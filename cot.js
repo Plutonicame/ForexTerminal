@@ -5,9 +5,10 @@
  *
  * Données : table Supabase "cot_positions", remplie par le bot "cot-bot" qui lit le rapport
  * hebdomadaire « Traders in Financial Futures » de la CFTC (publié le vendredi, chiffres du mardi).
- * Deux camemberts (Long / Short), précisions à droite :
- *   - COT Retail : les petits traders (positions « non déclarables ») ;
+ * Un camembert (Long / Short), précisions à droite :
  *   - COT Institutionnels : gestionnaires d'actifs + fonds à effet de levier.
+ * (Le COT « non déclarables » de la CFTC n'est plus affiché : on ne sait pas si ces traders gagnent ou perdent.
+ *  Le retail à majorité perdante est dans retail.js.)
  * Les couleurs se changent dans style.css (variables --cot-*) ou dans Paramètres > Analyse.
  */
 (function () {
@@ -147,26 +148,6 @@
     ].join('');
   }
 
-  function cardRetail(c, prevSnap, snap) {
-    const cur = snap.retail;
-    const prev = prevSnap ? prevSnap.retail : null;
-    const labels = { long: 'Long', short: 'Short', aria: 'Retail : répartition long / short' };
-    return `
-      <div class="cot-card">
-        <div class="cot-card-head">
-          <h3 class="cot-card-title">COT Retail</h3>
-          <span class="cot-card-sub">Petits traders (positions « non déclarables ») · hebdomadaire · ${esc(c.contract_name)}</span>
-        </div>
-        <div class="cot-body">
-          <div class="cot-pie-wrap">${pieSvg(cur.long, cur.short, 'retail', labels)}</div>
-          <div class="cot-details">
-            ${totalsDetails(cur, prev, snap.open_interest, 'retail')}
-            <p class="cot-bias">${esc(biasText(cur))}</p>
-          </div>
-        </div>
-      </div>`;
-  }
-
   function cardInstitutional(c, prevSnap, snap) {
     const cur = sum(snap.asset_mgr, snap.lev_funds);
     const prev = prevSnap ? sum(prevSnap.asset_mgr, prevSnap.lev_funds) : null;
@@ -255,7 +236,7 @@
       `<span class="cot-checked">${esc(checkedTxt)}</span>`,
     ].filter(Boolean).join(' · ');
 
-    section.innerHTML = head(info) + cardRetail(c, prevSnap, snap) + cardInstitutional(c, prevSnap, snap);
+    section.innerHTML = head(info) + cardInstitutional(c, prevSnap, snap);
   }
 
   function renderAll() {

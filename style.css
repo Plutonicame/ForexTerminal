@@ -3490,10 +3490,7 @@ body.fund-dragging * {
    Toutes ces couleurs sont modifiables dans Paramètres > Analyse.
    ===================================================================== */
 :root {
-  /* Camemberts : retail */
-  --cot-retail-long: #2ecc71;
-  --cot-retail-short: #fe1111;
-  /* Camemberts : institutionnels */
+  /* Camembert : institutionnels */
   --cot-inst-long: #2ecc71;
   --cot-inst-short: #fe1111;
   --cot-slice-border: var(--bg-card);
@@ -3627,8 +3624,6 @@ body.fund-dragging * {
   opacity: 0.82;
 }
 
-.cot-slice--retail-long { fill: var(--cot-retail-long); }
-.cot-slice--retail-short { fill: var(--cot-retail-short); }
 .cot-slice--inst-long { fill: var(--cot-inst-long); }
 .cot-slice--inst-short { fill: var(--cot-inst-short); }
 
@@ -3686,8 +3681,6 @@ body.fund-dragging * {
   border-radius: 50%;
 }
 
-.cot-dot--retail-long { background: var(--cot-retail-long); }
-.cot-dot--retail-short { background: var(--cot-retail-short); }
 .cot-dot--inst-long { background: var(--cot-inst-long); }
 .cot-dot--inst-short { background: var(--cot-inst-short); }
 
@@ -3743,8 +3736,8 @@ body.fund-dragging * {
    ===================================================================== */
 :root {
   /* Camemberts */
-  --intra-retail-long: var(--cot-retail-long);
-  --intra-retail-short: var(--cot-retail-short);
+  --intra-retail-long: #2ecc71;
+  --intra-retail-short: #fe1111;
   --intra-contra-long: #4d94ff;
   --intra-contra-short: #f5a623;
   --intra-slice-border: var(--bg-card);

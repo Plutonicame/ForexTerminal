@@ -417,7 +417,7 @@ function actualDirection(ev) {
 // visible en maintenant le doigt (ou en survolant) le nom. Pour ajouter
 // une traduction, ajouter simplement une ligne à cette liste.
 const CALENDAR_TRANSLATIONS = {
-  "Non-Farm Employment Change": "Créations d'emplois non agricoles (NFP)",
+  "Non-Farm Employment Change": "NFP",
   "Unemployment Rate": "Taux de chômage",
   "Average Hourly Earnings m/m": "Salaire horaire moyen (mensuel)",
   "Unemployment Claims": "Demandes d'allocations chômage",
@@ -502,9 +502,27 @@ function saveCalendarTranslateCache() {
 // Titre affiché : dictionnaire connu en priorité, sinon (si la
 // traduction automatique est activée) une traduction déjà en cache,
 // sinon le titre d'origine en attendant.
+// Dans les intitulés traduits en français, les périodes s'écrivent toujours avec les
+// abréviations de l'appli : m/m (mensuel), y/y (annuel, « sur un an »), q/q (trimestriel).
+function shortenPeriods(text) {
+  return String(text)
+    .replace(/\s*\(\s*mensuel(?:le)?s?\s*\)/gi, ' m/m')
+    .replace(/\s*\(\s*annuel(?:le)?s?\s*\)/gi, ' y/y')
+    .replace(/\s*\(\s*trimestriel(?:le)?s?\s*\)/gi, ' q/q')
+    .replace(/\s*\(\s*(?:sur (?:un|1) an|en glissement annuel)\s*\)/gi, ' y/y')
+    .replace(/\b(?:en glissement mensuel|sur (?:un|1) mois|d'un mois sur l'autre)\b/gi, 'm/m')
+    .replace(/\b(?:en glissement annuel|sur (?:un|1) an|d'une année sur l'autre)\b/gi, 'y/y')
+    .replace(/\b(?:en glissement trimestriel|sur (?:un|1) trimestre|d'un trimestre sur l'autre)\b/gi, 'q/q')
+    .replace(/\bmensuel(?:le)?s?\b/gi, 'm/m')
+    .replace(/\bannuel(?:le)?s?\b/gi, 'y/y')
+    .replace(/\btrimestriel(?:le)?s?\b/gi, 'q/q')
+    .replace(/\s{2,}/g, ' ')
+    .trim();
+}
+
 function resolveEventTitle(title) {
-  if (CALENDAR_TRANSLATIONS[title]) return CALENDAR_TRANSLATIONS[title];
-  if (calendarAutoTranslate && calendarTranslateCache.has(title)) return calendarTranslateCache.get(title);
+  if (CALENDAR_TRANSLATIONS[title]) return shortenPeriods(CALENDAR_TRANSLATIONS[title]);
+  if (calendarAutoTranslate && calendarTranslateCache.has(title)) return shortenPeriods(calendarTranslateCache.get(title));
   return String(title);
 }
 

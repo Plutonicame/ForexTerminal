@@ -112,8 +112,8 @@
     const retail = `
       <div class="intra-card">
         <div class="intra-card-head">
-          <h3 class="intra-card-title">Retail · intraday</h3>
-          <span class="intra-card-sub">Traders particuliers des brokers (majorité perdante) · moyenne sur ${esc(r.n_pairs)} paire${r.n_pairs > 1 ? 's' : ''}</span>
+          <h3 class="intra-card-title">COT Retail · majorité perdante</h3>
+          <span class="intra-card-sub">Traders particuliers des brokers · intraday · moyenne sur ${esc(r.n_pairs)} paire${r.n_pairs > 1 ? 's' : ''}</span>
         </div>
         <div class="intra-body">
           <div class="intra-pie-wrap">${pieSvg(L, S, 'retail', 'Retail intraday : acheteurs et vendeurs')}</div>
@@ -134,8 +134,8 @@
     const contra = `
       <div class="intra-card">
         <div class="intra-card-head">
-          <h3 class="intra-card-title">Lecture contrarienne</h3>
-          <span class="intra-card-sub">Inverse du retail (déduction, pas une mesure)</span>
+          <h3 class="intra-card-title">COT Retail inversé</h3>
+          <span class="intra-card-sub">Inverse du COT Retail ci-dessus (déduction, pas une mesure)</span>
         </div>
         <div class="intra-body">
           <div class="intra-pie-wrap">${pieSvg(S, L, 'contra', 'Lecture contrarienne : inverse du retail')}</div>
