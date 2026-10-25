@@ -1,7 +1,8 @@
 'use strict';
 
 /**
- * cot.js — « COT » (positionnement des traders, CFTC) dans chaque onglet de devise de l'analyse.
+ * cot.js — zone « COT · Positionnement » dans chaque onglet de devise de l'analyse
+ * (carte institutionnelle issue du rapport hebdomadaire de la CFTC ; les cartes retail viennent de retail.js).
  *
  * Données : table Supabase "cot_positions", remplie par le bot "cot-bot" qui lit le rapport
  * hebdomadaire « Traders in Financial Futures » de la CFTC (publié le vendredi, chiffres du mardi).
@@ -67,11 +68,14 @@
   // -------------------------------------------------------------------------
   // Emplacement dans le panneau : après le calendrier et les attentes de taux, avant les discours
   // -------------------------------------------------------------------------
-  function ensureSection(panel) {
+  // Zone « COT · Positionnement » partagée avec retail.js : un bandeau, la carte institutionnelle (cot.js),
+  // puis les cartes retail (retail.js). Chaque script n'écrit que dans son propre emplacement.
+  function ensureCotShell(panel) {
     let section = panel.querySelector('.cot');
     if (!section) {
       section = document.createElement('div');
       section.className = 'cot';
+      section.innerHTML = '<div class="cot-head"></div><div class="cot-institutional"></div><div class="cot-retail"></div>';
       const anchor = panel.querySelector('.rates') || panel.querySelector('.calendar');
       panel.insertBefore(section, anchor ? anchor.nextSibling : panel.firstChild);
     }
@@ -189,12 +193,14 @@
 
   function renderPanel(panel) {
     const code = panel.dataset.currency;
-    const section = ensureSection(panel);
+    const section = ensureCotShell(panel);
+    const headEl = section.querySelector('.cot-head');
+    const bodyEl = section.querySelector('.cot-institutional');
     const c = rows[code];
 
     const head = (info) => `
       <div class="cot-toolbar">
-        <span class="cot-toolbar-title">COT · Positionnement (CFTC)</span>
+        <span class="cot-toolbar-title">COT · Positionnement</span>
         <span class="cot-toolbar-info">${info}</span>
       </div>`;
 
@@ -205,7 +211,8 @@
       const sig = `empty:${msg}`;
       if (section.dataset.sig === sig) return;
       section.dataset.sig = sig;
-      section.innerHTML = `${head('')}<p class="cot-empty">${esc(msg)}</p>`;
+      headEl.innerHTML = head('');
+      bodyEl.innerHTML = `<p class="cot-empty">${esc(msg)}</p>`;
       return;
     }
 
@@ -223,7 +230,8 @@
     section.dataset.sig = sig;
 
     if (!validSnap(snap)) {
-      section.innerHTML = `${head('')}<p class="cot-empty">Données COT illisibles pour le moment.</p>`;
+      headEl.innerHTML = head('');
+      bodyEl.innerHTML = '<p class="cot-empty">Données COT illisibles pour le moment.</p>';
       return;
     }
 
@@ -236,7 +244,8 @@
       `<span class="cot-checked">${esc(checkedTxt)}</span>`,
     ].filter(Boolean).join(' · ');
 
-    section.innerHTML = head(info) + cardInstitutional(c, prevSnap, snap);
+    headEl.innerHTML = head(info);
+    bodyEl.innerHTML = cardInstitutional(c, prevSnap, snap);
   }
 
   function renderAll() {

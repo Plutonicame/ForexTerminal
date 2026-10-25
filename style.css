@@ -3731,7 +3731,7 @@ body.fund-dragging * {
 
 
 /* =====================================================================
-   Retail intraday (Myfxbook / OANDA) — retail.js
+   COT Retail intraday (Myfxbook / OANDA) — retail.js
    Toutes ces couleurs sont modifiables dans Paramètres > Analyse.
    ===================================================================== */
 :root {
@@ -3743,11 +3743,7 @@ body.fund-dragging * {
   --intra-slice-border: var(--bg-card);
   --intra-slice-label: #ffffff;
 
-  /* Bandeau */
-  --intra-toolbar-bg: var(--cot-toolbar-bg);
-  --intra-toolbar-border: var(--cot-toolbar-border);
-  --intra-toolbar-title: var(--cot-toolbar-title);
-  --intra-toolbar-info: var(--cot-toolbar-info);
+  /* Messages */
   --intra-empty-text: var(--cot-empty-text);
 
   /* Cartes */
@@ -3760,39 +3756,6 @@ body.fund-dragging * {
   --intra-dim: var(--cot-dim);
   --intra-sep: var(--cot-sep);
   --intra-link: var(--blue-light);
-}
-
-.intra {
-  margin-top: 16px;
-}
-
-.intra-toolbar {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 8px 12px;
-  flex-wrap: wrap;
-  margin: 0 0 10px;
-  padding: 10px 14px;
-  background: var(--intra-toolbar-bg);
-  border: 1px solid var(--intra-toolbar-border);
-  border-radius: var(--radius-card);
-}
-
-.intra-toolbar-title {
-  font-family: var(--mono);
-  font-size: 13px;
-  font-weight: 700;
-  letter-spacing: 1.5px;
-  text-transform: uppercase;
-  color: var(--intra-toolbar-title);
-}
-
-.intra-toolbar-info {
-  font-family: var(--mono);
-  font-size: 11px;
-  letter-spacing: 0.3px;
-  color: var(--intra-toolbar-info);
 }
 
 .intra-empty {

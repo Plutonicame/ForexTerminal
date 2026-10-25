@@ -1,7 +1,7 @@
 'use strict';
 
 /**
- * retail.js — « Retail intraday » dans chaque onglet de devise de l'analyse.
+ * retail.js — cartes « COT Retail » (intraday) dans la zone « COT · Positionnement » de chaque devise.
  *
  * Données : table Supabase "retail_sentiment", remplie par le bot "retail-bot" à partir de sources
  * officielles (Myfxbook et OANDA). Pour chaque paire, la lecture la plus récente est retenue ;
@@ -13,6 +13,12 @@
  */
 (function () {
   const REFRESH_MS = 60 * 1000;
+
+  // Part des comptes retail perdants, telle que PUBLIÉE par le broker dans son avertissement réglementaire.
+  // Ce n'est pas mesuré par les sources de ce bloc : à mettre à jour à la main quand le broker publie un nouveau chiffre.
+  // Source : OANDA Europe Limited, « Risk warning disclosures », septembre 2025
+  //          (https://legal.oanda.com/oel/risk_disclosure_agreement_uk/en).
+  const RETAIL_LOSERS = { pct: 76.6, who: 'OANDA Europe', date: 'sept. 2025' };
 
   let rows = {};
   let loaded = false;
@@ -35,12 +41,15 @@
     return h < 24 ? `il y a ${h} h ${String(min % 60).padStart(2, '0')}` : `il y a ${Math.floor(h / 24)} j`;
   }
 
-  function ensureSection(panel) {
-    let section = panel.querySelector('.intra');
+  // Zone « COT · Positionnement » partagée avec retail.js : un bandeau, la carte institutionnelle (cot.js),
+  // puis les cartes retail (retail.js). Chaque script n'écrit que dans son propre emplacement.
+  function ensureCotShell(panel) {
+    let section = panel.querySelector('.cot');
     if (!section) {
       section = document.createElement('div');
-      section.className = 'intra';
-      const anchor = panel.querySelector('.cot') || panel.querySelector('.rates') || panel.querySelector('.calendar');
+      section.className = 'cot';
+      section.innerHTML = '<div class="cot-head"></div><div class="cot-institutional"></div><div class="cot-retail"></div>';
+      const anchor = panel.querySelector('.rates') || panel.querySelector('.calendar');
       panel.insertBefore(section, anchor ? anchor.nextSibling : panel.firstChild);
     }
     return section;
@@ -90,7 +99,7 @@
     return 'Pas de biais contrarien net : le retail est partagé';
   }
 
-  function cards(r) {
+  function cards(r, infoHtml) {
     const L = Number(r.long_pct);
     const S = Number(r.short_pct);
     const buyers = r.buyers_profit_pct == null ? NaN : Number(r.buyers_profit_pct);
@@ -113,7 +122,7 @@
       <div class="intra-card">
         <div class="intra-card-head">
           <h3 class="intra-card-title">COT Retail · majorité perdante</h3>
-          <span class="intra-card-sub">Traders particuliers des brokers · intraday · moyenne sur ${esc(r.n_pairs)} paire${r.n_pairs > 1 ? 's' : ''}</span>
+          <span class="intra-card-sub">Traders particuliers des brokers · intraday · moyenne sur ${esc(r.n_pairs)} paire${r.n_pairs > 1 ? 's' : ''} · <span title="Chiffre publié par ${esc(RETAIL_LOSERS.who)} dans son avertissement sur les risques (${esc(RETAIL_LOSERS.date)}) : part de ses comptes clients retail qui perdent de l'argent en CFD. Ce n'est pas une mesure des sources de cette carte.">${pct(RETAIL_LOSERS.pct)} de comptes perdants (${esc(RETAIL_LOSERS.who)}, ${esc(RETAIL_LOSERS.date)})</span></span>
         </div>
         <div class="intra-body">
           <div class="intra-pie-wrap">${pieSvg(L, S, 'retail', 'Retail intraday : acheteurs et vendeurs')}</div>
@@ -127,6 +136,7 @@
               <ul class="intra-pair-list">${pairList}</ul>
               <p class="intra-note">Pour chaque paire, la source la plus récente est retenue.</p>
             </details>
+            <p class="intra-note">${infoHtml}</p>
           </div>
         </div>
       </div>`;
@@ -143,7 +153,7 @@
             ${row('<i class="intra-dot intra-dot--contra-long"></i>Lecture haussière', `<b>${pct(S)}</b>`)}
             ${row('<i class="intra-dot intra-dot--contra-short"></i>Lecture baissière', `<b>${pct(L)}</b>`)}
             <p class="intra-bias">${esc(contraSignal(L))}</p>
-            <p class="intra-note">Les retails perdent le plus souvent (typiquement 70 à 80 % de comptes perdants selon les avertissements des brokers) : cette carte retourne simplement leur positionnement. Ce n'est pas le positionnement réel des institutionnels, qui n'est pas publié en intraday ; pour les institutionnels, voir le COT hebdomadaire.</p>
+            <p class="intra-note">Les retails perdent le plus souvent (${esc(RETAIL_LOSERS.who)} publie ${pct(RETAIL_LOSERS.pct)} de comptes perdants, ${esc(RETAIL_LOSERS.date)}) : cette carte retourne simplement leur positionnement. Ce n'est pas le positionnement réel des institutionnels, qui n'est pas publié en intraday ; pour les institutionnels, voir le COT hebdomadaire.</p>
           </div>
         </div>
       </div>`;
@@ -152,42 +162,37 @@
 
   function renderPanel(panel) {
     const code = panel.dataset.currency;
-    const section = ensureSection(panel);
+    const slot = ensureCotShell(panel).querySelector('.cot-retail');
     const r = rows[code];
     const anyRow = Object.keys(rows).length > 0;
 
-    const head = (info) => `
-      <div class="intra-toolbar">
-        <span class="intra-toolbar-title">Retail intraday · multi-sources</span>
-        <span class="intra-toolbar-info">${info}</span>
-      </div>`;
     const empty = (msg) => {
       const sig = `empty:${msg}`;
-      if (section.dataset.sig === sig) return;
-      section.dataset.sig = sig;
-      section.innerHTML = `${head('')}<p class="intra-empty">${esc(msg)}</p>`;
+      if (slot.dataset.sig === sig) return;
+      slot.dataset.sig = sig;
+      slot.innerHTML = `<p class="intra-empty">COT Retail : ${esc(msg)}</p>`;
     };
 
-    if (!loaded) return empty(failed ? 'Impossible de charger le positionnement retail pour le moment.' : 'Chargement…');
+    if (!loaded) return empty(failed ? 'impossible de charger le positionnement retail pour le moment.' : 'chargement…');
     if (!r) {
       return empty(anyRow
-        ? 'Pas de lecture récente pour cette devise (aucune paire disponible).'
-        : 'Aucune source connectée pour le moment : ajoute tes accès Myfxbook et/ou OANDA dans Supabase (Edge Functions > Secrets) pour activer le positionnement retail intraday.');
+        ? 'pas de lecture récente pour cette devise (aucune paire disponible).'
+        : 'aucune source connectée pour le moment. Ajoute tes accès Myfxbook et/ou OANDA dans Supabase (Edge Functions > Secrets) pour l\'activer.');
     }
 
     const asOfMs = Date.parse(r.as_of);
     const stale = Number.isFinite(asOfMs) && Date.now() - asOfMs > 60 * 60 * 1000;
-    const sources = (Array.isArray(r.sources) ? r.sources : []).map((s) => SRC[s] || s).join(' + ');
+    const sources = (Array.isArray(r.sources) ? r.sources : []).map((x) => SRC[x] || x).join(' + ');
     const info = [
-      esc(sources),
+      `Sources : ${esc(sources)}`,
       `<span class="intra-age" data-asof="${Number.isFinite(asOfMs) ? asOfMs : ''}">lecture ${esc(ageText(asOfMs))}</span>`,
       stale ? '⚠ lecture ancienne (marché fermé ?)' : '',
     ].filter(Boolean).join(' · ');
 
     const sig = `${r.updated_at}|${r.as_of}`;
-    if (section.dataset.sig === sig) return;
-    section.dataset.sig = sig;
-    section.innerHTML = head(info) + cards(r);
+    if (slot.dataset.sig === sig) return;
+    slot.dataset.sig = sig;
+    slot.innerHTML = cards(r, info);
   }
 
   function renderAll() {
