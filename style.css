@@ -3731,7 +3731,7 @@ body.fund-dragging * {
 
 
 /* =====================================================================
-   COT Retail intraday (Myfxbook / OANDA) — retail.js
+   COT Retail intraday (Myfxbook) — retail.js
    Toutes ces couleurs sont modifiables dans Paramètres > Analyse.
    ===================================================================== */
 :root {
@@ -3745,6 +3745,11 @@ body.fund-dragging * {
 
   /* Messages */
   --intra-empty-text: var(--cot-empty-text);
+
+  /* Positions moyennes : en gain / en perte */
+  --intra-gain: #2ecc71;
+  --intra-loss: #fe1111;
+  --intra-mixed: #f5a623;
 
   /* Cartes */
   --intra-card-bg: var(--cot-card-bg);
@@ -3947,5 +3952,20 @@ body.fund-dragging * {
 
 .intra-pair-val,
 .intra-pair-src {
+  color: var(--intra-dim);
+}
+
+.intra-pnl {
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.intra-pnl--gain { color: var(--intra-gain); }
+.intra-pnl--loss { color: var(--intra-loss); }
+b.intra-pnl--loss { color: var(--intra-loss); }
+b.intra-pnl--mixed { color: var(--intra-mixed); }
+
+.intra-pair-px {
+  flex-basis: 100%;
   color: var(--intra-dim);
 }

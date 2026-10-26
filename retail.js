@@ -3,22 +3,17 @@
 /**
  * retail.js — cartes « COT Retail » (intraday) dans la zone « COT · Positionnement » de chaque devise.
  *
- * Données : table Supabase "retail_sentiment", remplie par le bot "retail-bot" à partir de sources
- * officielles (Myfxbook et OANDA). Pour chaque paire, la lecture la plus récente est retenue ;
- * les paires sont ensuite agrégées par devise.
- *   - Carte « Retail » : camembert acheteurs / vendeurs retail de la devise + part en gain.
- *   - Carte « Lecture contrarienne » : l'INVERSE du retail (les retails perdent le plus souvent).
+ * Données : table Supabase "retail_sentiment", remplie par le bot "retail-bot" à partir de Myfxbook
+ * (communauté de traders particuliers : lots, positions, prix moyens d'entrée) et de cours gratuits
+ * sans compte (Yahoo Finance). Les paires sont agrégées par devise.
+ *   - Carte « COT Retail » : camembert acheteurs / vendeurs de la devise, volumes, et position moyenne
+ *     des acheteurs / vendeurs (en gain ou en perte) comparée au cours actuel.
+ *   - Carte « COT Retail inversé » : l'INVERSE du retail (les traders particuliers perdent le plus souvent).
  *     C'est une déduction, pas le positionnement réel des institutionnels (non publié en intraday).
  * Couleurs : style.css (variables --intra-*) ou Paramètres > Analyse.
  */
 (function () {
   const REFRESH_MS = 60 * 1000;
-
-  // Part des comptes retail perdants, telle que PUBLIÉE par le broker dans son avertissement réglementaire.
-  // Ce n'est pas mesuré par les sources de ce bloc : à mettre à jour à la main quand le broker publie un nouveau chiffre.
-  // Source : OANDA Europe Limited, « Risk warning disclosures », septembre 2025
-  //          (https://legal.oanda.com/oel/risk_disclosure_agreement_uk/en).
-  const RETAIL_LOSERS = { pct: 76.6, who: 'OANDA Europe', date: 'sept. 2025' };
 
   let rows = {};
   let loaded = false;
@@ -30,7 +25,15 @@
   const pct = (v) => (Number.isFinite(v)
     ? v.toLocaleString('fr-FR', { minimumFractionDigits: 1, maximumFractionDigits: 1 }) + ' %'
     : '—');
-  const SRC = { myfxbook: 'Myfxbook', oanda: 'OANDA' };
+  const SRC = { myfxbook: 'Myfxbook' };
+  const SRC_PRICE = { yahoo: 'Yahoo Finance', stooq: 'Stooq', 'bce-quotidien': 'BCE (quotidien)', direct: 'direct' };
+  const int = (n) => Number.isFinite(n) ? Math.round(n).toLocaleString('fr-FR') : '—';
+  const px = (v, pair) => (Number.isFinite(v) ? v.toLocaleString('fr-FR', { minimumFractionDigits: pair.endsWith('JPY') ? 3 : 4, maximumFractionDigits: pair.endsWith('JPY') ? 3 : 5 }) : '—');
+  function pipsHtml(v) {
+    if (!Number.isFinite(v)) return '';
+    const n = Math.abs(v).toLocaleString('fr-FR', { maximumFractionDigits: 1 });
+    return `<span class="intra-pnl ${v < 0 ? 'intra-pnl--loss' : 'intra-pnl--gain'}">${v < 0 ? '−' : '+'}${n} pips</span>`;
+  }
 
   function ageText(ms) {
     if (!Number.isFinite(ms)) return '';
@@ -99,42 +102,71 @@
     return 'Pas de biais contrarien net : le retail est partagé';
   }
 
+  function sideLine(side, label) {
+    if (!side || !(side.pairs_total > 0)) return row(label, 'cours indisponible pour le moment');
+    const lossShare = Number.isFinite(side.loss_lots_pct) ? ` (${pct(side.loss_lots_pct)} des lots)` : '';
+    const state = side.pairs_in_loss === 0 ? 'gain' : (side.pairs_in_loss === side.pairs_total ? 'perte' : 'mixte');
+    const txt = side.pairs_in_loss === 0
+      ? `en gain sur les ${side.pairs_total} paires`
+      : `en perte sur <b class="intra-pnl--${state === 'perte' ? 'loss' : 'mixed'}">${side.pairs_in_loss} paire${side.pairs_in_loss > 1 ? 's' : ''} sur ${side.pairs_total}</b>${lossShare}`;
+    return row(label, txt);
+  }
+
   function cards(r, infoHtml) {
     const L = Number(r.long_pct);
     const S = Number(r.short_pct);
-    const buyers = r.buyers_profit_pct == null ? NaN : Number(r.buyers_profit_pct);
-    const sellers = r.sellers_profit_pct == null ? NaN : Number(r.sellers_profit_pct);
+    const d = r.details || {};
     const pairs = Array.isArray(r.pairs) ? r.pairs : [];
+    const ccy = r.currency;
+    const lots = d.lots || null;
+    const pos = d.positions || null;
+    const posLong = Number.isFinite(Number(d.long_pct_positions)) ? Number(d.long_pct_positions) : NaN;
+    const b = d.buyers || null;
+    const sl = d.sellers || null;
 
-    const pairList = pairs.map((p) => `
+    const pairList = pairs.map((p) => {
+      const lotsTxt = Number.isFinite(p.lots_long) && Number.isFinite(p.lots_short) ? ` · ${int(p.lots_long + p.lots_short)} lots` : '';
+      const priceTxt = Number.isFinite(p.price)
+        ? `Cours ${px(p.price, p.pair)}`
+          + (Number.isFinite(p.buyers_entry) ? ` · acheteurs ${esc(ccy)} : entrée moy. ${px(p.buyers_entry, p.pair)} ${pipsHtml(p.buyers_pips)}` : '')
+          + (Number.isFinite(p.sellers_entry) ? ` · vendeurs ${esc(ccy)} : entrée moy. ${px(p.sellers_entry, p.pair)} ${pipsHtml(p.sellers_pips)}` : '')
+        : 'Cours indisponible';
+      return `
       <li class="intra-pair">
         <span class="intra-pair-name">${esc(p.pair)}</span>
-        <span class="intra-pair-val">${pct(Number(p.long_pct))} long · ${pct(Number(p.short_pct))} short</span>
-        <span class="intra-pair-src" data-asof="${esc(p.as_of)}">${esc(SRC[p.source] || p.source)} · ${esc(ageText(Number(p.as_of)))}</span>
-      </li>`).join('');
+        <span class="intra-pair-val">${pct(Number(p.long_pct))} long · ${pct(Number(p.short_pct))} short${lotsTxt}</span>
+        <span class="intra-pair-px">${priceTxt}</span>
+      </li>`;
+    }).join('');
 
-    const profitRows = (Number.isFinite(buyers) || Number.isFinite(sellers))
-      ? row('Acheteurs en gain', Number.isFinite(buyers) ? `<b>${pct(buyers)}</b> de leurs positions` : 'indisponible', 'intra-row--sep')
-        + row('Vendeurs en gain', Number.isFinite(sellers) ? `<b>${pct(sellers)}</b> de leurs positions` : 'indisponible')
-      : row('Acheteurs / vendeurs en gain', 'nécessite OANDA (non configuré)', 'intra-row--sep');
+    const subParts = [
+      'Traders particuliers (Myfxbook)',
+      `intraday · moyenne sur ${esc(r.n_pairs)} paire${r.n_pairs > 1 ? 's' : ''}`,
+    ];
+    if (b && b.pairs_total > 0 && sl && sl.pairs_total > 0) {
+      subParts.push(`positions moyennes en perte : acheteurs ${b.pairs_in_loss}/${b.pairs_total} paires, vendeurs ${sl.pairs_in_loss}/${sl.pairs_total}`);
+    }
 
     const retail = `
       <div class="intra-card">
         <div class="intra-card-head">
           <h3 class="intra-card-title">COT Retail · majorité perdante</h3>
-          <span class="intra-card-sub">Traders particuliers des brokers · intraday · moyenne sur ${esc(r.n_pairs)} paire${r.n_pairs > 1 ? 's' : ''} · <span title="Chiffre publié par ${esc(RETAIL_LOSERS.who)} dans son avertissement sur les risques (${esc(RETAIL_LOSERS.date)}) : part de ses comptes clients retail qui perdent de l'argent en CFD. Ce n'est pas une mesure des sources de cette carte.">${pct(RETAIL_LOSERS.pct)} de comptes perdants (${esc(RETAIL_LOSERS.who)}, ${esc(RETAIL_LOSERS.date)})</span></span>
+          <span class="intra-card-sub">${subParts.join(' · ')}</span>
         </div>
         <div class="intra-body">
-          <div class="intra-pie-wrap">${pieSvg(L, S, 'retail', 'Retail intraday : acheteurs et vendeurs')}</div>
+          <div class="intra-pie-wrap">${pieSvg(L, S, 'retail', 'COT Retail : acheteurs et vendeurs')}</div>
           <div class="intra-details">
-            ${row('<i class="intra-dot intra-dot--retail-long"></i>Long (acheteurs)', `<b>${pct(L)}</b>`)}
-            ${row('<i class="intra-dot intra-dot--retail-short"></i>Short (vendeurs)', `<b>${pct(S)}</b>`)}
-            ${profitRows}
+            ${row('<i class="intra-dot intra-dot--retail-long"></i>Long (acheteurs)', `<b>${pct(L)}</b> des lots${Number.isFinite(posLong) ? ` · ${pct(posLong)} des positions` : ''}`)}
+            ${row('<i class="intra-dot intra-dot--retail-short"></i>Short (vendeurs)', `<b>${pct(S)}</b> des lots${Number.isFinite(posLong) ? ` · ${pct(100 - posLong)} des positions` : ''}`)}
+            ${lots ? row('Volume', `${int(lots.long)} lots acheteurs · ${int(lots.short)} lots vendeurs`, 'intra-row--sep') : ''}
+            ${pos ? row('Positions ouvertes', `${int(pos.long)} acheteuses · ${int(pos.short)} vendeuses`) : ''}
+            ${sideLine(b, 'Acheteurs : position moyenne')}
+            ${sideLine(sl, 'Vendeurs : position moyenne')}
             <p class="intra-bias">${esc(retailBias(L))}</p>
+            <p class="intra-note">Position moyenne : prix moyen d'entrée de tous les acheteurs (ou vendeurs) de la communauté Myfxbook, comparé au cours actuel. Ce n'est pas un pourcentage de traders : Myfxbook ne publie pas la part de traders perdants.</p>
             <details class="intra-pairs">
               <summary>Voir les ${pairs.length} paire${pairs.length > 1 ? 's' : ''} prises en compte</summary>
               <ul class="intra-pair-list">${pairList}</ul>
-              <p class="intra-note">Pour chaque paire, la source la plus récente est retenue.</p>
             </details>
             <p class="intra-note">${infoHtml}</p>
           </div>
@@ -148,12 +180,12 @@
           <span class="intra-card-sub">Inverse du COT Retail ci-dessus (déduction, pas une mesure)</span>
         </div>
         <div class="intra-body">
-          <div class="intra-pie-wrap">${pieSvg(S, L, 'contra', 'Lecture contrarienne : inverse du retail')}</div>
+          <div class="intra-pie-wrap">${pieSvg(S, L, 'contra', 'COT Retail inversé')}</div>
           <div class="intra-details">
             ${row('<i class="intra-dot intra-dot--contra-long"></i>Lecture haussière', `<b>${pct(S)}</b>`)}
             ${row('<i class="intra-dot intra-dot--contra-short"></i>Lecture baissière', `<b>${pct(L)}</b>`)}
             <p class="intra-bias">${esc(contraSignal(L))}</p>
-            <p class="intra-note">Les retails perdent le plus souvent (${esc(RETAIL_LOSERS.who)} publie ${pct(RETAIL_LOSERS.pct)} de comptes perdants, ${esc(RETAIL_LOSERS.date)}) : cette carte retourne simplement leur positionnement. Ce n'est pas le positionnement réel des institutionnels, qui n'est pas publié en intraday ; pour les institutionnels, voir le COT hebdomadaire.</p>
+            <p class="intra-note">Les traders particuliers perdent le plus souvent (les avertissements obligatoires des brokers l'indiquent) : cette carte retourne simplement leur positionnement. Ce n'est pas le positionnement réel des institutionnels, qui n'est pas publié en intraday ; pour les institutionnels, voir le COT hebdomadaire.</p>
           </div>
         </div>
       </div>`;
@@ -177,14 +209,15 @@
     if (!r) {
       return empty(anyRow
         ? 'pas de lecture récente pour cette devise (aucune paire disponible).'
-        : 'aucune source connectée pour le moment. Ajoute tes accès Myfxbook et/ou OANDA dans Supabase (Edge Functions > Secrets) pour l\'activer.');
+        : 'aucune source connectée pour le moment. Ajoute tes accès Myfxbook dans Supabase (Edge Functions > Secrets) pour l\'activer.');
     }
 
     const asOfMs = Date.parse(r.as_of);
     const stale = Number.isFinite(asOfMs) && Date.now() - asOfMs > 60 * 60 * 1000;
     const sources = (Array.isArray(r.sources) ? r.sources : []).map((x) => SRC[x] || x).join(' + ');
+    const pxSources = ((r.details && r.details.price_sources) || []).map((x) => SRC_PRICE[x] || x).join(' + ');
     const info = [
-      `Sources : ${esc(sources)}`,
+      `Source : ${esc(sources)}${pxSources ? ` · cours : ${esc(pxSources)}` : ''}`,
       `<span class="intra-age" data-asof="${Number.isFinite(asOfMs) ? asOfMs : ''}">lecture ${esc(ageText(asOfMs))}</span>`,
       stale ? '⚠ lecture ancienne (marché fermé ?)' : '',
     ].filter(Boolean).join(' · ');
