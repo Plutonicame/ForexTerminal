@@ -682,6 +682,215 @@ function eventCountryTag(ev) {
   return ev.shown && ev.shown.country ? `<span class="calendar-country">${escapeHtml(ev.shown.country)}</span>` : '';
 }
 
+// =========================================================
+// Graphique Trading Economics
+//   Quand une donnée est sortie (« Sortie » renseignée), un bouton « Graphique » apparaît dans la
+//   ligne. Il ouvre une fenêtre avec le graphique de l'indicateur fourni par Trading Economics
+//   (image d'intégration publique de leur site), avec le choix de la période (1 mois à « Tout »)
+//   et du style (courbe / barres) directement dans l'appli.
+//   Les codes ci-dessous sont les codes internes de Trading Economics, tous vérifiés
+//   (une image vide est renvoyée pour un code inconnu). Un indicateur sans code connu n'a pas de bouton.
+//   Pas de bouton non plus pour un CPI/PPI national de la zone euro (France, Allemagne...) :
+//   le graphique disponible est celui de toute la zone euro.
+// =========================================================
+const TE_IMG = 'https://d3fy651gv2fhd3.cloudfront.net/charts/embed.png';
+const TE_COUNTRY_PATH = { USD: 'united-states', EUR: 'euro-area', GBP: 'united-kingdom', JPY: 'japan', CHF: 'switzerland', CAD: 'canada', AUD: 'australia', NZD: 'new-zealand', CNY: 'china' };
+const TE_COUNTRY_FR = { USD: 'États-Unis', EUR: 'Zone euro', GBP: 'Royaume-Uni', JPY: 'Japon', CHF: 'Suisse', CAD: 'Canada', AUD: 'Australie', NZD: 'Nouvelle-Zélande', CNY: 'Chine' };
+const TE_SLUGS = {
+  cpi_yoy: 'inflation-cpi', core_cpi_yoy: 'core-inflation-rate', cpi_mom: 'inflation-rate-mom', core_cpi_mom: 'core-inflation-rate-mom',
+  ppi_yoy: 'producer-prices-change', ppi_mom: 'producer-price-inflation-mom', unemployment: 'unemployment-rate',
+  gdp_qoq: 'gdp-growth', gdp_yoy: 'gdp-growth-annual', retail_mom: 'retail-sales', retail_yoy: 'retail-sales-annual',
+  rate: 'interest-rate', mfg_pmi: 'manufacturing-pmi', svc_pmi: 'services-pmi', ind_mom: 'industrial-production-mom',
+  trade: 'balance-of-trade', conf: 'consumer-confidence', employment: 'employment-change',
+  nfp: 'non-farm-payrolls', adp: 'adp-employment-change', ism_mfg: 'business-confidence', ism_svc: 'non-manufacturing-pmi',
+};
+const TE_SYMBOLS = {
+  USD: { cpi_yoy: 'CPI YOY', core_cpi_yoy: 'USACORECPIRATE', cpi_mom: 'UNITEDSTAINFRATMOM', core_cpi_mom: 'USACIRM', ppi_yoy: 'UNITEDSTAPROPRICHA', ppi_mom: 'USAPPIM', unemployment: 'USURTOT', gdp_qoq: 'GDP CQOQ', gdp_yoy: 'GDP CYOY', retail_mom: 'RSTAMOM', retail_yoy: 'USARetailSalesYoY', rate: 'FDTR', mfg_pmi: 'UNITEDSTAMANPMI', svc_pmi: 'UNITEDSTASERPMI', ind_mom: 'UNITEDSTAINDPROMOM', trade: 'USTBTOT', conf: 'CONCCONF', nfp: 'NFP TCH', adp: 'UNITEDSTAADPEMPCHA', ism_mfg: 'NAPMPMI', ism_svc: 'UNITEDSTANONMANPMI' },
+  EUR: { cpi_yoy: 'ECCPEMUY', core_cpi_yoy: 'EUROAREACORINFRAT', cpi_mom: 'EUROAREAINFRATMOM', core_cpi_mom: 'EURCIRM', ppi_yoy: 'EUROAREAPROPRICHA', ppi_mom: 'EURPPIM', unemployment: 'UMRTEMU', gdp_qoq: 'EUGNEMUQ', gdp_yoy: 'EUGNEMUY', retail_mom: 'EMURetailSalesMoM', retail_yoy: 'EMURetailSalesYoY', rate: 'EURR002W', mfg_pmi: 'EUROAREAMANPMI', svc_pmi: 'EUROAREASERPMI', ind_mom: 'EUROAREAINDPROMOM', trade: 'XTTBEZ', conf: 'EUCCEMU', employment: 'EUROAREAEMPCHA' },
+  GBP: { cpi_yoy: 'UKRPCJYR', core_cpi_yoy: 'GBRCORECPIRATE', cpi_mom: 'UNITEDKININFRATMOM', core_cpi_mom: 'GBRCIRM', ppi_yoy: 'UNITEDKINPROPRICHA', ppi_mom: 'GBRPPIM', unemployment: 'UKUEILOR', gdp_qoq: 'UKGRYBZQ', gdp_yoy: 'UKGRYBZY', retail_mom: 'GBRRetailSalesMoM', retail_yoy: 'GBRRetailSalesYoY', rate: 'UKBRBASE', mfg_pmi: 'UNITEDKINMANPMI', svc_pmi: 'UNITEDKINSERPMI', ind_mom: 'UNITEDKININDPROMOM', trade: 'UKTBTTBA', conf: 'UKCCI', employment: 'UNITEDKINEMPCHA' },
+  JPY: { cpi_yoy: 'JNCPIYOY', core_cpi_yoy: 'JPNCORECPIRATE', cpi_mom: 'JAPANINFRATMOM', ppi_yoy: 'JAPANPROPRICHA', ppi_mom: 'JPNPPIM', unemployment: 'JNUE', gdp_qoq: 'JGDPAGDP', gdp_yoy: 'JGDPNSAQ', retail_mom: 'JPNRetailSalesMoM', retail_yoy: 'JPNRetailSalesYoY', rate: 'BOJDTR', mfg_pmi: 'JAPANMANPMI', svc_pmi: 'JAPANSERPMI', ind_mom: 'JAPANINDPROMOM', trade: 'JNTBAL', conf: 'JCOMACF' },
+  CHF: { cpi_yoy: 'SZCPIYOY', core_cpi_yoy: 'CHECORECPIRATE', cpi_mom: 'SWITZERLANINFRATMOM', ppi_yoy: 'SWITZERLANPROPRICHA', ppi_mom: 'CHEPPIM', unemployment: 'SZUEUEA', gdp_qoq: 'SZGDPCQQ', gdp_yoy: 'SZGDPCYY', retail_mom: 'CHERetailSalesMoM', retail_yoy: 'CHERetailSalesYoY', rate: 'SZLTTR', mfg_pmi: 'SWITZERLANMANPMI', svc_pmi: 'SWITZERLANSERPMI', ind_mom: 'SWITZERLANINDPROMOM', trade: 'SZTBAL', conf: 'SZCCI', employment: 'SWITZERLANEMPCHA' },
+  CAD: { cpi_yoy: 'CACPIYOY', core_cpi_yoy: 'CANCORECPIRATE', cpi_mom: 'CANADAINFRATMOM', core_cpi_mom: 'CANCIRM', ppi_yoy: 'CANADAPROPRICHA', ppi_mom: 'CANPPIM', unemployment: 'CANLXEMR', gdp_qoq: 'CGE9QOQ', gdp_yoy: 'CGE9YOY', retail_mom: 'CANRetailSalesMoM', retail_yoy: 'CannadaRetsYoY', rate: 'CCLR', mfg_pmi: 'CANADAMANPMI', svc_pmi: 'CANSERVICESPMI', ind_mom: 'CANADAINDPROMOM', trade: 'CATBTOTB', conf: 'OECAI001', employment: 'CANADAEMPCHA' },
+  AUD: { cpi_yoy: 'AUCPIYOY', core_cpi_yoy: 'AUSCORECPIRATE', cpi_mom: 'AUSTRALIAINFRATMOM', ppi_yoy: 'AUSTRALIAPROPRICHA', unemployment: 'AULFUNEM', gdp_qoq: 'AUNAGDPC', gdp_yoy: 'AUNAGDPY', retail_mom: 'AUSRetailSalesMoM', retail_yoy: 'AUSRetailSalesYoY', rate: 'RBATCTR', mfg_pmi: 'AUSTRALIAMANPMI', svc_pmi: 'AUSTRALIASERPMI', ind_mom: 'AUSTRALIAINDPROMOM', trade: 'AUITGSB', conf: 'WMCCCONPCT', employment: 'AUSTRALIAEMPCHA' },
+  NZD: { cpi_yoy: 'NZCPIYOY', core_cpi_yoy: 'NZLCORECPIRATE', cpi_mom: 'NEWZEALANINFRATMOM', ppi_yoy: 'NZLPRODUCERPCHANGE', ppi_mom: 'NZLPPIM', unemployment: 'NZLFUNER', gdp_qoq: 'NZNTGDPC', gdp_yoy: 'NZNTGDPY', retail_mom: 'NZLRetailSalesMoM', retail_yoy: 'NZLRetailSalesYoY', rate: 'NZOCRS', mfg_pmi: 'NEWZEALANMANPMI', svc_pmi: 'NEWZEALANSERPMI', trade: 'NZMTBAL', conf: 'NZCC', employment: 'NEWZEALANEMPCHA' },
+  CNY: { cpi_yoy: 'CNCPIYOY', core_cpi_yoy: 'CHINACORINFRAT', cpi_mom: 'CHINAINFRATMOM', core_cpi_mom: 'CHNCIRM', ppi_yoy: 'CHINAPROPRICHA', ppi_mom: 'CHNPPIM', unemployment: 'CNUERATE', gdp_qoq: 'CNGDPQOQ', gdp_yoy: 'CNGDPYOY', retail_mom: 'CHNRetailSalesMoM', retail_yoy: 'CHNRetailSalesYoY', rate: 'CHLR12M', mfg_pmi: 'CHINAMANPMI', svc_pmi: 'CHINASERPMI', ind_mom: 'CHINAINDPROMOM', trade: 'CNFRBALD', conf: 'CHCSCONF' },
+};
+// Indicateurs présentés avec nos intitulés fixes (voir plus haut) -> type d'indicateur
+const TE_LABEL_KINDS = {
+  'CPI y/y': 'cpi_yoy', 'Core CPI y/y': 'core_cpi_yoy', 'CPI m/m': 'cpi_mom', 'Core CPI m/m': 'core_cpi_mom',
+  'PPI y/y': 'ppi_yoy', 'PPI m/m': 'ppi_mom', 'NFP': 'nfp', 'ADP NFP': 'adp',
+  'ISM PMI manufacturier': 'ism_mfg', 'ISM PMI services': 'ism_svc',
+};
+// Autres indicateurs reconnus par leur titre d'origine (Forex Factory)
+const TE_TITLE_KINDS = [
+  [/^unemployment rate$/i, 'unemployment'],
+  [/\bgdp q\/q$/i, 'gdp_qoq'],
+  [/\bgdp y\/y$/i, 'gdp_yoy'],
+  [/^retail sales m\/m$/i, 'retail_mom'],
+  [/^retail sales y\/y$/i, 'retail_yoy'],
+  [/^(federal funds rate|main refinancing rate|official bank rate|boj policy rate|snb policy rate|overnight rate|cash rate|official cash rate)$/i, 'rate'],
+  [/^(?!ism\b).*\bmanufacturing pmi$/i, 'mfg_pmi'],
+  [/^(?!ism\b).*\bservices pmi$/i, 'svc_pmi'],
+  [/^industrial production m\/m$/i, 'ind_mom'],
+  [/^trade balance$/i, 'trade'],
+  [/^(cb )?consumer confidence$/i, 'conf'],
+  [/^employment change$/i, 'employment'],
+];
+// Indicateurs en variation : barres par défaut ; les autres : courbe
+const TE_COLUMN_KINDS = new Set(['cpi_mom', 'core_cpi_mom', 'ppi_mom', 'gdp_qoq', 'retail_mom', 'ind_mom', 'nfp', 'adp', 'employment', 'trade']);
+const TE_PERIODS = [
+  { id: '1m', label: '1 mois', months: 1 }, { id: '3m', label: '3 mois', months: 3 }, { id: '6m', label: '6 mois', months: 6 },
+  { id: '1y', label: '1 an', months: 12 }, { id: '2y', label: '2 ans', months: 24 }, { id: '5y', label: '5 ans', months: 60 },
+  { id: '10y', label: '10 ans', months: 120 }, { id: 'all', label: 'Tout', months: null },
+];
+const TE_TYPES = [{ id: 'line', label: 'Courbe' }, { id: 'column', label: 'Barres' }];
+
+function teKindFor(ev) {
+  const table = TE_SYMBOLS[ev.currency];
+  if (!table) return null;
+  if (ev.shown && ev.shown.country) return null;
+  let kind = null;
+  if (ev.shown && TE_LABEL_KINDS[ev.shown.label]) kind = TE_LABEL_KINDS[ev.shown.label];
+  else if (!ev.shown) {
+    const t = String(ev.title || '').trim();
+    for (const [re, k] of TE_TITLE_KINDS) if (re.test(t)) { kind = k; break; }
+  }
+  return kind && table[kind] ? kind : null;
+}
+
+const TE_ICON = '<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="3 17 9 11 13 15 21 6"/><polyline points="15 6 21 6 21 12"/></svg>';
+
+// Bouton « Graphique » : seulement quand la donnée est sortie et qu'un graphique existe.
+function teChartButton(ev) {
+  if (!eventHasValue(ev.actual)) return '';
+  const kind = teKindFor(ev);
+  if (!kind) return '';
+  const name = ev.shown ? ev.shown.label : resolveEventTitle(ev.title);
+  return `<button type="button" class="calendar-chart-btn" data-te-cur="${escapeHtml(ev.currency)}" data-te-kind="${kind}" data-te-name="${escapeHtml(name)}" title="Graphique Trading Economics" aria-label="Graphique : ${escapeHtml(name)}">${TE_ICON}<span class="calendar-chart-btn-text">Graphique</span></button>`;
+}
+
+function teChartUrl(cur, kind, periodId, typeId, width, height) {
+  const symbol = TE_SYMBOLS[cur][kind];
+  const path = `${TE_COUNTRY_PATH[cur]}/${TE_SLUGS[kind]}`;
+  const iso = (d) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+  const end = new Date();
+  const p = TE_PERIODS.find((x) => x.id === periodId) || TE_PERIODS[5];
+  const start = new Date(end);
+  if (p.months === null) { start.setFullYear(1960, 0, 1); } else { start.setMonth(start.getMonth() - p.months); }
+  return {
+    img: `${TE_IMG}?s=${encodeURIComponent(symbol)}&h=${height}&w=${width}&ref=/${path}&type=${typeId}&d1=${iso(start)}&d2=${iso(end)}`,
+    page: `https://tradingeconomics.com/${path}`,
+  };
+}
+
+let teState = null;   // { cur, kind, name, period, type }
+let teModal = null;
+let tePrefs = { period: null, type: null };
+
+function teLoadPrefs() {
+  try {
+    const raw = JSON.parse(localStorage.getItem('fx_te_chart_prefs') || '{}');
+    if (TE_PERIODS.some((p) => p.id === raw.period)) tePrefs.period = raw.period;
+    if (TE_TYPES.some((t) => t.id === raw.type)) tePrefs.type = raw.type;
+  } catch (e) { /* ignoré */ }
+}
+function teSavePrefs() {
+  try { localStorage.setItem('fx_te_chart_prefs', JSON.stringify(tePrefs)); } catch (e) { /* ignoré */ }
+}
+
+function teEnsureModal() {
+  if (teModal) return teModal;
+  const root = document.createElement('div');
+  root.className = 'te-modal';
+  root.hidden = true;
+  root.innerHTML = `
+    <div class="te-modal-box" role="dialog" aria-modal="true" aria-labelledby="teModalTitle">
+      <div class="te-modal-head">
+        <div class="te-modal-titles">
+          <h3 class="te-modal-title" id="teModalTitle"></h3>
+          <span class="te-modal-sub">Graphique Trading Economics</span>
+        </div>
+        <button type="button" class="te-modal-close" aria-label="Fermer">×</button>
+      </div>
+      <div class="te-modal-controls">
+        <div class="te-chips te-periods" role="group" aria-label="Période">${TE_PERIODS.map((p) => `<button type="button" class="te-chip" data-te-period="${p.id}">${p.label}</button>`).join('')}</div>
+        <div class="te-chips te-types" role="group" aria-label="Style">${TE_TYPES.map((t) => `<button type="button" class="te-chip" data-te-type="${t.id}">${t.label}</button>`).join('')}</div>
+      </div>
+      <div class="te-modal-image">
+        <span class="te-modal-status" role="status"></span>
+        <img class="te-modal-img" alt="Graphique Trading Economics" hidden>
+      </div>
+      <p class="te-modal-note"><a class="te-modal-link" target="_blank" rel="noopener noreferrer">Voir cet indicateur sur Trading Economics</a></p>
+    </div>`;
+  document.body.appendChild(root);
+  root.addEventListener('click', (e) => {
+    if (e.target === root || e.target.closest('.te-modal-close')) { teCloseChart(); return; }
+    const pb = e.target.closest('[data-te-period]');
+    if (pb && teState) { teState.period = pb.dataset.tePeriod; tePrefs.period = teState.period; teSavePrefs(); teRenderChart(); return; }
+    const tb = e.target.closest('[data-te-type]');
+    if (tb && teState) { teState.type = tb.dataset.teType; tePrefs.type = teState.type; teSavePrefs(); teRenderChart(); }
+  });
+  const img = root.querySelector('.te-modal-img');
+  img.addEventListener('load', () => { root.querySelector('.te-modal-status').textContent = ''; img.hidden = false; });
+  img.addEventListener('error', () => {
+    img.hidden = true;
+    root.querySelector('.te-modal-status').textContent = 'Graphique indisponible pour le moment. Utilise le lien ci-dessous pour le voir sur Trading Economics.';
+  });
+  document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && !root.hidden) teCloseChart(); });
+  teModal = root;
+  return root;
+}
+
+function teRenderChart() {
+  if (!teState || !teModal) return;
+  const { cur, kind, name, period, type } = teState;
+  const narrow = window.innerWidth < 720;
+  const urls = teChartUrl(cur, kind, period, type, narrow ? 560 : 800, narrow ? 340 : 400);
+  teModal.querySelectorAll('[data-te-period]').forEach((b) => { const on = b.dataset.tePeriod === period; b.classList.toggle('is-active', on); b.setAttribute('aria-pressed', on ? 'true' : 'false'); });
+  teModal.querySelectorAll('[data-te-type]').forEach((b) => { const on = b.dataset.teType === type; b.classList.toggle('is-active', on); b.setAttribute('aria-pressed', on ? 'true' : 'false'); });
+  teModal.querySelector('.te-modal-title').textContent = `${name} · ${TE_COUNTRY_FR[cur] || cur}`;
+  teModal.querySelector('.te-modal-link').href = urls.page;
+  const img = teModal.querySelector('.te-modal-img');
+  teModal.querySelector('.te-modal-status').textContent = 'Chargement du graphique…';
+  img.hidden = true;
+  img.src = urls.img;
+}
+
+function teOpenChart(cur, kind, name) {
+  if (!TE_SYMBOLS[cur] || !TE_SYMBOLS[cur][kind]) return;
+  teLoadPrefs();
+  const monthly = ['gdp_qoq', 'gdp_yoy'].includes(kind);
+  teState = {
+    cur, kind, name,
+    period: tePrefs.period || (monthly ? '10y' : '5y'),
+    type: tePrefs.type || (TE_COLUMN_KINDS.has(kind) ? 'column' : 'line'),
+  };
+  const modal = teEnsureModal();
+  modal.hidden = false;
+  document.body.classList.add('te-open');
+  teRenderChart();
+  const close = modal.querySelector('.te-modal-close');
+  if (close) close.focus({ preventScroll: true });
+}
+
+function teCloseChart() {
+  if (!teModal) return;
+  teModal.hidden = true;
+  document.body.classList.remove('te-open');
+  const img = teModal.querySelector('.te-modal-img');
+  img.removeAttribute('src');
+  teState = null;
+}
+
+// Un clic sur « Graphique » ouvre la fenêtre (écouteur global : les lignes sont recréées à chaque affichage).
+document.addEventListener('click', (e) => {
+  const btn = e.target.closest ? e.target.closest('.calendar-chart-btn') : null;
+  if (!btn) return;
+  e.preventDefault();
+  e.stopPropagation();
+  teOpenChart(btn.dataset.teCur, btn.dataset.teKind, btn.dataset.teName || '');
+}, true);
+
 async function translateToFrench(text) {
   const url = `https://translate.googleapis.com/translate_a/single?client=gtx&sl=en&tl=fr&dt=t&q=${encodeURIComponent(text)}`;
   const res = await fetch(url);
@@ -831,7 +1040,7 @@ function renderCalendar(code, events, errorNote) {
       <td class="calendar-col-date">${escapeHtml(formatCalendarDateInline(ev.event_time))}</td>
       <td class="calendar-col-name">
         <button type="button" class="calendar-date-btn" data-event-time="${escapeHtml(ev.event_time)}" aria-label="Voir la date et l'heure">${CALENDAR_DATE_ICON}</button>
-        <span class="calendar-impact calendar-impact--${impact}"></span><span class="calendar-name" title="${escapeHtml(ev.title)}">${escapeHtml(ev.shown ? ev.shown.label : resolveEventTitle(ev.title))}</span>${eventCountryTag(ev)}
+        <span class="calendar-impact calendar-impact--${impact}"></span><span class="calendar-name" title="${escapeHtml(ev.title)}">${escapeHtml(ev.shown ? ev.shown.label : resolveEventTitle(ev.title))}</span>${teChartButton(ev)}${eventCountryTag(ev)}
       </td>
       ${calendarCell(ev.actual, 'calendar-value--actual' + (actualDirection(ev) ? ' calendar-value--' + actualDirection(ev) : ''))}
       ${calendarCell(ev.forecast_mid)}
@@ -1402,7 +1611,7 @@ function renderNewsCalendar(events, errorNote) {
       <td class="calendar-col-date news-col-time">${escapeHtml(time)}</td>
       <td class="calendar-col-name">
         <button type="button" class="calendar-date-btn" data-event-time="${escapeHtml(ev.event_time)}" aria-label="Voir la date et l'heure">${CALENDAR_DATE_ICON}</button>
-        <span class="calendar-impact calendar-impact--${impact}"></span><span class="news-cur">${escapeHtml(ev.currency)}</span><span class="calendar-name" title="${escapeHtml(ev.title)}">${escapeHtml(ev.shown ? ev.shown.label : resolveEventTitle(ev.title))}</span>${eventCountryTag(ev)}
+        <span class="calendar-impact calendar-impact--${impact}"></span><span class="news-cur">${escapeHtml(ev.currency)}</span><span class="calendar-name" title="${escapeHtml(ev.title)}">${escapeHtml(ev.shown ? ev.shown.label : resolveEventTitle(ev.title))}</span>${teChartButton(ev)}${eventCountryTag(ev)}
       </td>
       ${calendarCell(ev.actual, 'calendar-value--actual' + (actualDirection(ev) ? ' calendar-value--' + actualDirection(ev) : ''))}
       ${calendarCell(ev.forecast_mid)}

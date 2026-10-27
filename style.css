@@ -90,6 +90,32 @@
   --calendar-country-text: var(--text-dim);
   --calendar-country-bg: transparent;
   --calendar-country-border: var(--border);
+
+  /* Bouton « Graphique » du calendrier */
+  --tegraph-btn-bg: transparent;
+  --tegraph-btn-border: var(--border);
+  --tegraph-btn-text: var(--text-dim);
+  --tegraph-btn-hover-bg: var(--bg-card);
+  --tegraph-btn-hover-border: var(--text-dim);
+  --tegraph-btn-hover-text: var(--text);
+
+  /* Fenêtre du graphique Trading Economics */
+  --tegraph-overlay: #000000;
+  --tegraph-bg: var(--bg-card);
+  --tegraph-border: var(--border);
+  --tegraph-title: var(--text);
+  --tegraph-sub: var(--text-dim);
+  --tegraph-close: var(--text-dim);
+  --tegraph-close-hover: var(--text);
+  --tegraph-chip-bg: transparent;
+  --tegraph-chip-border: var(--border-dim);
+  --tegraph-chip-text: var(--text-dim);
+  --tegraph-chip-active-bg: var(--text);
+  --tegraph-chip-active-border: var(--text);
+  --tegraph-chip-active-text: var(--bg);
+  --tegraph-image-bg: #ffffff;
+  --tegraph-status: var(--text-dim);
+  --tegraph-link: var(--blue-light);
   --calendar-value-text: var(--text);
   --calendar-actual-text: var(--blue-light);
   --calendar-actual-up: #35c46b;
@@ -3968,4 +3994,210 @@ b.intra-pnl--mixed { color: var(--intra-mixed); }
 .intra-pair-px {
   flex-basis: 100%;
   color: var(--intra-dim);
+}
+
+
+/* =====================================================================
+   Bouton « Graphique » (calendrier) et fenêtre Trading Economics
+   Toutes ces couleurs sont modifiables dans Paramètres > Analyse.
+   ===================================================================== */
+.calendar-chart-btn {
+  float: right;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  margin: 0 0 0 10px;
+  padding: 2px 9px;
+  background: var(--tegraph-btn-bg);
+  border: 1px solid var(--tegraph-btn-border);
+  border-radius: 10px;
+  color: var(--tegraph-btn-text);
+  font-family: var(--sans);
+  font-size: 11px;
+  line-height: 1.4;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.calendar-chart-btn:hover,
+.calendar-chart-btn:focus-visible {
+  background: var(--tegraph-btn-hover-bg);
+  border-color: var(--tegraph-btn-hover-border);
+  color: var(--tegraph-btn-hover-text);
+  outline: none;
+}
+
+@media (max-width: 719px) {
+  /* Téléphone : icône seule (pas de place pour le mot) */
+  .calendar-chart-btn {
+    padding: 3px 7px;
+  }
+
+  .calendar-chart-btn-text {
+    display: none;
+  }
+}
+
+body.te-open {
+  overflow: hidden;
+}
+
+.te-modal {
+  position: fixed;
+  inset: 0;
+  z-index: 480;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+}
+
+/* Fond assombri : couleur pleine modifiable, opacité fixe */
+.te-modal::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: var(--tegraph-overlay);
+  opacity: 0.75;
+}
+
+.te-modal[hidden] {
+  display: none;
+}
+
+.te-modal-box {
+  position: relative;
+  z-index: 1;
+  width: min(860px, 100%);
+  max-height: 100%;
+  overflow-y: auto;
+  padding: 16px 18px 14px;
+  background: var(--tegraph-bg);
+  border: 1px solid var(--tegraph-border);
+  border-radius: var(--radius-card);
+  box-shadow: 0 16px 48px rgba(0, 0, 0, 0.6);
+}
+
+.te-modal-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.te-modal-title {
+  margin: 0;
+  font-family: var(--sans);
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--tegraph-title);
+}
+
+.te-modal-sub {
+  display: block;
+  margin-top: 2px;
+  font-family: var(--mono);
+  font-size: 11px;
+  color: var(--tegraph-sub);
+}
+
+.te-modal-close {
+  flex: 0 0 auto;
+  width: 32px;
+  height: 32px;
+  background: transparent;
+  border: 0;
+  border-radius: 50%;
+  color: var(--tegraph-close);
+  font-size: 24px;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.te-modal-close:hover,
+.te-modal-close:focus-visible {
+  color: var(--tegraph-close-hover);
+  outline: none;
+}
+
+.te-modal-controls {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px 16px;
+  flex-wrap: wrap;
+  margin-bottom: 12px;
+}
+
+.te-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.te-chip {
+  padding: 5px 11px;
+  background: var(--tegraph-chip-bg);
+  border: 1px solid var(--tegraph-chip-border);
+  border-radius: 14px;
+  color: var(--tegraph-chip-text);
+  font-family: var(--sans);
+  font-size: 12px;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.te-chip.is-active {
+  background: var(--tegraph-chip-active-bg);
+  border-color: var(--tegraph-chip-active-border);
+  color: var(--tegraph-chip-active-text);
+  font-weight: 700;
+}
+
+.te-modal-image {
+  position: relative;
+  min-height: 120px;
+  background: var(--tegraph-image-bg);
+  border-radius: 6px;
+  overflow: hidden;
+}
+
+.te-modal-img {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
+.te-modal-img[hidden] {
+  display: none;
+}
+
+.te-modal-status {
+  display: block;
+  padding: 44px 16px;
+  text-align: center;
+  font-family: var(--sans);
+  font-size: 13px;
+  color: var(--tegraph-status);
+}
+
+.te-modal-status:empty {
+  display: none;
+}
+
+.te-modal-note {
+  margin: 10px 0 0;
+  font-family: var(--mono);
+  font-size: 11px;
+  text-align: right;
+}
+
+.te-modal-link {
+  color: var(--tegraph-link);
+  text-decoration: none;
+}
+
+.te-modal-link:hover {
+  text-decoration: underline;
 }
