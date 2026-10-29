@@ -3300,6 +3300,45 @@ body.fund-dragging * {
   color: var(--rates-toolbar-info);
 }
 
+/* Boutons de choix de la réunion (mois en cours / mois suivant) */
+.rates-meetings {
+  display: inline-flex;
+  gap: 4px;
+  padding: 3px;
+  background: var(--calendar-impact-toggle-track-bg);
+  border: 1px solid var(--calendar-impact-toggle-track-border);
+  border-radius: 8px;
+}
+
+.rates-meeting-btn {
+  padding: 5px 12px;
+  background: transparent;
+  border: 0;
+  border-radius: 6px;
+  color: var(--rates-toolbar-info);
+  font-family: var(--mono);
+  font-size: 11px;
+  letter-spacing: 0.5px;
+  cursor: pointer;
+  transition: background 0.12s, color 0.12s;
+}
+
+.rates-meeting-btn.is-active {
+  background: var(--calendar-impact-toggle-knob-bg);
+  color: var(--rates-toolbar-title);
+  font-weight: 700;
+}
+
+.rates-meeting-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.rates-meeting-btn:focus-visible {
+  outline: 2px solid var(--rates-link);
+  outline-offset: 1px;
+}
+
 .rates-empty {
   margin: 0;
   padding: 14px;

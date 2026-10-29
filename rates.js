@@ -3,8 +3,9 @@
 /**
  * rates.js — « Attentes de taux » (Polymarket) dans chaque onglet de devise de l'analyse.
  *
- * Données : table Supabase "rate_expectations", remplie toutes les 15 minutes par le bot
- * "polymarket-rates" (prochaine réunion de la banque centrale de la devise).
+ * Données : table Supabase "rate_expectations", remplie par le bot "polymarket-rates"
+ * (UNE ligne par devise ET par réunion : réunion de ce mois-ci, puis celle du mois suivant).
+ * Des boutons dans le bandeau (« Octobre », « Novembre »...) permettent de passer de l'une à l'autre.
  * Affiche : 4 cases KPI (aucun changement / hausse de 25 pb / baisse de 25 pb / autre = 50 pb ou plus)
  * et un graphique de l'évolution des probabilités ; l'infobulle apparaît au survol (ou au toucher).
  * Si Polymarket n'a pas de marché pour la banque, l'onglet l'indique.
@@ -28,10 +29,18 @@
   const REFRESH_MS = 60 * 1000; // le bot met les prix à jour chaque minute
   const STALE_MS = 2 * 3600 * 1000;
 
+  // rows[devise] = liste des marchés Polymarket (un par réunion), triés par date de réunion :
+  // [0] = réunion de ce mois-ci, [1] = réunion du mois suivant...
   let rows = {};
+  const selected = {}; // devise -> index de la réunion affichée
   let loaded = false;
   let failed = false;
   let loading = false;
+
+  const fmtMonth = (ms) => {
+    const m = new Date(ms).toLocaleDateString('fr-FR', { month: 'long' });
+    return m.charAt(0).toUpperCase() + m.slice(1);
+  };
 
   const esc = (s) => String(s == null ? '' : s)
     .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
@@ -56,6 +65,13 @@
       section = document.createElement('div');
       section.className = 'rates';
       section.dataset.code = code;
+      // Bouton de choix de la réunion (écouteur unique : la barre est redessinée à chaque mise à jour)
+      section.addEventListener('click', (ev) => {
+        const btn = ev.target.closest('.rates-meeting-btn[data-idx]');
+        if (!btn || btn.disabled) return;
+        selected[code] = Number(btn.dataset.idx);
+        renderCode(code);
+      });
       const calendar = panel.querySelector('.calendar');
       panel.insertBefore(section, calendar ? calendar.nextSibling : panel.firstChild);
     }
@@ -87,11 +103,29 @@
     const section = ensureSection(code);
     if (!section) return;
     const bank = BANKS[code];
-    const row = rows[code];
+    const list = rows[code] || [];
+    const idx = Math.max(0, Math.min(selected[code] || 0, list.length - 1));
+    const row = list[idx];
+
+    // Boutons « mois en cours / mois suivant », comme sur Polymarket.
+    // S'il n'y a qu'un marché, le bouton du mois suivant est affiché grisé.
+    const meetingToggle = () => {
+      if (!list.length) return '';
+      const label = (r, i) => {
+        const t = Date.parse(r.meeting_at);
+        return Number.isFinite(t) ? fmtMonth(t) : (i === 0 ? 'Prochaine réunion' : 'Réunion suivante');
+      };
+      const btns = list.map((r, i) => `<button type="button" class="rates-meeting-btn${i === idx ? ' is-active' : ''}" data-idx="${i}" aria-pressed="${i === idx}">${esc(label(r, i))}</button>`);
+      if (list.length === 1) {
+        btns.push('<button type="button" class="rates-meeting-btn" disabled title="Marché de la réunion suivante pas encore disponible sur Polymarket">Réunion suivante</button>');
+      }
+      return `<div class="rates-meetings" role="group" aria-label="Réunion de la banque centrale">${btns.join('')}</div>`;
+    };
 
     const head = (info) => `
       <div class="rates-toolbar">
         <span class="rates-toolbar-title">Attentes de taux · Polymarket</span>
+        ${meetingToggle()}
         <span class="rates-toolbar-info">${esc(info)}</span>
       </div>`;
 
@@ -106,7 +140,7 @@
       return;
     }
 
-    const sig = `${row.event_slug}|${row.updated_at}`;
+    const sig = `${idx}/${list.length}|${row.event_slug}|${row.updated_at}`;
     if (section.dataset.sig === sig) return;
     // Pendant qu'on survole le graphique, on ne le redessine pas (l'infobulle resterait coupée) :
     // la mise à jour est appliquée dès que le curseur le quitte.
@@ -300,7 +334,12 @@
       const { data, error } = await client.from('rate_expectations').select('*');
       if (error) throw error;
       rows = {};
-      (data || []).forEach((r) => { rows[r.currency] = r; });
+      (data || []).forEach((r) => { (rows[r.currency] = rows[r.currency] || []).push(r); });
+      Object.values(rows).forEach((list) => list.sort((a, b) => {
+        const ta = Date.parse(a.meeting_at);
+        const tb = Date.parse(b.meeting_at);
+        return (Number.isFinite(ta) ? ta : Infinity) - (Number.isFinite(tb) ? tb : Infinity);
+      }));
       loaded = true;
       failed = false;
     } catch (err) {
