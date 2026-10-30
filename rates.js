@@ -334,7 +334,13 @@
       const { data, error } = await client.from('rate_expectations').select('*');
       if (error) throw error;
       rows = {};
-      (data || []).forEach((r) => { (rows[r.currency] = rows[r.currency] || []).push(r); });
+      // Les réunions déjà passées (plus d'une demi-journée) ne sont jamais affichées.
+      const minMs = Date.now() - 12 * 3600 * 1000;
+      (data || []).forEach((r) => {
+        const t = Date.parse(r.meeting_at);
+        if (Number.isFinite(t) && t < minMs) return;
+        (rows[r.currency] = rows[r.currency] || []).push(r);
+      });
       Object.values(rows).forEach((list) => list.sort((a, b) => {
         const ta = Date.parse(a.meeting_at);
         const tb = Date.parse(b.meeting_at);
