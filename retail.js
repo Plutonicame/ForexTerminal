@@ -3,7 +3,8 @@
 /**
  * retail.js — cartes « COT Retail » (intraday) dans la zone « COT · Positionnement » de chaque devise.
  *
- * Données : table Supabase "retail_sentiment", remplie par le bot "retail-bot" à partir de Myfxbook
+ * Données : table Supabase "retail_sentiment" (bot "retail-bot", Myfxbook) + "retail_sentiment_alt" (bot "retail-alt-bot", FXSSI : 2e source)
+ * Données principales : table "retail_sentiment", remplie par le bot "retail-bot" à partir de Myfxbook
  * (communauté de traders particuliers : lots, positions, prix moyens d'entrée) et de cours gratuits
  * sans compte (Yahoo Finance). Les paires sont agrégées par devise.
  *   - Carte « COT Retail » : camembert acheteurs / vendeurs de la devise, volumes, et position moyenne
@@ -16,6 +17,7 @@
   const REFRESH_MS = 60 * 1000;
 
   let rows = {};
+  let altRows = {}; // 2e source (FXSSI : Oanda, Dukascopy, FXBlue...), table retail_sentiment_alt
   let loaded = false;
   let failed = false;
   let loading = false;
@@ -192,17 +194,63 @@
     return retail + contra;
   }
 
+  // 2e carte : positionnement retail d'une SECONDE source indépendante de Myfxbook (FXSSI : médiane de plusieurs brokers).
+  function altCard(a) {
+    if (!a) return '';
+    const L = Number(a.long_pct);
+    const S = Number(a.short_pct);
+    if (!Number.isFinite(L) || !Number.isFinite(S)) return '';
+    const ccy = a.currency;
+    const pairs = Array.isArray(a.pairs) ? a.pairs : [];
+    const asOfMs = Date.parse(a.as_of);
+    const stale = Number.isFinite(asOfMs) && Date.now() - asOfMs > 60 * 60 * 1000;
+    const pairList = pairs.map((p) => {
+      const lo = Number(p.long_pct);
+      const side = lo >= 52 ? 'acheteuse' : (lo <= 48 ? 'vendeuse' : 'équilibrée');
+      const range = Number.isFinite(p.min) && Number.isFinite(p.max) && p.n_brokers > 1 ? ` · écart entre brokers ${pct(Number(p.min))} à ${pct(Number(p.max))}` : '';
+      return `
+      <li class="intra-pair">
+        <span class="intra-pair-name">${esc(p.pair)}</span>
+        <span class="intra-pair-val">${pct(lo)} long · ${pct(Number(p.short_pct))} short · majorité ${side} pour ${esc(ccy)}</span>
+        <span class="intra-pair-px">${esc(p.n_brokers)} broker${p.n_brokers > 1 ? 's' : ''} : ${esc((p.brokers || []).join(', '))}${range}</span>
+      </li>`;
+    }).join('');
+    return `
+      <div class="intra-card">
+        <div class="intra-card-head">
+          <h3 class="intra-card-title">COT Retail · 2e source (FXSSI)</h3>
+          <span class="intra-card-sub">Traders particuliers de plusieurs brokers (Oanda, Dukascopy, FXBlue...) · intraday · moyenne sur ${esc(a.n_pairs)} paire${a.n_pairs > 1 ? 's' : ''}</span>
+        </div>
+        <div class="intra-body">
+          <div class="intra-pie-wrap">${pieSvg(L, S, 'retail', 'COT Retail 2e source : acheteurs et vendeurs')}</div>
+          <div class="intra-details">
+            ${row('<i class="intra-dot intra-dot--retail-long"></i>Long (acheteurs)', `<b>${pct(L)}</b>`)}
+            ${row('<i class="intra-dot intra-dot--retail-short"></i>Short (vendeurs)', `<b>${pct(S)}</b>`)}
+            <p class="intra-bias">${esc(retailBias(L))}</p>
+            <details class="intra-pairs">
+              <summary>Voir les ${pairs.length} paire${pairs.length > 1 ? 's' : ''} prises en compte</summary>
+              <ul class="intra-pair-list">${pairList}</ul>
+            </details>
+            <p class="intra-note">Pour chaque paire : médiane du % d'acheteurs des brokers disponibles, Myfxbook exclu (c'est la 1re source). FXSSI ne couvre qu'une partie des paires : une devise peut donc reposer sur peu de paires. Pas de volumes ni de prix d'entrée.</p>
+            <p class="intra-note">Source : FXSSI · <span class="intra-age" data-asof="${Number.isFinite(asOfMs) ? asOfMs : ''}">lecture ${esc(ageText(asOfMs))}</span>${stale ? ' · ⚠ lecture ancienne (marché fermé ?)' : ''}</p>
+          </div>
+        </div>
+      </div>`;
+  }
+
   function renderPanel(panel) {
     const code = panel.dataset.currency;
     const slot = ensureCotShell(panel).querySelector('.cot-retail');
     const r = rows[code];
     const anyRow = Object.keys(rows).length > 0;
 
+    const a = altRows[code];
+    const altSig = a ? `${a.updated_at}|${a.as_of}` : '';
     const empty = (msg) => {
-      const sig = `empty:${msg}`;
+      const sig = `empty:${msg}|${altSig}`;
       if (slot.dataset.sig === sig) return;
       slot.dataset.sig = sig;
-      slot.innerHTML = `<p class="intra-empty">COT Retail : ${esc(msg)}</p>`;
+      slot.innerHTML = `<p class="intra-empty">COT Retail : ${esc(msg)}</p>${altCard(a)}`;
     };
 
     if (!loaded) return empty(failed ? 'impossible de charger le positionnement retail pour le moment.' : 'chargement…');
@@ -222,10 +270,10 @@
       stale ? '⚠ lecture ancienne (marché fermé ?)' : '',
     ].filter(Boolean).join(' · ');
 
-    const sig = `${r.updated_at}|${r.as_of}`;
+    const sig = `${r.updated_at}|${r.as_of}|${altSig}`;
     if (slot.dataset.sig === sig) return;
     slot.dataset.sig = sig;
-    slot.innerHTML = cards(r, info);
+    slot.innerHTML = cards(r, info) + altCard(a);
   }
 
   function renderAll() {
@@ -256,6 +304,14 @@
       if (error) throw error;
       rows = {};
       (data || []).forEach((r) => { rows[r.currency] = r; });
+      // 2e source : une erreur ici ne doit jamais empêcher d'afficher la 1re
+      try {
+        const alt = await client.from('retail_sentiment_alt').select('*');
+        if (!alt.error) {
+          altRows = {};
+          (alt.data || []).forEach((r) => { altRows[r.currency] = r; });
+        }
+      } catch (e) { /* 2e source indisponible : on garde la précédente */ }
       loaded = true;
       failed = false;
     } catch (err) {
