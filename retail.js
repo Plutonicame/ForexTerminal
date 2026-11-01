@@ -14,6 +14,8 @@
  */
 (function () {
   const REFRESH_MS = 60 * 1000;
+  // Les lectures ne tournent que lorsque l'onglet « Analyse par devise » est affiché (économise des requêtes).
+  const analyseActive = () => { const t = document.getElementById('tab-1'); return !t || !t.hidden; };
 
   let rows = {};
   let loaded = false;
@@ -107,8 +109,8 @@
     const lossShare = Number.isFinite(side.loss_lots_pct) ? ` (${pct(side.loss_lots_pct)} des lots)` : '';
     const state = side.pairs_in_loss === 0 ? 'gain' : (side.pairs_in_loss === side.pairs_total ? 'perte' : 'mixte');
     const txt = side.pairs_in_loss === 0
-      ? `en gain sur les ${side.pairs_total} paires`
-      : `en perte sur <b class="intra-pnl--${state === 'perte' ? 'loss' : 'mixed'}">${side.pairs_in_loss} paire${side.pairs_in_loss > 1 ? 's' : ''} sur ${side.pairs_total}</b>${lossShare}`;
+      ? `en gain sur les ${int(side.pairs_total)} paires`
+      : `en perte sur <b class="intra-pnl--${state === 'perte' ? 'loss' : 'mixed'}">${int(side.pairs_in_loss)} paire${side.pairs_in_loss > 1 ? 's' : ''} sur ${int(side.pairs_total)}</b>${lossShare}`;
     return row(label, txt);
   }
 
@@ -152,7 +154,7 @@
       `intraday · moyenne sur ${esc(r.n_pairs)} paire${r.n_pairs > 1 ? 's' : ''}`,
     ];
     if (b && b.pairs_total > 0 && sl && sl.pairs_total > 0) {
-      subParts.push(`positions moyennes en perte : acheteurs ${b.pairs_in_loss}/${b.pairs_total} paires, vendeurs ${sl.pairs_in_loss}/${sl.pairs_total}`);
+      subParts.push(`positions moyennes en perte : acheteurs ${int(b.pairs_in_loss)}/${int(b.pairs_total)} paires, vendeurs ${int(sl.pairs_in_loss)}/${int(sl.pairs_total)}`);
     }
 
     const retail = `
@@ -230,7 +232,7 @@
       stale ? '⚠ lecture ancienne (marché fermé ?)' : '',
     ].filter(Boolean).join(' · ');
 
-    const sig = `${r.updated_at}|${r.as_of}`;
+    const sig = `${r.updated_at}|${r.as_of}|${stale ? 'stale' : 'ok'}`; // « lecture ancienne » fait partie de la signature
     if (slot.dataset.sig === sig) return;
     slot.dataset.sig = sig;
     slot.innerHTML = cards(r, info);
@@ -245,12 +247,6 @@
     document.querySelectorAll('.intra-age[data-asof]').forEach((el) => {
       const ms = Number(el.dataset.asof);
       if (Number.isFinite(ms)) el.textContent = `lecture ${ageText(ms)}`;
-    });
-    document.querySelectorAll('.intra-pair-src[data-asof]').forEach((el) => {
-      const ms = Number(el.dataset.asof);
-      if (!Number.isFinite(ms)) return;
-      const name = el.textContent.split(' · ')[0];
-      el.textContent = `${name} · ${ageText(ms)}`;
     });
   }
 
@@ -278,8 +274,8 @@
   document.addEventListener('DOMContentLoaded', () => {
     renderAll();
     if (window.Auth) window.Auth.onAuthStateChange((session) => { if (session) load(); });
-    document.addEventListener('visibilitychange', () => { if (!document.hidden) load(); });
-    setInterval(() => { if (!document.hidden) load(); }, REFRESH_MS);
+    document.addEventListener('visibilitychange', () => { if (!document.hidden && analyseActive()) load(); });
+    setInterval(() => { if (!document.hidden && analyseActive()) load(); }, REFRESH_MS);
     setInterval(refreshAges, 30 * 1000);
   });
 

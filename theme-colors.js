@@ -451,15 +451,9 @@ function saveThemeVars() {
   window.setTimeout(hideSaveSpinner, 500);
 }
 
-let saveSpinnerTimeout = null;
-
 function showSaveSpinner() {
   const el = document.getElementById('saveSpinner');
   if (!el) return;
-  if (saveSpinnerTimeout) {
-    window.clearTimeout(saveSpinnerTimeout);
-    saveSpinnerTimeout = null;
-  }
   el.classList.add('is-visible');
 }
 
@@ -798,10 +792,12 @@ function renderThemeFields(sectionKey) {
               </span>
             </div>`;
           }
-          const hex = currentValueFor(f.v);
+          const hexRaw = currentValueFor(f.v);
+          // valeur venant du cloud : on ne l'insère dans le HTML que si c'est bien une couleur
+          const hex = /^(#[0-9a-f]{3,8}|rgba?\([\d\s.,%]+\)|[a-z]+)$/i.test(String(hexRaw).trim()) ? String(hexRaw).trim() : 'transparent';
           return `<div class="theme-field-row">
             <span class="theme-field-label">${f.l}</span>
-            <button type="button" class="theme-field-swatch" style="background:${hex}" data-var="${f.v}" data-label="${f.l}"></button>
+            <button type="button" class="theme-field-swatch" style="background:${hex}" data-var="${f.v}" data-label="${String(f.l).replace(/"/g, '&quot;')}"></button>
           </div>`;
         })
         .join('');
@@ -908,7 +904,8 @@ function subscribeCloudTheme() {
       { event: '*', schema: 'public', table: CLOUD_TABLE, filter: `user_id=eq.${cloudUserId}` },
       (payload) => {
         const newVars = payload.new && payload.new.theme_vars;
-        if (newVars) {
+        // écho de notre propre enregistrement (ou thème identique) : rien à refaire, ça évite un rendu complet
+        if (newVars && JSON.stringify(newVars) !== JSON.stringify(themeVars)) {
           themeVars = newVars;
           previewThemeVars();
           try { localStorage.setItem(THEME_STORAGE_KEY, JSON.stringify(themeVars)); } catch (e) {}

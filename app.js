@@ -470,10 +470,6 @@ const CALENDAR_TRANSLATIONS = {
   "GDP q/y": "PIB (GDP) annuel",
 };
 
-function translateEventTitle(title) {
-  return CALENDAR_TRANSLATIONS[title] || String(title);
-}
-
 // =========================================================
 // Traduction automatique (bouton "Traduire" de la barre d'outils).
 // Complète les titres absents de CALENDAR_TRANSLATIONS ci-dessus, via
@@ -684,8 +680,8 @@ function eventCountryTag(ev) {
 
 // =========================================================
 // Graphique Trading Economics
-//   Quand une donnée est sortie (« Sortie » renseignée), un bouton « Graphique » apparaît dans la
-//   ligne. Il ouvre une fenêtre avec le graphique de l'indicateur fourni par Trading Economics
+//   Quand une donnée à fort impact (rouge) est sortie (« Sortie » renseignée), un bouton « Graphique »
+//   apparaît dans la ligne (jamais sur les données oranges). Il ouvre une fenêtre avec le graphique de l'indicateur fourni par Trading Economics
 //   (image d'intégration publique de leur site), avec le choix de la période (1 mois à « Tout »)
 //   et du style (courbe / barres) directement dans l'appli.
 //   Les codes ci-dessous sont les codes internes de Trading Economics, tous vérifiés
@@ -728,7 +724,7 @@ const TE_TITLE_KINDS = [
   [/\bgdp y\/y$/i, 'gdp_yoy'],
   [/^retail sales m\/m$/i, 'retail_mom'],
   [/^retail sales y\/y$/i, 'retail_yoy'],
-  [/^(federal funds rate|main refinancing rate|official bank rate|boj policy rate|snb policy rate|overnight rate|cash rate|official cash rate)$/i, 'rate'],
+  [/^(federal funds rate|main refinancing rate|official bank rate|boj policy rate|snb policy rate|overnight rate|cash rate|official cash rate|(rba|boe|boc|rbnz|snb|boj) interest rate decision)$/i, 'rate'],
   [/^(?!ism\b).*\bmanufacturing pmi$/i, 'mfg_pmi'],
   [/^(?!ism\b).*\bservices pmi$/i, 'svc_pmi'],
   [/^industrial production m\/m$/i, 'ind_mom'],
@@ -745,6 +741,27 @@ const TE_PERIODS = [
 ];
 const TE_TYPES = [{ id: 'line', label: 'Courbe' }, { id: 'column', label: 'Barres' }];
 
+// Un indicateur d'un seul pays de la zone euro (« German Flash Manufacturing PMI », « HCOB France Services PMI »...)
+// ne doit jamais prendre le graphique de toute la zone euro : pas de graphique.
+const TE_NATIONAL_TITLE = /\b(german|germany|french|france|spanish|spain|italian|italy|dutch|netherlands|tokyo)\b/i;
+
+// Contrôle de cohérence : la valeur sortie et la précédente doivent avoir l'ordre de grandeur de l'indicateur
+// (un CPI m/m ne vaut pas 3 %, un PMI est entre 20 et 80...). Sinon, ce n'est probablement pas le bon indicateur : pas de graphique.
+const TE_RANGES = {
+  cpi_mom: [-3, 3], core_cpi_mom: [-3, 3], ppi_mom: [-8, 8], retail_mom: [-12, 12], ind_mom: [-15, 15],
+  cpi_yoy: [-10, 40], core_cpi_yoy: [-10, 40], ppi_yoy: [-30, 60],
+  mfg_pmi: [20, 80], svc_pmi: [20, 80], ism_mfg: [20, 80], ism_svc: [20, 80],
+  unemployment: [0, 40], rate: [-1, 30],
+};
+function teSanityOk(ev, kind) {
+  const range = TE_RANGES[kind];
+  if (!range) return true;
+  return [ev.actual, ev.previous].every((v) => {
+    const n = parseCalendarNumber(v);
+    return n === null || (n >= range[0] && n <= range[1]);
+  });
+}
+
 function teKindFor(ev) {
   const table = TE_SYMBOLS[ev.currency];
   if (!table) return null;
@@ -753,20 +770,23 @@ function teKindFor(ev) {
   if (ev.shown && TE_LABEL_KINDS[ev.shown.label]) kind = TE_LABEL_KINDS[ev.shown.label];
   else if (!ev.shown) {
     const t = String(ev.title || '').trim();
+    if (TE_NATIONAL_TITLE.test(t)) return null;
     for (const [re, k] of TE_TITLE_KINDS) if (re.test(t)) { kind = k; break; }
   }
-  return kind && table[kind] ? kind : null;
+  if (!kind || !table[kind]) return null;
+  return teSanityOk(ev, kind) ? kind : null;
 }
 
 const TE_ICON = '<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="3 17 9 11 13 15 21 6"/><polyline points="15 6 21 6 21 12"/></svg>';
 
-// Bouton « Graphique » : seulement quand la donnée est sortie et qu'un graphique existe.
+// Bouton « Graphique » : seulement pour une donnée rouge (impact élevé), sortie, et dont le graphique existe.
 function teChartButton(ev) {
+  if (ev.impact !== 'high') return '';
   if (!eventHasValue(ev.actual)) return '';
   const kind = teKindFor(ev);
   if (!kind) return '';
   const name = ev.shown ? ev.shown.label : resolveEventTitle(ev.title);
-  return `<button type="button" class="calendar-chart-btn" data-te-cur="${escapeHtml(ev.currency)}" data-te-kind="${kind}" data-te-name="${escapeHtml(name)}" title="Graphique Trading Economics" aria-label="Graphique : ${escapeHtml(name)}">${TE_ICON}<span class="calendar-chart-btn-text">Graphique</span></button>`;
+  return `<button type="button" class="calendar-chart-btn" data-te-cur="${escapeHtml(ev.currency)}" data-te-kind="${kind}" data-te-name="${escapeHtml(name)}" data-te-actual="${escapeHtml(ev.actual)}" data-te-forecast="${escapeHtml(eventHasValue(ev.forecast_mid) ? ev.forecast_mid : '')}" data-te-prev="${escapeHtml(eventHasValue(ev.previous) ? ev.previous : '')}" title="Graphique Trading Economics" aria-label="Graphique : ${escapeHtml(name)}">${TE_ICON}<span class="calendar-chart-btn-text">Graphique</span></button>`;
 }
 
 function teChartUrl(cur, kind, periodId, typeId, width, height) {
@@ -778,7 +798,7 @@ function teChartUrl(cur, kind, periodId, typeId, width, height) {
   const start = new Date(end);
   if (p.months === null) { start.setFullYear(1960, 0, 1); } else { start.setMonth(start.getMonth() - p.months); }
   return {
-    img: `${TE_IMG}?s=${encodeURIComponent(symbol)}&h=${height}&w=${width}&ref=/${path}&type=${typeId}&d1=${iso(start)}&d2=${iso(end)}`,
+    img: `${TE_IMG}?s=${encodeURIComponent(symbol)}&h=${height}&w=${width}&ref=/${path}&type=${typeId}&d1=${iso(start)}&d2=${iso(end)}&_=${Math.floor(Date.now() / 600000)}`,
     page: `https://tradingeconomics.com/${path}`,
   };
 }
@@ -820,6 +840,7 @@ function teEnsureModal() {
         <span class="te-modal-status" role="status"></span>
         <img class="te-modal-img" alt="Graphique Trading Economics" hidden>
       </div>
+      <p class="te-modal-values" hidden></p>
       <p class="te-modal-note"><a class="te-modal-link" target="_blank" rel="noopener noreferrer">Voir cet indicateur sur Trading Economics</a></p>
     </div>`;
   document.body.appendChild(root);
@@ -850,18 +871,25 @@ function teRenderChart() {
   teModal.querySelectorAll('[data-te-type]').forEach((b) => { const on = b.dataset.teType === type; b.classList.toggle('is-active', on); b.setAttribute('aria-pressed', on ? 'true' : 'false'); });
   teModal.querySelector('.te-modal-title').textContent = `${name} · ${TE_COUNTRY_FR[cur] || cur}`;
   teModal.querySelector('.te-modal-link').href = urls.page;
+  const vals = teModal.querySelector('.te-modal-values');
+  const v = teState.values || {};
+  const parts = [['Sortie', v.actual], ['Prévu', v.forecast], ['Avant', v.prev]].filter(([, x]) => x);
+  vals.hidden = !parts.length;
+  vals.innerHTML = parts.length
+    ? `${parts.map(([l, x]) => `${l} <b>${escapeHtml(x)}</b>`).join(' · ')}<br><span class="te-modal-values-hint">Contrôle : la dernière valeur du graphique doit être « Sortie ». Trading Economics peut mettre un peu de temps à se mettre à jour.</span>`
+    : '';
   const img = teModal.querySelector('.te-modal-img');
   teModal.querySelector('.te-modal-status').textContent = 'Chargement du graphique…';
   img.hidden = true;
   img.src = urls.img;
 }
 
-function teOpenChart(cur, kind, name) {
+function teOpenChart(cur, kind, name, values) {
   if (!TE_SYMBOLS[cur] || !TE_SYMBOLS[cur][kind]) return;
   teLoadPrefs();
   const monthly = ['gdp_qoq', 'gdp_yoy'].includes(kind);
   teState = {
-    cur, kind, name,
+    cur, kind, name, values,
     period: tePrefs.period || (monthly ? '10y' : '5y'),
     type: tePrefs.type || (TE_COLUMN_KINDS.has(kind) ? 'column' : 'line'),
   };
@@ -888,7 +916,9 @@ document.addEventListener('click', (e) => {
   if (!btn) return;
   e.preventDefault();
   e.stopPropagation();
-  teOpenChart(btn.dataset.teCur, btn.dataset.teKind, btn.dataset.teName || '');
+  teOpenChart(btn.dataset.teCur, btn.dataset.teKind, btn.dataset.teName || '', {
+    actual: btn.dataset.teActual || '', forecast: btn.dataset.teForecast || '', prev: btn.dataset.tePrev || '',
+  });
 }, true);
 
 async function translateToFrench(text) {
@@ -1206,7 +1236,9 @@ function initCurrencyTabs() {
   // la devise affichée toutes les minutes. Le statut du bot (fraîcheur
   // des données) est vérifié en même temps.
   window.setInterval(() => {
-    if (currentCalendarCurrency && !document.hidden) loadCalendar(currentCalendarCurrency);
+    const analyseTab = document.getElementById('tab-1');
+    // le calendrier de l'onglet Analyse n'est relu que lorsqu'il est affiché
+    if (currentCalendarCurrency && !document.hidden && analyseTab && !analyseTab.hidden) loadCalendar(currentCalendarCurrency);
     if (!document.hidden) refreshCalendarStatus();
   }, CALENDAR_REFRESH_MS);
   refreshCalendarStatus();
@@ -1926,6 +1958,10 @@ document.addEventListener('DOMContentLoaded', () => {
     if (filterbar) filterbar.hidden = tabId !== 'tab-4';
     closeNewsPopups();
     if (tabId === 'tab-4') loadNews(); // onglet Nouveau : données fraîches à chaque ouverture
+    if (tabId === 'tab-1') { // onglet Analyse : les lectures sont suspendues en dehors, on rafraîchit à l'ouverture
+      if (currentCalendarCurrency) loadCalendar(currentCalendarCurrency);
+      ['Rates', 'Retail', 'Cot'].forEach((k) => { if (window[k] && window[k].reload) window[k].reload(); });
+    }
     if (tabId === 'tab-5' && window.Fundamental) window.Fundamental.refresh(); // Analyse fondamentale
   });
   initNewsFilters();

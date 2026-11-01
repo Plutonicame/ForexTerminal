@@ -27,6 +27,8 @@
   ];
 
   const REFRESH_MS = 60 * 1000; // le bot met les prix à jour chaque minute
+  // Les lectures ne tournent que lorsque l'onglet « Analyse par devise » est affiché (économise des requêtes).
+  const analyseActive = () => { const t = document.getElementById('tab-1'); return !t || !t.hidden; };
   const STALE_MS = 2 * 3600 * 1000;
 
   // rows[devise] = liste des marchés Polymarket (un par réunion), triés par date de réunion :
@@ -85,11 +87,11 @@
   // Variation sur ~24 h pour une issue (en points de pourcentage).
   function delta24(series, key) {
     const last = series[series.length - 1];
-    let prev = series[0];
+    let prev = null;
     for (let i = series.length - 1; i >= 0; i -= 1) {
       if (series[i].t <= last.t - 86400) { prev = series[i]; break; }
     }
-    return last[key] - prev[key];
+    return prev ? last[key] - prev[key] : NaN; // pas 24 h d'historique : on n'affiche pas « sur 24 h »
   }
 
   function deltaText(d) {
@@ -140,7 +142,10 @@
       return;
     }
 
-    const sig = `${idx}/${list.length}|${row.event_slug}|${row.updated_at}`;
+    // « données anciennes » dépend de l'heure : il fait partie de la signature, sinon l'alerte n'apparaîtrait jamais si le bot s'arrête
+    const updMs0 = Date.parse(row.updated_at);
+    const staleNow = Number.isFinite(updMs0) && Date.now() - updMs0 > STALE_MS;
+    const sig = `${idx}/${list.length}|${row.event_slug}|${row.updated_at}|${staleNow ? 'stale' : 'ok'}`;
     if (section.dataset.sig === sig) return;
     // Pendant qu'on survole le graphique, on ne le redessine pas (l'infobulle resterait coupée) :
     // la mise à jour est appliquée dès que le curseur le quitte.
@@ -190,7 +195,7 @@
             <h3 class="rates-chart-title">${esc(row.event_title)}</h3>
             <span class="rates-chart-sub">${esc(sub)}</span>
           </div>
-          ${row.event_url ? `<a class="rates-link" href="${esc(row.event_url)}" target="_blank" rel="noopener noreferrer">Voir sur Polymarket</a>` : ''}
+          ${/^https:\/\//i.test(row.event_url || '') ? `<a class="rates-link" href="${esc(row.event_url)}" target="_blank" rel="noopener noreferrer">Voir sur Polymarket</a>` : ''}
         </div>
         <div class="rates-chart"></div>
         <div class="rates-legend">${legend}</div>
@@ -360,8 +365,8 @@
   document.addEventListener('DOMContentLoaded', () => {
     renderAll(); // « Chargement… » en attendant la lecture
     if (window.Auth) window.Auth.onAuthStateChange((session) => { if (session) loadRates(); });
-    document.addEventListener('visibilitychange', () => { if (!document.hidden) loadRates(); });
-    setInterval(() => { if (!document.hidden) loadRates(); }, REFRESH_MS);
+    document.addEventListener('visibilitychange', () => { if (!document.hidden && analyseActive()) loadRates(); });
+    setInterval(() => { if (!document.hidden && analyseActive()) loadRates(); }, REFRESH_MS);
   });
 
   window.Rates = { reload: loadRates };

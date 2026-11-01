@@ -1163,51 +1163,6 @@ button {
 .calendar-value--down { color: var(--calendar-actual-down); }
 
 /* =========================================================
-   Éléments réutilisables (cartes / graphiques)
-   à disposition pour les prochains onglets
-   ========================================================= */
-.card {
-  background: var(--bg-card);
-  border: 1px solid var(--border-dim);
-  border-radius: var(--radius-card);
-  overflow: hidden;
-}
-
-.card-header {
-  padding: 12px 16px;
-  border-bottom: 1px solid var(--border-dim);
-}
-
-.card-title {
-  font-family: var(--mono);
-  font-size: 10px;
-  letter-spacing: 2px;
-  text-transform: uppercase;
-  color: var(--text-dim);
-}
-
-.card-body {
-  padding: 14px 16px;
-}
-
-.pill {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  padding: 4px 9px;
-  border-radius: var(--radius-sm);
-  font-family: var(--mono);
-  font-size: 10px;
-  letter-spacing: 0.5px;
-  border: 1px solid currentColor;
-  background: transparent;
-}
-
-.pill--blue { color: var(--blue-light); }
-.pill--red { color: var(--red-light); }
-.pill--gray { color: var(--gray); }
-
-/* =========================================================
    Panneau Thème & Mode Stylo (plein écran)
    ========================================================= */
 .theme-panel {
@@ -4015,8 +3970,7 @@ body.fund-dragging * {
   color: var(--intra-value);
 }
 
-.intra-pair-val,
-.intra-pair-src {
+.intra-pair-val {
   color: var(--intra-dim);
 }
 
@@ -4230,6 +4184,18 @@ body.te-open {
   font-family: var(--mono);
   font-size: 11px;
   text-align: right;
+}
+
+.te-modal-values {
+  margin: 8px 0 0;
+  font-family: var(--mono);
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.te-modal-values-hint {
+  opacity: 0.7;
+  font-size: 10.5px;
 }
 
 .te-modal-link {

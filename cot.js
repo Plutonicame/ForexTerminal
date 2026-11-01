@@ -14,6 +14,8 @@
  */
 (function () {
   const REFRESH_MS = 5 * 60 * 1000; // le bot vérifie la CFTC toutes les 5 minutes
+  // Les lectures ne tournent que lorsque l'onglet « Analyse par devise » est affiché (économise des requêtes).
+  const analyseActive = () => { const t = document.getElementById('tab-1'); return !t || !t.hidden; };
   const NF = new Intl.NumberFormat('fr-FR');
 
   let rows = {};
@@ -188,7 +190,7 @@
 
   function validSnap(s) {
     const ok = (x) => x && Number.isFinite(x.long) && Number.isFinite(x.short);
-    return s && ok(s.retail) && ok(s.asset_mgr) && ok(s.lev_funds) && Number.isFinite(s.open_interest);
+    return s && ok(s.asset_mgr) && ok(s.lev_funds) && Number.isFinite(s.open_interest);
   }
 
   function renderPanel(panel) {
@@ -221,7 +223,16 @@
     const checkedMs = Date.parse(c.checked_at);
     const checkedTxt = Number.isFinite(checkedMs) ? `vérifié à ${fmtTime(checkedMs)}` : '';
 
-    const sig = `${c.report_date}|${c.updated_at}`;
+    // Date de rapport illisible : on l'indique au lieu de faire planter l'affichage des autres devises
+    if (!/^\d{4}-\d{2}-\d{2}/.test(String(c.report_date)) || !Number.isFinite(parseDay(c.report_date).getTime())) {
+      headEl.innerHTML = head('');
+      bodyEl.innerHTML = '<p class="cot-empty">Données COT illisibles pour le moment.</p>';
+      section.dataset.sig = `bad:${c.report_date}`;
+      return;
+    }
+    // « en attente de la CFTC » dépend de l'heure : il fait partie de la signature
+    const waitingNow = Date.now() > nextRelease(c.report_date).at + 2 * 3600 * 1000;
+    const sig = `${c.report_date}|${c.updated_at}|${waitingNow ? 'wait' : 'ok'}`;
     if (section.dataset.sig === sig) {
       const el = section.querySelector('.cot-checked');
       if (el) el.textContent = checkedTxt;
@@ -279,8 +290,8 @@
   document.addEventListener('DOMContentLoaded', () => {
     renderAll();
     if (window.Auth) window.Auth.onAuthStateChange((session) => { if (session) loadCot(); });
-    document.addEventListener('visibilitychange', () => { if (!document.hidden) loadCot(); });
-    setInterval(() => { if (!document.hidden) loadCot(); }, REFRESH_MS);
+    document.addEventListener('visibilitychange', () => { if (!document.hidden && analyseActive()) loadCot(); });
+    setInterval(() => { if (!document.hidden && analyseActive()) loadCot(); }, REFRESH_MS);
   });
 
   window.Cot = { reload: loadCot };

@@ -63,33 +63,6 @@ const SPEECH_BANKS = {
 const SPEECH_STATUS = { true: 'Votant', false: 'Non votant' };
 
 // ---------------------------------------------------------------------------
-// Référence : membres de la Fed pouvant s'exprimer (non affichée pour l'instant,
-// servira à retrouver poste et statut votant à partir du nom de l'orateur).
-// ---------------------------------------------------------------------------
-const SPEECH_ROSTER = {
-  USD: [
-    { first: 'Kevin', last: 'Warsh', role: 'Président', voting: true },
-    { first: 'Philip', last: 'Jefferson', role: 'Vice-président', voting: true },
-    { first: 'Michelle', last: 'Bowman', role: 'Vice-présidente supervision', voting: true },
-    { first: 'Michael', last: 'Barr', role: 'Gouverneur', voting: true },
-    { first: 'Lisa', last: 'Cook', role: 'Gouverneure', voting: true },
-    { first: 'Jerome', last: 'Powell', role: 'Gouverneur', voting: true },
-    { first: 'Christopher', last: 'Waller', role: 'Gouverneur', voting: true },
-    { first: 'John', last: 'Williams', role: 'New York · vice-président FOMC', voting: true },
-    { first: 'Beth', last: 'Hammack', role: 'Cleveland', voting: true },
-    { first: 'Neel', last: 'Kashkari', role: 'Minneapolis', voting: true },
-    { first: 'Lorie', last: 'Logan', role: 'Dallas', voting: true },
-    { first: 'Anna', last: 'Paulson', role: 'Philadelphie', voting: true },
-    { first: 'Susan', last: 'Collins', role: 'Boston', voting: false },
-    { first: 'Thomas', last: 'Barkin', role: 'Richmond', voting: false },
-    { first: 'Austan', last: 'Goolsbee', role: 'Chicago', voting: false },
-    { first: 'Alberto', last: 'Musalem', role: 'Saint-Louis', voting: false },
-    { first: 'Jeffrey', last: 'Schmid', role: 'Kansas City', voting: false },
-    { first: 'Mary', last: 'Daly', role: 'San Francisco', voting: false },
-  ],
-};
-
-// ---------------------------------------------------------------------------
 // Utilitaires
 // ---------------------------------------------------------------------------
 const speechStore = new Map(); // "USD:<id>" -> fiche
@@ -257,7 +230,7 @@ function closeSpeechPopup() {
   if (!speechPopup || speechPopup.hidden) return;
   speechPopup.hidden = true;
   document.documentElement.classList.remove('speech-popup-open');
-  if (speechLastTrigger) speechLastTrigger.focus();
+  if (speechLastTrigger && speechLastTrigger.isConnected) speechLastTrigger.focus();
 }
 
 // ---------------------------------------------------------------------------
@@ -379,7 +352,6 @@ window.Speeches = {
   open: openSpeechPopup,
   close: closeSpeechPopup,
   rejected: speechRejected,
-  roster: SPEECH_ROSTER,
   // Redessine les discours de l'onglet Nouveau ; avec un filtre, le mémorise.
   renderNews: (filter) => { if (filter !== undefined) speechNewsFilter = filter; renderNewsSpeeches(); },
 };
@@ -423,7 +395,8 @@ async function loadSpeechesFromSupabase() {
       .limit(300);
     if (error) throw error;
     const entries = (data || []).map(speechRowToEntry);
-    const signature = entries.map((e) => e.id).join('|');
+    // un discours dont le résumé ou la traduction arrive après coup doit aussi être redessiné
+    const signature = entries.map((e) => `${e.id}:${e.summary.length}:${e.speech.length}:${e.title}`).join('|');
     if (signature !== speechSignature) { // on ne redessine que s'il y a du nouveau
       speechSignature = signature;
       setSpeechEntries(entries);

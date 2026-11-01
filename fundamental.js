@@ -29,7 +29,6 @@
   const TABLE = 'fundamental_nodes';
   const OPEN_KEY = 'fx_fund_open';
   const SAVE_DELAY_MS = 800;
-  const NAME_MAX = 80;
 
   const COLS = 'id,parent_id,name,content,created_at,sort_order';
   const COLS_LEGACY = 'id,parent_id,name,content,created_at';
@@ -43,6 +42,7 @@
   let loading = false;
 
   const dirty = new Set();   // ids dont le texte n'est pas encore envoyé
+  const saving = new Set();  // ids dont le texte est en cours d'envoi (à protéger comme « dirty » le temps de la requête)
   const timers = new Map();  // id -> timeout de sauvegarde différée
   const els = {};
   let dialogState = null;    // { resolve, withInput }
@@ -728,7 +728,14 @@
     if (!node || !client) return;
 
     spinnerOn();
-    const { error } = await client.from(TABLE).update({ content: node.content }).eq('id', id);
+    saving.add(id);
+    let error = null;
+    try {
+      const res = await client.from(TABLE).update({ content: node.content }).eq('id', id).select('id');
+      error = res.error;
+      // Une mise à jour refusée par les règles d'accès ne renvoie aucune ligne ni erreur : ce n'est PAS enregistré
+      if (!error && (!res.data || !res.data.length)) error = { message: 'Aucune ligne modifiée (accès refusé ou note supprimée)' };
+    } catch (e) { error = e; } finally { saving.delete(id); }
     spinnerOff();
 
     if (error) {
@@ -1086,7 +1093,8 @@
     // Évite qu'un clic fantôme ouvre/ferme l'onglet qu'on vient de lâcher.
     suppressClick = true;
     window.setTimeout(() => { suppressClick = false; }, 0);
-    if (d.target) moveRelative(d.id, d.target.id, d.target.where);
+    // un rendu différé pendant le glisser (changement reçu d'un autre appareil) ne doit jamais être perdu
+    if (d.target) Promise.resolve(moveRelative(d.id, d.target.id, d.target.where)).finally(() => { if (d.pendingRender) render(); });
     else if (d.pendingRender) render();
   }
 
@@ -1230,7 +1238,7 @@
     data.forEach((row) => {
       const n = normalize(row);
       const local = nodes.get(n.id);
-      if (local && dirty.has(n.id)) n.content = local.content; // ne jamais écraser une frappe non envoyée
+      if (local && (dirty.has(n.id) || saving.has(n.id))) n.content = local.content; // ne jamais écraser une frappe non envoyée
       next.set(n.id, n);
     });
     nodes = next;
@@ -1276,7 +1284,7 @@
 
     // Le texte n'est mis à jour que si je ne suis pas en train de l'écrire.
     // (Supabase peut omettre "content" quand il n'a pas changé : on ignore alors.)
-    const protect = dirty.has(row.id) || isEditing(row.id) || !!(dict && dict.id === row.id);
+    const protect = dirty.has(row.id) || saving.has(row.id) || isEditing(row.id) || !!(dict && dict.id === row.id);
     if (!protect && row.content !== undefined && existing.content !== row.content) {
       existing.content = row.content;
       const ta = textareaFor(row.id);
