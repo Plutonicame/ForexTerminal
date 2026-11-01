@@ -205,7 +205,7 @@ function openSpeechPopup(key, kind, trigger) {
   const el = ensureSpeechPopup();
   const isSummary = kind === 'summary';
 
-  el.querySelector('#speechPopupKind').textContent = isSummary ? 'Résumé' : 'Discours (traduit en français)';
+  el.querySelector('#speechPopupKind').textContent = isSummary ? 'Résumé' : (entry.kindLabel || 'Discours (traduit en français)');
   el.querySelector('#speechPopupTitle').textContent = `${entry.first} ${entry.last}`;
   const sub = el.querySelector('#speechPopupSubtitle');
   sub.textContent = entry.title || '';

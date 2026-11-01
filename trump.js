@@ -14,7 +14,7 @@
   let loading = false;
   let signature = null;
   let lastEntries = [];
-  const MIN_STARS = 3; // seuls les posts STRICTEMENT supérieurs à 2 étoiles sont affichés
+  const MIN_STARS = 2; // seuls les posts à 2 étoiles ou plus sont affichés
 
   function rowToEntry(row) {
     const body = row.text_fr || row.text_en || '';
@@ -29,6 +29,7 @@
       speech: body.split(/\n{2,}/).map((p) => p.trim()).filter(Boolean),
       summary: Array.isArray(row.summary) ? row.summary : [],
       source: row.url,
+      kindLabel: 'Post traduit en français',
       sourceLabel: 'Voir le post original sur Truth Social',
       pending: row.stars == null, // pas encore analysé par l'IA
     };
@@ -54,8 +55,7 @@
         <div class="speech-card-photo" aria-hidden="true"></div>
       </article>
       <div class="speech-card-actions">
-        <button type="button" class="speech-btn" data-open="speech" data-key="${k}">Discours</button>
-        <button type="button" class="speech-btn" data-open="summary" data-key="${k}">Résumé</button>
+        <button type="button" class="speech-btn" data-open="speech" data-key="${k}">Tweet</button>
       </div>
     </div>`;
   }
@@ -83,11 +83,11 @@
     section.innerHTML = `
     <div class="speeches-toolbar">
       <span class="speeches-toolbar-title">Donald Trump</span>
-      <span class="speeches-toolbar-info">Truth Social · ${entries.length} posts importants (3 étoiles et plus)</span>
+      <span class="speeches-toolbar-info">Truth Social · ${entries.length} posts importants (2 étoiles et plus)</span>
     </div>
     ${entries.length
       ? `<div class="speeches-grid">${entries.map(buildCard).join('')}</div>`
-      : `<p class="speeches-empty">${failed ? 'Impossible de charger les posts pour le moment.' : 'Aucun post à 3 étoiles ou plus pour le moment.'}</p>`}`;
+      : `<p class="speeches-empty">${failed ? 'Impossible de charger les posts pour le moment.' : 'Aucun post à 2 étoiles ou plus pour le moment.'}</p>`}`;
   }
 
   async function load() {
