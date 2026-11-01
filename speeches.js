@@ -213,7 +213,7 @@ function openSpeechPopup(key, kind, trigger) {
   el.querySelector('#speechPopupMeta').textContent =
     [entry.role, speechFormatDate(entry.date)].filter(Boolean).join(' · ');
   const link = el.querySelector('#speechPopupSource');
-  if (/^https:\/\//i.test(entry.source || '')) { link.href = entry.source; link.hidden = false; }
+  if (/^https:\/\//i.test(entry.source || '')) { link.href = entry.source; link.textContent = entry.sourceLabel || 'Voir le discours original (site officiel)'; link.hidden = false; }
   else { link.removeAttribute('href'); link.hidden = true; }
   el.querySelector('#speechPopupBody').innerHTML = isSummary
     ? speechSummaryHtml(entry.summary)
