@@ -109,7 +109,7 @@
     s.async = true;
     const cssVar = (n, d) => { try { return getComputedStyle(document.documentElement).getPropertyValue(n).trim() || d; } catch (e) { return d; } };
     s.text = JSON.stringify({
-      backgroundColor: cssVar('--risk-chart-bg', '#131722'), gridColor: cssVar('--risk-chart-grid', '#2a2e39'),
+      backgroundColor: cssVar('--risk-chart-bg', '#0a0a0a'), gridColor: cssVar('--risk-chart-grid', '#1c1c1c'),
       autosize: true, symbol: 'CAPITALCOM:VIX', interval: '60', timezone: 'Europe/Paris', theme: 'dark', style: '1', locale: 'fr',
       allow_symbol_change: true, hide_side_toolbar: true, hide_top_toolbar: false, save_image: false, calendar: false,
       support_host: 'https://www.tradingview.com',

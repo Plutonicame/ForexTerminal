@@ -4226,9 +4226,9 @@ body.te-open {
   --risk-chip-border: var(--border-dim);
   --risk-chip-text: #bbbbbb;
   /* graphique VIX */
-  --risk-chart-bg: #131722;
+  --risk-chart-bg: #0a0a0a;
   --risk-chart-border: var(--border-dim);
-  --risk-chart-grid: #2a2e39;
+  --risk-chart-grid: #1c1c1c;
   /* posts de Trump : cases */
   --trump-card-bg: var(--speech-card-bg);
   --trump-card-border: var(--speech-card-border);
