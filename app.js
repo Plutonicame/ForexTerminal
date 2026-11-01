@@ -1962,6 +1962,7 @@ document.addEventListener('DOMContentLoaded', () => {
       if (currentCalendarCurrency) loadCalendar(currentCalendarCurrency);
       ['Rates', 'Retail', 'Cot'].forEach((k) => { if (window[k] && window[k].reload) window[k].reload(); });
     }
+    if (tabId === 'tab-2' && window.Trump) window.Trump.refresh(); // Événements secondaires : posts de Trump
     if (tabId === 'tab-5' && window.Fundamental) window.Fundamental.refresh(); // Analyse fondamentale
   });
   initNewsFilters();
