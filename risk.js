@@ -99,22 +99,58 @@
 
   const cssVar = (n, d) => { try { return getComputedStyle(document.documentElement).getPropertyValue(n).trim() || d; } catch (e) { return d; } };
 
-  // Widget officiel « Advanced Chart » de TradingView, créé quand l'onglet est visible (sinon sa taille est nulle).
-  function mountChart() {
-    const panel = document.getElementById(PANEL_ID);
-    if (tvDone || !wrap || !panel || panel.hidden) return;
-    tvDone = true;
-    const box = wrap.querySelector('.risk-chart');
+  // Repli : widget « embed » officiel (fond et grille réglables, mais pas les bougies) si tv.js ne se charge pas.
+  function mountEmbedFallback(box) {
     box.innerHTML = '<div class="tradingview-widget-container" style="height:100%;width:100%"><div class="tradingview-widget-container__widget" style="height:100%;width:100%"></div></div>';
+    const s = document.createElement('script');
+    s.src = 'https://s3.tradingview.com/external-embedding/embed-widget-advanced-chart.js';
+    s.async = true;
+    s.text = JSON.stringify({
+      autosize: true, symbol: 'CAPITALCOM:VIX', interval: '120', timezone: 'Europe/Paris', theme: 'dark', style: '1', locale: 'fr',
+      backgroundColor: cssVar('--risk-chart-bg', '#272727'), gridColor: 'rgba(0, 0, 0, 0)', hide_volume: true,
+      allow_symbol_change: true, hide_side_toolbar: true, save_image: false, calendar: false,
+      support_host: 'https://www.tradingview.com',
+    });
+    box.firstChild.appendChild(s);
+  }
+
+  // Widget TradingView complet (tv.js) : accepte les réglages « overrides » (bougies, fond, grille).
+  function buildWidget() {
     const up = cssVar('--risk-candle-up-body', '#ffffff');
     const down = cssVar('--risk-candle-down-body', '#000000');
     const border = cssVar('--risk-candle-border', '#ffffff');
     const wick = cssVar('--risk-candle-wick', '#ffffff');
     const bg = cssVar('--risk-chart-bg', '#272727');
-    const s = document.createElement('script');
-    s.src = 'https://s3.tradingview.com/external-embedding/embed-widget-advanced-chart.js';
-    s.async = true;
-    s.text = JSON.stringify({
+    const none = 'rgba(0,0,0,0)'; // aucun quadrillage
+    const overrides = {
+      // bougies : tout blanc, sauf le corps des baissières (noir)
+      'mainSeriesProperties.candleStyle.drawBody': true,
+      'mainSeriesProperties.candleStyle.drawBorder': true,
+      'mainSeriesProperties.candleStyle.drawWick': true,
+      'mainSeriesProperties.candleStyle.upColor': up,
+      'mainSeriesProperties.candleStyle.downColor': down,
+      'mainSeriesProperties.candleStyle.borderUpColor': border,
+      'mainSeriesProperties.candleStyle.borderDownColor': border,
+      'mainSeriesProperties.candleStyle.wickUpColor': wick,
+      'mainSeriesProperties.candleStyle.wickDownColor': wick,
+      // fond uni (pas de dégradé)
+      'paneProperties.backgroundType': 'solid',
+      'paneProperties.background': bg,
+      'paneProperties.backgroundGradientStartColor': bg,
+      'paneProperties.backgroundGradientEndColor': bg,
+      'chartProperties.paneProperties.backgroundType': 'solid',
+      'chartProperties.paneProperties.background': bg,
+      'scalesProperties.backgroundColor': bg,
+      // aucune grille
+      'paneProperties.gridLinesMode': 'none',
+      'paneProperties.gridProperties.color': none,
+      'paneProperties.vertGridProperties.color': none,
+      'paneProperties.horzGridProperties.color': none,
+      'chartProperties.paneProperties.vertGridProperties.color': none,
+      'chartProperties.paneProperties.horzGridProperties.color': none,
+    };
+    new window.TradingView.widget({
+      container_id: 'riskChartHost',
       autosize: true,
       symbol: 'CAPITALCOM:VIX',
       interval: '120',
@@ -122,29 +158,35 @@
       theme: 'dark',
       style: '1',
       locale: 'fr',
-      backgroundColor: bg,
-      gridColor: 'rgba(0, 0, 0, 0)', // aucun quadrillage
-      hide_volume: true,
+      toolbar_bg: bg,
+      enable_publishing: false,
       allow_symbol_change: true,
       hide_side_toolbar: true,
+      hide_volume: true,
       save_image: false,
-      calendar: false,
-      support_host: 'https://www.tradingview.com',
-      // Bougies (pris en compte si TradingView les accepte ; sinon réglage manuel : clic droit > Paramètres)
-      overrides: {
-        'paneProperties.background': bg,
-        'paneProperties.backgroundType': 'solid',
-        'paneProperties.vertGridProperties.color': 'rgba(0,0,0,0)',
-        'paneProperties.horzGridProperties.color': 'rgba(0,0,0,0)',
-        'mainSeriesProperties.candleStyle.upColor': up,
-        'mainSeriesProperties.candleStyle.downColor': down,
-        'mainSeriesProperties.candleStyle.borderUpColor': border,
-        'mainSeriesProperties.candleStyle.borderDownColor': border,
-        'mainSeriesProperties.candleStyle.wickUpColor': wick,
-        'mainSeriesProperties.candleStyle.wickDownColor': wick,
-      },
+      disabled_features: ['create_volume_indicator_by_default'],
+      overrides,
+      loading_screen: { backgroundColor: bg },
     });
-    box.firstChild.appendChild(s);
+  }
+
+  // Le widget doit être créé quand l'onglet est visible (sinon sa taille est nulle).
+  function mountChart() {
+    const panel = document.getElementById(PANEL_ID);
+    if (tvDone || !wrap || !panel || panel.hidden) return;
+    tvDone = true;
+    const box = wrap.querySelector('.risk-chart');
+    box.innerHTML = '<div id="riskChartHost" style="height:100%;width:100%"></div>';
+    const start = () => {
+      try { buildWidget(); } catch (e) { console.warn('risk.js widget', e); mountEmbedFallback(box); }
+    };
+    if (window.TradingView && window.TradingView.widget) { start(); return; }
+    const s = document.createElement('script');
+    s.src = 'https://s3.tradingview.com/tv.js';
+    s.async = true;
+    s.onload = start;
+    s.onerror = () => mountEmbedFallback(box);
+    document.head.appendChild(s);
   }
 
   async function load() {
