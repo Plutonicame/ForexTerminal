@@ -4207,18 +4207,106 @@ body.te-open {
   text-decoration: underline;
 }
 
-/* Posts de Trump : texte du tweet déplié sous la case */
+/* ---- Événements secondaires : variables personnalisables (Thèmes > Événements secondaires) ---- */
+:root {
+  /* bandeaux */
+  --events-toolbar-bg: var(--speech-toolbar-bg);
+  --events-toolbar-border: var(--speech-toolbar-border);
+  --events-toolbar-title: var(--speech-toolbar-title);
+  --events-toolbar-info: var(--speech-toolbar-info);
+  /* cadran du risque */
+  --risk-off: #ff6b6b;
+  --risk-mid: #f5c542;
+  --risk-on: #2dd4bf;
+  --risk-seg-off: #232323;
+  --risk-tick: #8a8a8a;
+  --risk-needle: #ff8a8a;
+  --risk-hub-fill: #111111;
+  --risk-sub: #8a8a8a;
+  --risk-chip-border: var(--border-dim);
+  --risk-chip-text: #bbbbbb;
+  /* graphique VIX */
+  --risk-chart-bg: #131722;
+  --risk-chart-border: var(--border-dim);
+  --risk-chart-grid: #2a2e39;
+  /* posts de Trump : cases */
+  --trump-card-bg: var(--speech-card-bg);
+  --trump-card-border: var(--speech-card-border);
+  --trump-first-text: var(--speech-card-first-text);
+  --trump-last-text: var(--speech-card-last-text);
+  --trump-role-text: var(--speech-card-role-text);
+  --trump-silhouette: var(--speech-silhouette);
+  --trump-badge-bg: var(--speech-badge-bg);
+  --trump-badge-border: var(--speech-badge-border);
+  --trump-badge-text: var(--speech-badge-text);
+  --trump-star-on: var(--speech-star-on);
+  --trump-star-off: var(--speech-star-off);
+  --trump-btn-bg: var(--speech-btn-bg);
+  --trump-btn-border: var(--speech-btn-border);
+  --trump-btn-text: var(--speech-btn-text);
+  --trump-btn-hover-bg: var(--speech-btn-hover-bg);
+  /* posts de Trump : texte déplié */
+  --trump-tweet-bg: var(--speech-popup-bg);
+  --trump-tweet-border: var(--speech-popup-border);
+  --trump-tweet-text: var(--speech-popup-text);
+  --trump-tweet-title: var(--speech-popup-title);
+  --trump-tweet-link: var(--speech-popup-heading);
+}
+
+/* bandeaux de l'onglet */
+#tab-2 .speeches-toolbar { background: var(--events-toolbar-bg); border-color: var(--events-toolbar-border); }
+#tab-2 .speeches-toolbar-title { color: var(--events-toolbar-title); }
+#tab-2 .speeches-toolbar-info { color: var(--events-toolbar-info); }
+
+/* cases des posts de Trump (mêmes classes que les discours, couleurs propres) */
+#tab-2 .speech-card { background: var(--trump-card-bg); border-color: var(--trump-card-border); }
+#tab-2 .speech-card-first { color: var(--trump-first-text); }
+#tab-2 .speech-card-last { color: var(--trump-last-text); }
+#tab-2 .speech-card-role { color: var(--trump-role-text); }
+#tab-2 .speech-card-photo { --speech-silhouette: var(--trump-silhouette); }
+#tab-2 .speech-badge { background: var(--trump-badge-bg); border-color: var(--trump-badge-border); color: var(--trump-badge-text); }
+#tab-2 .speech-star { color: var(--trump-star-off); }
+#tab-2 .speech-star.is-on { color: var(--trump-star-on); }
+#tab-2 .speech-btn { background: var(--trump-btn-bg); border-color: var(--trump-btn-border); color: var(--trump-btn-text); }
+#tab-2 .speech-btn:hover { background: var(--trump-btn-hover-bg); }
+
 .trump-tweet {
   margin-top: 8px;
   padding: 12px 14px;
-  background: var(--speech-popup-bg, #131c27);
-  border: 1px solid var(--speech-popup-border, #2a475e);
+  background: var(--trump-tweet-bg);
+  border: 1px solid var(--trump-tweet-border);
   border-radius: var(--radius-card, 10px);
-  color: var(--speech-popup-text, #d5dee7);
+  color: var(--trump-tweet-text);
   font-size: 15px;
   line-height: 1.5;
 }
 .trump-tweet[hidden] { display: none; }
 .trump-tweet p { margin: 0 0 10px; white-space: pre-wrap; overflow-wrap: anywhere; }
-.trump-tweet-title { font-weight: 700; color: var(--speech-popup-title, #fff); }
-.trump-tweet-link { font-size: 12px; color: var(--speech-popup-heading, #9cc3e4); }
+.trump-tweet-title { font-weight: 700; color: var(--trump-tweet-title); }
+.trump-tweet-link { font-size: 12px; color: var(--trump-tweet-link); }
+
+/* cadran du risque + VIX */
+.risk-wrap { margin-bottom: 18px; }
+.risk-gauge { max-width: 520px; margin: 0 auto; padding: 8px 12px 0; }
+.risk-gauge-svg { width: 100%; height: auto; display: block; }
+.risk-seg { fill: var(--risk-seg-off); }
+.risk-seg--off.is-lit { fill: var(--risk-off); }
+.risk-seg--mid.is-lit { fill: var(--risk-mid); }
+.risk-seg--on.is-lit { fill: var(--risk-on); }
+.risk-seg:not(.is-lit) { opacity: 0.45; }
+.risk-tick { fill: var(--risk-tick); font-family: var(--mono, monospace); font-size: 13px; }
+.risk-needle-line { stroke: var(--risk-needle); stroke-width: 3; stroke-linecap: round; }
+.risk-hub { fill: var(--risk-hub-fill); stroke: var(--risk-needle); stroke-width: 3; }
+.risk-value { font-family: var(--mono, monospace); font-size: 56px; font-weight: 700; }
+.risk-label { font-family: var(--mono, monospace); font-size: 20px; font-weight: 700; letter-spacing: 3px; }
+.risk-value--off { fill: var(--risk-off); }
+.risk-value--mid { fill: var(--risk-mid); }
+.risk-value--on { fill: var(--risk-on); }
+.risk-sub { fill: var(--risk-sub); font-family: var(--mono, monospace); font-size: 13px; }
+.risk-info { display: flex; flex-wrap: wrap; gap: 6px; justify-content: center; padding: 6px 16px 14px; }
+.risk-chip { font-size: 11px; padding: 3px 8px; border-radius: 999px; border: 1px solid var(--risk-chip-border); color: var(--risk-chip-text); }
+.risk-chip b { margin-left: 4px; }
+.risk-chip--off b { color: var(--risk-off); }
+.risk-chip--mid b { color: var(--risk-mid); }
+.risk-chip--on b { color: var(--risk-on); }
+.risk-chart { height: 70vh; min-height: 520px; max-height: 820px; margin: 0 12px 8px; border: 1px solid var(--risk-chart-border); border-radius: 10px; overflow: hidden; background: var(--risk-chart-bg); }

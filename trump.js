@@ -87,7 +87,6 @@
     if (!panel) return null;
     let section = panel.querySelector('.speeches');
     if (!section) {
-      panel.textContent = '';
       section = document.createElement('div');
       section.className = 'speeches';
       panel.appendChild(section);
