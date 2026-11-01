@@ -4226,10 +4226,9 @@ body.te-open {
   --risk-chip-border: var(--border-dim);
   --risk-chip-text: #bbbbbb;
   /* graphique VIX */
-  --risk-chart-bg: #1c1c1c;
-  --risk-chart-bg2: #121212;
+  --risk-chart-bg: #272727;
+  --risk-chart-bg2: #272727;
   --risk-chart-border: var(--border-dim);
-  --risk-chart-grid: #1c1c1c;
   --risk-candle-up-body: #ffffff;
   --risk-candle-down-body: #000000;
   --risk-candle-border: #ffffff;

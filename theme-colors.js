@@ -271,7 +271,6 @@ const THEME_FIELDS = {
     { v: '--risk-candle-down-body', l: 'Bougies baissières : corps', section: 'Graphique VIX (TradingView)' },
     { v: '--risk-candle-border', l: 'Bougies : bordures', section: 'Graphique VIX (TradingView)' },
     { v: '--risk-candle-wick', l: 'Bougies : mèches', section: 'Graphique VIX (TradingView)' },
-    { v: '--risk-chart-grid', l: 'Quadrillage', section: 'Graphique VIX (TradingView)' },
     { v: '--risk-chart-border', l: 'Bordure du cadre', section: 'Graphique VIX (TradingView)' },
     { v: '--trump-card-bg', l: 'Fond', section: 'Donald Trump — cases' },
     { v: '--trump-card-border', l: 'Bordure', section: 'Donald Trump — cases' },
