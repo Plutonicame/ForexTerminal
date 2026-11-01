@@ -35,27 +35,49 @@
     };
   }
 
+  function esc(v) {
+    return String(v == null ? '' : v).replace(/[&<>"']/g, (c) => (
+      { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+  }
+  function fmtDate(iso) {
+    const d = new Date(iso);
+    if (Number.isNaN(d.getTime())) return '';
+    return d.toLocaleString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+  }
+  function stars(n) {
+    const v = Math.max(0, Math.min(5, Math.round(Number(n) || 0)));
+    let h = '';
+    for (let i = 1; i <= 5; i += 1) h += `<span class="speech-star${i <= v ? ' is-on' : ''}">★</span>`;
+    return `<span class="speech-stars" role="img" aria-label="Importance ${v} sur 5">${h}</span>`;
+  }
+
+  // La case est la même que pour les discours ; le bouton « Tweet » déplie le texte
+  // traduit juste en dessous (pas de fenêtre séparée).
   function buildCard(entry) {
-    const key = 'TRUMP:' + entry.id;
-    speechStore.set(key, entry);
-    const k = speechEscape(key);
+    const link = /^https:\/\//i.test(entry.source || '')
+      ? `<a class="trump-tweet-link" href="${esc(entry.source)}" target="_blank" rel="noopener noreferrer">Voir le post original sur Truth Social</a>` : '';
     return `
     <div class="speech-item">
       <div class="speech-badge">
         <span class="speech-badge-status">Truth Social</span>
-        ${entry.pending ? '<span class="speech-badge-status">Analyse en cours…</span>' : speechStarsHtml(entry.stars)}
+        ${stars(entry.stars)}
       </div>
       <article class="speech-card">
         <div class="speech-card-name">
-          <span class="speech-card-first">${speechEscape(entry.first)}</span>
-          <span class="speech-card-last">${speechEscape(entry.last)}</span>
-          <span class="speech-card-role">${speechEscape(entry.role)}</span>
+          <span class="speech-card-first">${esc(entry.first)}</span>
+          <span class="speech-card-last">${esc(entry.last)}</span>
+          <span class="speech-card-role">${esc(entry.role)}</span>
         </div>
-        <span class="speech-card-date">${speechEscape(speechFormatDate(entry.date))}</span>
+        <span class="speech-card-date">${esc(fmtDate(entry.date))}</span>
         <div class="speech-card-photo" aria-hidden="true"></div>
       </article>
       <div class="speech-card-actions">
-        <button type="button" class="speech-btn" data-open="speech" data-key="${k}">Tweet</button>
+        <button type="button" class="speech-btn" data-trump-tweet aria-expanded="false">Tweet</button>
+      </div>
+      <div class="trump-tweet" hidden>
+        ${entry.title ? `<p class="trump-tweet-title">${esc(entry.title)}</p>` : ''}
+        ${entry.speech.map((p) => `<p>${esc(p)}</p>`).join('')}
+        ${link}
       </div>
     </div>`;
   }
@@ -70,9 +92,13 @@
       section.className = 'speeches';
       panel.appendChild(section);
       section.addEventListener('click', (event) => {
-        const btn = event.target.closest('.speech-btn[data-open]');
+        const btn = event.target.closest('[data-trump-tweet]');
         if (!btn) return;
-        openSpeechPopup(btn.dataset.key, btn.dataset.open, btn);
+        const box = btn.closest('.speech-item').querySelector('.trump-tweet');
+        const open = box.hidden;
+        box.hidden = !open;
+        btn.setAttribute('aria-expanded', String(open));
+        btn.textContent = open ? 'Masquer' : 'Tweet';
       });
     }
     return section;

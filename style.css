@@ -4206,3 +4206,19 @@ body.te-open {
 .te-modal-link:hover {
   text-decoration: underline;
 }
+
+/* Posts de Trump : texte du tweet déplié sous la case */
+.trump-tweet {
+  margin-top: 8px;
+  padding: 12px 14px;
+  background: var(--speech-popup-bg, #131c27);
+  border: 1px solid var(--speech-popup-border, #2a475e);
+  border-radius: var(--radius-card, 10px);
+  color: var(--speech-popup-text, #d5dee7);
+  font-size: 15px;
+  line-height: 1.5;
+}
+.trump-tweet[hidden] { display: none; }
+.trump-tweet p { margin: 0 0 10px; white-space: pre-wrap; overflow-wrap: anywhere; }
+.trump-tweet-title { font-weight: 700; color: var(--speech-popup-title, #fff); }
+.trump-tweet-link { font-size: 12px; color: var(--speech-popup-heading, #9cc3e4); }
