@@ -4226,9 +4226,14 @@ body.te-open {
   --risk-chip-border: var(--border-dim);
   --risk-chip-text: #bbbbbb;
   /* graphique VIX */
-  --risk-chart-bg: #0a0a0a;
+  --risk-chart-bg: #1c1c1c;
+  --risk-chart-bg2: #121212;
   --risk-chart-border: var(--border-dim);
   --risk-chart-grid: #1c1c1c;
+  --risk-candle-up-body: #ffffff;
+  --risk-candle-down-body: #000000;
+  --risk-candle-border: #ffffff;
+  --risk-candle-wick: #ffffff;
   /* posts de Trump : cases */
   --trump-card-bg: var(--speech-card-bg);
   --trump-card-border: var(--speech-card-border);
@@ -4309,4 +4314,4 @@ body.te-open {
 .risk-chip--off b { color: var(--risk-off); }
 .risk-chip--mid b { color: var(--risk-mid); }
 .risk-chip--on b { color: var(--risk-on); }
-.risk-chart { height: 70vh; min-height: 520px; max-height: 820px; margin: 0 12px 8px; border: 1px solid var(--risk-chart-border); border-radius: 10px; overflow: hidden; background: var(--risk-chart-bg); }
+.risk-chart { height: 70vh; min-height: 520px; max-height: 820px; margin: 0 12px 8px; border: 1px solid var(--risk-chart-border); border-radius: 10px; overflow: hidden; background: linear-gradient(var(--risk-chart-bg), var(--risk-chart-bg2)); }
