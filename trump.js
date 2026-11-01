@@ -13,6 +13,8 @@
   const COLUMNS = 'id, posted_at, text_en, text_fr, title_fr, stars, summary, url';
   let loading = false;
   let signature = null;
+  let lastEntries = [];
+  const MIN_STARS = 3; // seuls les posts STRICTEMENT supérieurs à 2 étoiles sont affichés
 
   function rowToEntry(row) {
     const body = row.text_fr || row.text_en || '';
@@ -76,15 +78,16 @@
     return section;
   }
 
-  function render(section, entries, failed) {
+  function render(section, all, failed) {
+    const entries = all.filter((e) => !e.pending && (e.stars || 0) >= MIN_STARS);
     section.innerHTML = `
     <div class="speeches-toolbar">
       <span class="speeches-toolbar-title">Donald Trump</span>
-      <span class="speeches-toolbar-info">Truth Social · ${entries.length} posts</span>
+      <span class="speeches-toolbar-info">Truth Social · ${entries.length} posts importants (3 étoiles et plus)</span>
     </div>
     ${entries.length
       ? `<div class="speeches-grid">${entries.map(buildCard).join('')}</div>`
-      : `<p class="speeches-empty">${failed ? 'Impossible de charger les posts pour le moment.' : 'Aucun post pour le moment.'}</p>`}`;
+      : `<p class="speeches-empty">${failed ? 'Impossible de charger les posts pour le moment.' : 'Aucun post à 3 étoiles ou plus pour le moment.'}</p>`}`;
   }
 
   async function load() {
@@ -102,6 +105,7 @@
         .limit(LIMIT);
       if (error) throw error;
       const entries = (data || []).map(rowToEntry);
+      lastEntries = entries;
       const sig = entries.map((e) => `${e.id}:${e.stars}:${e.speech.length}`).join('|');
       if (sig === signature) return;
       signature = sig;
