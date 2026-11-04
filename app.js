@@ -1226,7 +1226,7 @@ function initCurrencyTabs() {
   // La barre des devises (8 devises + All) est construite par windows.js ;
   // ici on écoute seulement ses changements pour la fenêtre Calendar.
   const W = window.FXWindows;
-  currentCalendarCurrency = (W && W.current('calendar')) || 'USD';
+  currentCalendarCurrency = (W && W.current('calendar')) || 'ALL';
 
   document.addEventListener('fx-currency-select', (event) => {
     const d = event.detail || {};

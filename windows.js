@@ -125,13 +125,13 @@
 
   function buildCurrencyWindow(sec, item) {
     const cfg = item.currency;
-    const panelCodes = cfg.all === 'own' ? CURRENCIES.concat(ALL) : CURRENCIES;
+    const panelCodes = cfg.all === 'own' ? [ALL].concat(CURRENCIES) : CURRENCIES;
 
     const bar = document.createElement('div');
     bar.className = 'currency-bar';
     bar.setAttribute('role', 'tablist');
     bar.setAttribute('aria-label', 'Devises');
-    bar.innerHTML = CURRENCIES.concat(ALL).map((c) =>
+    bar.innerHTML = [ALL].concat(CURRENCIES).map((c) =>
       `<button type="button" class="currency-card" role="tab" data-currency="${c}" aria-selected="false">${c === ALL ? 'All' : c}</button>`
     ).join('');
     sec.insertBefore(bar, sec.firstChild);
@@ -175,7 +175,7 @@
         }
       });
     });
-    Object.keys(windows).forEach((win) => select(win, 'USD'));
+    Object.keys(windows).forEach((win) => select(win, ALL)); // « All » sélectionné par défaut
   }
 
   function buildMenu() {
