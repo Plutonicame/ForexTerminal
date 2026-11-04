@@ -294,9 +294,9 @@ const THEME_FIELDS = {
     { v: '--trump-tweet-link', l: 'Lien vers le post original', section: 'Donald Trump — texte du tweet' },
   ],
   fondamentale: [
-    { v: '--fund-toolbar-bg', l: 'Fond', category: 'Page', section: 'Bandeau « Analyse fondamentale »' },
-    { v: '--fund-toolbar-border', l: 'Bordure', category: 'Page', section: 'Bandeau « Analyse fondamentale »' },
-    { v: '--fund-toolbar-title', l: 'Titre', category: 'Page', section: 'Bandeau « Analyse fondamentale »' },
+    { v: '--fund-toolbar-bg', l: 'Fond', category: 'Page', section: 'Bandeau « Note fondamentale »' },
+    { v: '--fund-toolbar-border', l: 'Bordure', category: 'Page', section: 'Bandeau « Note fondamentale »' },
+    { v: '--fund-toolbar-title', l: 'Titre', category: 'Page', section: 'Bandeau « Note fondamentale »' },
 
     { v: '--fund-primary-bg', l: 'Fond', category: 'Page', section: 'Bouton « + Groupe »' },
     { v: '--fund-primary-border', l: 'Bordure', category: 'Page', section: 'Bouton « + Groupe »' },
@@ -373,10 +373,10 @@ const THEME_FIELDS = {
     { v: '--accordion-content-text', l: 'Texte', category: 'Menu déplié', section: 'Contenu (ex. Connexion)' },
     { v: '--accordion-content-border', l: 'Bordure du panneau', category: 'Menu déplié', section: 'Contenu (ex. Connexion)' },
     { v: '--accordion-swatch-border', l: 'Bordure des carrés de couleur', category: 'Menu déplié', section: 'Contenu (ex. Connexion)' },
-    { v: '--theme-accordion-bg', l: 'Fond de la section', category: 'Menu déplié', section: 'Boîte (Connexion, Analyse...)' },
-    { v: '--theme-accordion-border', l: 'Bordure de la section', category: 'Menu déplié', section: 'Boîte (Connexion, Analyse...)' },
-    { v: '--theme-accordion-row-hover-bg', l: 'Fond au survol du titre', category: 'Menu déplié', section: 'Boîte (Connexion, Analyse...)' },
-    { v: '--theme-field-row-hover-bg', l: 'Fond au survol d\'une ligne', category: 'Menu déplié', section: 'Boîte (Connexion, Analyse...)' },
+    { v: '--theme-accordion-bg', l: 'Fond de la section', category: 'Menu déplié', section: 'Boîte (Connexion, Calendar...)' },
+    { v: '--theme-accordion-border', l: 'Bordure de la section', category: 'Menu déplié', section: 'Boîte (Connexion, Calendar...)' },
+    { v: '--theme-accordion-row-hover-bg', l: 'Fond au survol du titre', category: 'Menu déplié', section: 'Boîte (Connexion, Calendar...)' },
+    { v: '--theme-field-row-hover-bg', l: 'Fond au survol d\'une ligne', category: 'Menu déplié', section: 'Boîte (Connexion, Calendar...)' },
 
     { v: '--cp-modal-bg', l: 'Fond', category: 'Sélecteur de couleur', section: 'Fenêtre' },
     { v: '--cp-modal-border', l: 'Bordure', category: 'Sélecteur de couleur', section: 'Fenêtre' },
@@ -435,15 +435,14 @@ const THEME_FIELDS = {
     { v: '--menu-tab-nouveau-border', l: 'Bordure', category: 'Menu burger déplié', section: 'Onglet Nouveau' },
     { v: '--menu-tab-nouveau-text', l: 'Texte', category: 'Menu burger déplié', section: 'Onglet Nouveau' },
     { v: '--menu-tab-nouveau-hover-text', l: 'Texte au survol', category: 'Menu burger déplié', section: 'Onglet Nouveau' },
-    { v: '--menu-tab-analyse-border', l: 'Bordure', category: 'Menu burger déplié', section: 'Onglet Analyse' },
-    { v: '--menu-tab-analyse-text', l: 'Texte', category: 'Menu burger déplié', section: 'Onglet Analyse' },
-    { v: '--menu-tab-analyse-hover-text', l: 'Texte au survol', category: 'Menu burger déplié', section: 'Onglet Analyse' },
-    { v: '--menu-tab-evenements-border', l: 'Bordure', category: 'Menu burger déplié', section: 'Onglet Événements' },
-    { v: '--menu-tab-evenements-text', l: 'Texte', category: 'Menu burger déplié', section: 'Onglet Événements' },
-    { v: '--menu-tab-evenements-hover-text', l: 'Texte au survol', category: 'Menu burger déplié', section: 'Onglet Événements' },
-    { v: '--menu-tab-fondamentale-border', l: 'Bordure', category: 'Menu burger déplié', section: 'Onglet Analyse fondamentale' },
-    { v: '--menu-tab-fondamentale-text', l: 'Texte', category: 'Menu burger déplié', section: 'Onglet Analyse fondamentale' },
-    { v: '--menu-tab-fondamentale-hover-text', l: 'Texte au survol', category: 'Menu burger déplié', section: 'Onglet Analyse fondamentale' },
+    { v: '--menu-tab-analyse-border', l: 'Bordure', category: 'Menu burger déplié', section: 'Fenêtres (Calendar, COT, Globe...)' },
+    { v: '--menu-tab-analyse-text', l: 'Texte', category: 'Menu burger déplié', section: 'Fenêtres (Calendar, COT, Globe...)' },
+    { v: '--menu-tab-analyse-hover-text', l: 'Texte au survol', category: 'Menu burger déplié', section: 'Fenêtres (Calendar, COT, Globe...)' },
+    { v: '--menu-group-title-text', l: 'Texte', category: 'Menu burger déplié', section: 'Titres de groupe (News, Macroéconomique...)' },
+    { v: '--menu-group-title-line', l: 'Trait sous le titre', category: 'Menu burger déplié', section: 'Titres de groupe (News, Macroéconomique...)' },
+    { v: '--menu-tab-fondamentale-border', l: 'Bordure', category: 'Menu burger déplié', section: 'Onglet Note fondamentale' },
+    { v: '--menu-tab-fondamentale-text', l: 'Texte', category: 'Menu burger déplié', section: 'Onglet Note fondamentale' },
+    { v: '--menu-tab-fondamentale-hover-text', l: 'Texte au survol', category: 'Menu burger déplié', section: 'Onglet Note fondamentale' },
     { v: '--menu-tab-parametres-border', l: 'Bordure', category: 'Menu burger déplié', section: 'Onglet Paramètres' },
     { v: '--menu-tab-parametres-text', l: 'Texte', category: 'Menu burger déplié', section: 'Onglet Paramètres' },
     { v: '--menu-tab-parametres-hover-text', l: 'Texte au survol', category: 'Menu burger déplié', section: 'Onglet Paramètres' },
@@ -465,6 +464,58 @@ const THEME_FIELDS = {
     { v: '--gray', l: 'Gris', category: 'Palette de base', section: '' },
   ],
 };
+
+/* ---------------------------------------------------------
+   Répartition par FENÊTRE : les réglages de l'ancien onglet « Analyse » et de
+   l'ancien onglet « Événements » sont rangés dans l'onglet de la fenêtre où ils
+   s'appliquent (chaque onglet est créé par buildWindowAccordions() à partir de la
+   liste de windows.js). Le rangement se fait d'après le début du nom de la section.
+   - « Bandeaux » (commun à Sentiment du risque, Indicator et Discours) apparaît dans les 3.
+   - Les couleurs du sélecteur de devises sont communes à toutes les fenêtres : Général.
+   Pour une nouvelle fenêtre, ajouter ses champs dans THEME_FIELDS sous la clé de la
+   fenêtre (identifiant sans « tab- »).
+   --------------------------------------------------------- */
+(function splitFieldsByWindow() {
+  const old = (THEME_FIELDS.analyse || []).concat(THEME_FIELDS.evenements || []);
+  delete THEME_FIELDS.analyse;
+  delete THEME_FIELDS.evenements;
+  const rules = [
+    ['calendar', /^Calendrier — /],
+    ['speeches', /^(Discours|Donald Trump) — /],
+    ['rates', /^Attentes de taux — /],
+    ['cot', /^COT( Retail)? — /],
+    ['risk', /^Cadran du risque/],
+    ['indicator', /^Graphique VIX/],
+  ];
+  const shared = /^(Barre des devises|Boutons des devises|Devise sélectionnée)/;
+  const banner = /^Bandeaux/;
+  const put = (key, f) => { (THEME_FIELDS[key] = THEME_FIELDS[key] || []).push(f); };
+  old.forEach((f) => {
+    const sec = f.section || '';
+    if (banner.test(sec)) {
+      ['risk', 'indicator', 'speeches'].forEach((k) => put(k, Object.assign({}, f, { section: 'Bandeau (commun à Sentiment du risque, Indicator et Discours)' })));
+      return;
+    }
+    if (shared.test(sec)) { put('general', Object.assign({}, f, { category: 'Sélecteur de devises (toutes les fenêtres)' })); return; }
+    const rule = rules.find((r) => r[1].test(sec));
+    if (!rule) console.warn('[FX-THEME] réglage non rangé, placé dans Général :', f.v, sec);
+    put(rule ? rule[0] : 'general', f);
+  });
+})();
+
+// Crée un onglet de thème par fenêtre (entre « Général » et « Paramètres »).
+function buildWindowAccordions() {
+  const host = document.getElementById('themeWindowAccordions');
+  if (!host) return;
+  const list = window.FXWindows && window.FXWindows.themeWindows ? window.FXWindows.themeWindows() : [];
+  host.innerHTML = list.map((w) => `<div class="theme-accordion" data-section="${w.key}">
+        <button type="button" class="theme-accordion-row" data-section="${w.key}">
+          <span class="chevron">›</span> ${w.label}
+        </button>
+        <div class="theme-accordion-content" id="themeFields-${w.key}"></div>
+      </div>`).join('');
+  list.forEach((w) => { if (!THEME_FIELDS[w.key]) THEME_FIELDS[w.key] = []; });
+}
 
 /* =========================================================
    2. État des couleurs personnalisées (chargé depuis localStorage)
@@ -1040,6 +1091,7 @@ function initThemeColors() {
   loadThemeVars();
   previewThemeVars();
   initColorPickerEngine();
+  buildWindowAccordions();
   renderAllThemeFields();
   initCloudSync();
 }

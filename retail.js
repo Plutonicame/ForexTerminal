@@ -1,7 +1,7 @@
 'use strict';
 
 /**
- * retail.js — cartes « COT Retail » (intraday) dans la zone « COT · Positionnement » de chaque devise.
+ * retail.js — cartes « COT Retail » (intraday) dans la zone « COT · Positionnement » de chaque devise de la fenêtre « COT ».
  *
  * Données : table Supabase "retail_sentiment", remplie par le bot "retail-bot" à partir de Myfxbook + FXSSI (par paire : la lecture la plus récente, ou la moyenne si même moment)
  * (communauté de traders particuliers : lots, positions, prix moyens d'entrée) et de cours gratuits
@@ -15,7 +15,7 @@
 (function () {
   const REFRESH_MS = 60 * 1000;
   // Les lectures ne tournent que lorsque l'onglet « Analyse par devise » est affiché (économise des requêtes).
-  const analyseActive = () => { const t = document.getElementById('tab-1'); return !t || !t.hidden; };
+  const analyseActive = () => { const t = document.getElementById('tab-cot'); return !t || !t.hidden; };
 
   let rows = {};
   let loaded = false;
@@ -54,8 +54,7 @@
       section = document.createElement('div');
       section.className = 'cot';
       section.innerHTML = '<div class="cot-head"></div><div class="cot-institutional"></div><div class="cot-retail"></div>';
-      const anchor = panel.querySelector('.rates') || panel.querySelector('.calendar');
-      panel.insertBefore(section, anchor ? anchor.nextSibling : panel.firstChild);
+      panel.appendChild(section);
     }
     return section;
   }
@@ -239,7 +238,7 @@
   }
 
   function renderAll() {
-    document.querySelectorAll('.currency-panel[data-currency]').forEach(renderPanel);
+    document.querySelectorAll('.currency-panel[data-win="cot"]').forEach(renderPanel);
   }
 
   // Les « il y a X min » se mettent à jour toutes les 30 s sans relire la base.

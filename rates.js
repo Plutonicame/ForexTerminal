@@ -1,7 +1,7 @@
 'use strict';
 
 /**
- * rates.js — « Attentes de taux » (Polymarket) dans chaque onglet de devise de l'analyse.
+ * rates.js — « Attentes de taux » (Polymarket) dans la fenêtre « Taux d'intérêt » (un panneau par devise, plus « All »).
  *
  * Données : table Supabase "rate_expectations", remplie par le bot "polymarket-rates"
  * (UNE ligne par devise ET par réunion : réunion de ce mois-ci, puis celle du mois suivant).
@@ -28,7 +28,7 @@
 
   const REFRESH_MS = 60 * 1000; // le bot met les prix à jour chaque minute
   // Les lectures ne tournent que lorsque l'onglet « Analyse par devise » est affiché (économise des requêtes).
-  const analyseActive = () => { const t = document.getElementById('tab-1'); return !t || !t.hidden; };
+  const analyseActive = () => { const t = document.getElementById('tab-rates'); return !t || !t.hidden; };
   const STALE_MS = 2 * 3600 * 1000;
 
   // rows[devise] = liste des marchés Polymarket (un par réunion), triés par date de réunion :
@@ -60,7 +60,7 @@
   // Section dans le panneau d'une devise
   // -------------------------------------------------------------------------
   function ensureSection(code) {
-    const panel = document.querySelector(`.currency-panel[data-currency="${code}"]`);
+    const panel = document.querySelector(`.currency-panel[data-win="rates"][data-currency="${code}"]`);
     if (!panel) return null;
     let section = panel.querySelector('.rates');
     if (!section) {
@@ -74,8 +74,7 @@
         selected[code] = Number(btn.dataset.idx);
         renderCode(code);
       });
-      const calendar = panel.querySelector('.calendar');
-      panel.insertBefore(section, calendar ? calendar.nextSibling : panel.firstChild);
+      panel.appendChild(section);
     }
     return section;
   }

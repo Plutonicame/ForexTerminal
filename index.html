@@ -87,25 +87,8 @@
 <nav class="side-menu" id="sideMenu" aria-hidden="true">
   <button type="button" class="menu-close" id="menuCloseBtn">Fermer ✕</button>
 
-  <button type="button" class="menu-tab menu-tab--nouveau is-active" data-tab="tab-4" aria-current="true">
-    Nouveau
-  </button>
-
-  <button type="button" class="menu-tab menu-tab--analyse" data-tab="tab-1">
-    Analyse par devise
-  </button>
-
-  <button type="button" class="menu-tab menu-tab--evenements" data-tab="tab-2">
-    Événements secondaires
-  </button>
-
-  <button type="button" class="menu-tab menu-tab--fondamentale" data-tab="tab-5">
-    Analyse fondamentale
-  </button>
-
-  <button type="button" class="menu-tab menu-tab--parametres" data-tab="tab-3">
-    Paramètres
-  </button>
+  <!-- Groupes et fenêtres : construits par windows.js (liste MENU) -->
+  <div class="menu-list" id="menuList"></div>
 
   <button type="button" class="menu-tab menu-tab--deconnexion" id="logoutBtn">
     <svg class="menu-tab-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="butt" aria-hidden="true">
@@ -118,18 +101,8 @@
 
 <main class="app-main">
 
-  <section class="tab-panel" id="tab-1" role="tabpanel" aria-label="Analyse par devise" hidden>
-    <div class="currency-bar" role="tablist" aria-label="Devises">
-      <button type="button" class="currency-card" role="tab" data-currency="USD" aria-selected="false" aria-controls="currency-panel-USD">USD</button>
-      <button type="button" class="currency-card" role="tab" data-currency="EUR" aria-selected="false" aria-controls="currency-panel-EUR">EUR</button>
-      <button type="button" class="currency-card" role="tab" data-currency="JPY" aria-selected="false" aria-controls="currency-panel-JPY">JPY</button>
-      <button type="button" class="currency-card" role="tab" data-currency="GBP" aria-selected="false" aria-controls="currency-panel-GBP">GBP</button>
-      <button type="button" class="currency-card" role="tab" data-currency="CHF" aria-selected="false" aria-controls="currency-panel-CHF">CHF</button>
-      <button type="button" class="currency-card" role="tab" data-currency="CAD" aria-selected="false" aria-controls="currency-panel-CAD">CAD</button>
-      <button type="button" class="currency-card" role="tab" data-currency="AUD" aria-selected="false" aria-controls="currency-panel-AUD">AUD</button>
-      <button type="button" class="currency-card" role="tab" data-currency="NZD" aria-selected="false" aria-controls="currency-panel-NZD">NZD</button>
-    </div>
-
+  <!-- Fenêtre Calendar : barre des devises et panneaux construits par windows.js -->
+  <section class="tab-panel" id="tab-calendar" role="tabpanel" aria-label="Calendar" hidden>
     <div class="calendar-toolbar">
       <span class="calendar-toolbar-title">Calendrier</span>
       <div class="calendar-toolbar-tools">
@@ -161,42 +134,12 @@
       </div>
     </div>
     <div class="calendar-status" id="calendarStatus" hidden></div>
-
-    <div class="currency-panels">
-      <section class="currency-panel" id="currency-panel-USD" role="tabpanel" data-currency="USD" aria-label="Analyse USD" hidden>
-        <div class="calendar" data-currency="USD" aria-live="polite"></div>
-      </section>
-      <section class="currency-panel" id="currency-panel-EUR" role="tabpanel" data-currency="EUR" aria-label="Analyse EUR" hidden>
-        <div class="calendar" data-currency="EUR" aria-live="polite"></div>
-      </section>
-      <section class="currency-panel" id="currency-panel-JPY" role="tabpanel" data-currency="JPY" aria-label="Analyse JPY" hidden>
-        <div class="calendar" data-currency="JPY" aria-live="polite"></div>
-      </section>
-      <section class="currency-panel" id="currency-panel-GBP" role="tabpanel" data-currency="GBP" aria-label="Analyse GBP" hidden>
-        <div class="calendar" data-currency="GBP" aria-live="polite"></div>
-      </section>
-      <section class="currency-panel" id="currency-panel-CHF" role="tabpanel" data-currency="CHF" aria-label="Analyse CHF" hidden>
-        <div class="calendar" data-currency="CHF" aria-live="polite"></div>
-      </section>
-      <section class="currency-panel" id="currency-panel-CAD" role="tabpanel" data-currency="CAD" aria-label="Analyse CAD" hidden>
-        <div class="calendar" data-currency="CAD" aria-live="polite"></div>
-      </section>
-      <section class="currency-panel" id="currency-panel-AUD" role="tabpanel" data-currency="AUD" aria-label="Analyse AUD" hidden>
-        <div class="calendar" data-currency="AUD" aria-live="polite"></div>
-      </section>
-      <section class="currency-panel" id="currency-panel-NZD" role="tabpanel" data-currency="NZD" aria-label="Analyse NZD" hidden>
-        <div class="calendar" data-currency="NZD" aria-live="polite"></div>
-      </section>
-    </div>
+    <div class="currency-panels"></div>
   </section>
 
-  <section class="tab-panel" id="tab-2" role="tabpanel" aria-label="Événements secondaires" hidden>
-    
-  </section>
-
-  <section class="tab-panel" id="tab-5" role="tabpanel" aria-label="Analyse fondamentale" hidden>
+  <section class="tab-panel" id="tab-5" role="tabpanel" aria-label="Note fondamentale" hidden>
     <div class="fund-toolbar">
-      <span class="fund-toolbar-title">Analyse fondamentale</span>
+      <span class="fund-toolbar-title">Note fondamentale</span>
       <button type="button" class="fund-primary-btn" id="fundAddGroupBtn">+ Groupe</button>
     </div>
     <p class="fund-status" id="fundStatus" role="status" hidden></p>
@@ -268,39 +211,21 @@
         <div class="theme-accordion-content" id="themeFields-nouveau"></div>
       </div>
 
-      <div class="theme-accordion" data-section="analyse">
-        <button type="button" class="theme-accordion-row" data-section="analyse">
-          <span class="chevron">›</span> Analyse
+      <div class="theme-accordion" data-section="general">
+        <button type="button" class="theme-accordion-row" data-section="general">
+          <span class="chevron">›</span> Général
         </button>
-        <div class="theme-accordion-content" id="themeFields-analyse"></div>
+        <div class="theme-accordion-content" id="themeFields-general"></div>
       </div>
 
-      <div class="theme-accordion" data-section="evenements">
-        <button type="button" class="theme-accordion-row" data-section="evenements">
-          <span class="chevron">›</span> Événements
-        </button>
-        <div class="theme-accordion-content" id="themeFields-evenements"></div>
-      </div>
-
-      <div class="theme-accordion" data-section="fondamentale">
-        <button type="button" class="theme-accordion-row" data-section="fondamentale">
-          <span class="chevron">›</span> Analyse fondamentale
-        </button>
-        <div class="theme-accordion-content" id="themeFields-fondamentale"></div>
-      </div>
+      <!-- Un onglet par fenêtre : construit par theme-colors.js à partir de la liste de windows.js -->
+      <div id="themeWindowAccordions"></div>
 
       <div class="theme-accordion" data-section="parametres">
         <button type="button" class="theme-accordion-row" data-section="parametres">
           <span class="chevron">›</span> Paramètres
         </button>
         <div class="theme-accordion-content" id="themeFields-parametres"></div>
-      </div>
-
-      <div class="theme-accordion" data-section="general">
-        <button type="button" class="theme-accordion-row" data-section="general">
-          <span class="chevron">›</span> Général
-        </button>
-        <div class="theme-accordion-content" id="themeFields-general"></div>
       </div>
 
       <div class="theme-panel-footer">
@@ -363,6 +288,7 @@
 <script src="./supabase-config.js" defer></script>
 <script src="./auth.js" defer></script>
 <script src="./theme-colors.js" defer></script>
+<script src="./windows.js" defer></script>
 <script src="./speeches.js" defer></script>
 <script src="./risk.js" defer></script>
 <script src="./trump.js" defer></script>

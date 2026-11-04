@@ -2,13 +2,13 @@
 
 /**
  * trump.js
- * Onglet « Événements secondaires » : posts de Donald Trump (Truth Social).
+ * Fenêtre « Discours » (panneau USD et All) : posts de Donald Trump (Truth Social).
  * Même présentation que les discours des banques centrales : on réutilise
  * les classes CSS et la pop-up de speeches.js (speechStore, openSpeechPopup…).
  * Données : table trump_posts, alimentée par l'edge function trump-bot.
  */
 (function () {
-  const PANEL_ID = 'tab-2';
+  const WINDOW_ID = 'tab-speeches';
   const LIMIT = 200;
   const COLUMNS = 'id, posted_at, text_en, text_fr, title_fr, stars, summary, url';
   let loading = false;
@@ -83,12 +83,13 @@
   }
 
   function ensureSection() {
-    const panel = document.getElementById(PANEL_ID);
+    // Posts de Trump : panneau USD de la fenêtre « Discours » (visibles dans USD et All)
+    const panel = document.querySelector('.currency-panel[data-win="speeches"][data-currency="USD"]');
     if (!panel) return null;
-    let section = panel.querySelector('.speeches');
+    let section = panel.querySelector('.trump-speeches');
     if (!section) {
       section = document.createElement('div');
-      section.className = 'speeches';
+      section.className = 'trump-speeches';
       panel.appendChild(section);
       section.addEventListener('click', (event) => {
         const btn = event.target.closest('[data-trump-tweet]');
@@ -149,7 +150,7 @@
     ensureSection();
     if (window.Auth) window.Auth.onAuthStateChange((s) => { if (s) load(); });
     setInterval(() => {
-      const p = document.getElementById(PANEL_ID);
+      const p = document.getElementById(WINDOW_ID);
       if (!document.hidden && p && !p.hidden) load();
     }, 60 * 1000);
   });

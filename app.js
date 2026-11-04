@@ -377,12 +377,13 @@ function escapeHtml(value) {
 async function fetchCalendarEvents(code) {
   const client = window.Auth && window.Auth.getClient ? window.Auth.getClient() : null;
   if (!client) return { events: null, error: 'connexion indisponible' };
-  const { data, error } = await client
+  // « ALL » : les 8 devises à la fois (NEWS_CURRENCIES, défini plus bas dans ce fichier).
+  let query = client
     .from('calendar_events')
-    .select('title, impact, previous, forecast_low, forecast_mid, forecast_high, actual, event_time')
-    .eq('currency', code)
-    .in('impact', getCalendarImpacts())
-    .order('event_time', { ascending: true });
+    .select('currency, title, impact, previous, forecast_low, forecast_mid, forecast_high, actual, event_time')
+    .in('impact', getCalendarImpacts());
+  query = code === 'ALL' ? query.in('currency', NEWS_CURRENCIES) : query.eq('currency', code);
+  const { data, error } = await query.order('event_time', { ascending: true });
   if (error) {
     console.error('Calendrier économique : lecture impossible :', error);
     return { events: null, error: (error && error.message) || 'erreur inconnue' };
@@ -1070,7 +1071,7 @@ function renderCalendar(code, events, errorNote) {
       <td class="calendar-col-date">${escapeHtml(formatCalendarDateInline(ev.event_time))}</td>
       <td class="calendar-col-name">
         <button type="button" class="calendar-date-btn" data-event-time="${escapeHtml(ev.event_time)}" aria-label="Voir la date et l'heure">${CALENDAR_DATE_ICON}</button>
-        <span class="calendar-impact calendar-impact--${impact}"></span><span class="calendar-name" title="${escapeHtml(ev.title)}">${escapeHtml(ev.shown ? ev.shown.label : resolveEventTitle(ev.title))}</span>${teChartButton(ev)}${eventCountryTag(ev)}
+        <span class="calendar-impact calendar-impact--${impact}"></span>${code === 'ALL' ? `<span class="news-cur">${escapeHtml(ev.currency)}</span>` : ''}<span class="calendar-name" title="${escapeHtml(ev.title)}">${escapeHtml(ev.shown ? ev.shown.label : resolveEventTitle(ev.title))}</span>${teChartButton(ev)}${eventCountryTag(ev)}
       </td>
       ${calendarCell(ev.actual, 'calendar-value--actual' + (actualDirection(ev) ? ' calendar-value--' + actualDirection(ev) : ''))}
       ${calendarCell(ev.forecast_mid)}
@@ -1176,6 +1177,20 @@ function limitUpcomingEvents(code, events) {
   return events.filter((ev) => new Date(ev.event_time).getTime() <= max);
 }
 
+// Règles de la fenêtre Calendar. Pour « ALL », chaque devise est traitée avec SA
+// banque centrale, puis le tout est trié par heure.
+function processCalendarEvents(code, raw) {
+  if (code !== 'ALL') {
+    return hideSpeechEvents(limitUpcomingEvents(code, filterSinceLastCentralBankMeeting(code, raw)));
+  }
+  const out = [];
+  for (const cur of NEWS_CURRENCIES) {
+    const own = raw.filter((ev) => ev.currency === cur);
+    out.push(...hideSpeechEvents(limitUpcomingEvents(cur, filterSinceLastCentralBankMeeting(cur, own))));
+  }
+  return out.sort((a, b) => new Date(a.event_time) - new Date(b.event_time));
+}
+
 const lastCalendarEventsByCurrency = {};
 
 async function loadCalendar(code) {
@@ -1195,7 +1210,7 @@ async function loadCalendar(code) {
     return;
   }
 
-  const events = hideSpeechEvents(limitUpcomingEvents(code, filterSinceLastCentralBankMeeting(code, result.events)));
+  const events = processCalendarEvents(code, result.events);
 
   lastCalendarEventsByCurrency[code] = events;
   renderCalendar(code, events);
@@ -1208,37 +1223,25 @@ async function loadCalendar(code) {
 let currentCalendarCurrency = null;
 
 function initCurrencyTabs() {
-  const buttons = Array.from(document.querySelectorAll('.currency-card[data-currency]'));
-  const panels = Array.from(document.querySelectorAll('.currency-panel'));
-  if (!buttons.length) return;
+  // La barre des devises (8 devises + All) est construite par windows.js ;
+  // ici on écoute seulement ses changements pour la fenêtre Calendar.
+  const W = window.FXWindows;
+  currentCalendarCurrency = (W && W.current('calendar')) || 'USD';
 
-  function selectCurrency(code) {
-    currentCalendarCurrency = code;
-    for (const btn of buttons) {
-      const isActive = btn.dataset.currency === code;
-      btn.classList.toggle('is-active', isActive);
-      btn.setAttribute('aria-selected', isActive ? 'true' : 'false');
-    }
-    for (const panel of panels) {
-      panel.hidden = panel.dataset.currency !== code;
-    }
-    loadCalendar(code);
-  }
-
-  for (const btn of buttons) {
-    btn.addEventListener('click', () => {
-      selectCurrency(btn.dataset.currency);
-      btn.scrollIntoView({ behavior: 'smooth', inline: 'nearest', block: 'nearest' });
-    });
-  }
+  document.addEventListener('fx-currency-select', (event) => {
+    const d = event.detail || {};
+    if (d.win !== 'calendar') return;
+    currentCalendarCurrency = d.code;
+    loadCalendar(d.code);
+  });
 
   // Les valeurs "sortie" arrivent après la publication : on rafraîchit
   // la devise affichée toutes les minutes. Le statut du bot (fraîcheur
   // des données) est vérifié en même temps.
   window.setInterval(() => {
-    const analyseTab = document.getElementById('tab-1');
-    // le calendrier de l'onglet Analyse n'est relu que lorsqu'il est affiché
-    if (currentCalendarCurrency && !document.hidden && analyseTab && !analyseTab.hidden) loadCalendar(currentCalendarCurrency);
+    const calendarTab = document.getElementById('tab-calendar');
+    // le calendrier n'est relu que lorsque la fenêtre est affichée
+    if (currentCalendarCurrency && !document.hidden && calendarTab && !calendarTab.hidden) loadCalendar(currentCalendarCurrency);
     if (!document.hidden) refreshCalendarStatus();
   }, CALENDAR_REFRESH_MS);
   refreshCalendarStatus();
@@ -1251,8 +1254,7 @@ function initCurrencyTabs() {
     });
   }
 
-  // Devise affichée au démarrage : la première de la liste (USD).
-  selectCurrency(buttons[0].dataset.currency);
+  loadCalendar(currentCalendarCurrency);
 }
 
 // Fraîcheur du calendrier : lit l'heure de dernière exécution du bot
@@ -1958,12 +1960,14 @@ document.addEventListener('DOMContentLoaded', () => {
     if (filterbar) filterbar.hidden = tabId !== 'tab-4';
     closeNewsPopups();
     if (tabId === 'tab-4') loadNews(); // onglet Nouveau : données fraîches à chaque ouverture
-    if (tabId === 'tab-1') { // onglet Analyse : les lectures sont suspendues en dehors, on rafraîchit à l'ouverture
-      if (currentCalendarCurrency) loadCalendar(currentCalendarCurrency);
-      ['Rates', 'Retail', 'Cot'].forEach((k) => { if (window[k] && window[k].reload) window[k].reload(); });
-    }
-    if (tabId === 'tab-2') { if (window.Risk) window.Risk.refresh(); if (window.Trump) window.Trump.refresh(); } // Événements secondaires : posts de Trump
-    if (tabId === 'tab-5' && window.Fundamental) window.Fundamental.refresh(); // Analyse fondamentale
+    // Les lectures de chaque fenêtre sont suspendues en dehors d'elle : on rafraîchit à l'ouverture.
+    if (tabId === 'tab-calendar' && currentCalendarCurrency) loadCalendar(currentCalendarCurrency);
+    if (tabId === 'tab-rates' && window.Rates) window.Rates.reload();
+    if (tabId === 'tab-cot') { if (window.Cot) window.Cot.reload(); if (window.Retail) window.Retail.reload(); }
+    if (tabId === 'tab-risk' && window.Risk) window.Risk.refresh();
+    if (tabId === 'tab-indicator' && window.Risk) window.Risk.showChart();
+    if (tabId === 'tab-speeches') { if (window.Trump) window.Trump.refresh(); }
+    if (tabId === 'tab-5' && window.Fundamental) window.Fundamental.refresh(); // Note fondamentale
   });
   initNewsFilters();
   initNewsTab();

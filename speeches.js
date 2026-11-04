@@ -2,7 +2,7 @@
 
 /**
  * speeches.js
- * Section « Discours » sous le calendrier de chaque devise.
+ * Fenêtre « Discours » : une section par devise (plus « All » qui les affiche toutes).
  *
  * UN SEUL GABARIT DE CASE, rempli à partir d'une « fiche » par discours :
  *   - bandeau : statut (Votant / Non votant) à gauche, importance en étoiles à droite
@@ -120,7 +120,7 @@ function buildSpeechCard(code, entry) {
 
 function renderSpeechSection(code, entries, failed = false) {
   const bank = SPEECH_BANKS[code] && SPEECH_BANKS[code].label;
-  const panel = document.querySelector(`.currency-panel[data-currency="${code}"]`);
+  const panel = document.querySelector(`.currency-panel[data-win="speeches"][data-currency="${code}"]`);
   if (!bank || !panel) return;
 
   let section = panel.querySelector('.speeches');

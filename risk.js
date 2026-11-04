@@ -2,18 +2,20 @@
 
 /**
  * risk.js
- * Onglet « Événements secondaires » (haut de page) :
- *   1) cadran d'appétit pour le risque (0 = risk-off, 100 = risk-on), lu dans la table risk_sentiment
- *      (calculée par l'edge function risk-bot) ;
- *   2) en dessous, grand graphique TradingView du VIX en H1.
+ *   1) Fenêtre « Sentiment du risque » : cadran d'appétit pour le risque (0 = risk-off, 100 = risk-on),
+ *      lu dans la table risk_sentiment (alimentée par l'edge function risk-bot, qui relaie
+ *      le CNN Fear & Greed Index : indice publié, non calculé par l'appli).
+ *   2) Fenêtre « Indicator » : grand graphique TradingView du VIX.
  */
 (function () {
-  const PANEL_ID = 'tab-2';
+  const GAUGE_PANEL_ID = 'tab-risk';
+  const CHART_PANEL_ID = 'tab-indicator';
   const NS = 'http://www.w3.org/2000/svg';
   const CX = 200; const CY = 190; const R_OUT = 150; const R_IN = 122;
   const A0 = 150; const A1 = 390; // degrés : de bas-gauche (0) à bas-droite (100), en passant par le haut
   const SEG = 40;
   let wrap = null;
+  let chartWrap = null;
   let tvDone = false;
   let loading = false;
 
@@ -25,8 +27,8 @@
   }
   const pt = (deg, r) => [CX + r * Math.cos(deg * Math.PI / 180), CY + r * Math.sin(deg * Math.PI / 180)];
   const angleFor = (v) => A0 + (A1 - A0) * Math.max(0, Math.min(100, v)) / 100;
-  const zone = (v) => (v < 40 ? 'off' : v > 60 ? 'on' : 'mid');
-  const label = (v) => (v < 40 ? 'RISK-OFF' : v > 60 ? 'RISK-ON' : 'NEUTRAL');
+  const zone = (v) => (v < 45 ? 'off' : v > 55 ? 'on' : 'mid');
+  const label = (v) => (v < 45 ? 'RISK-OFF' : v > 55 ? 'RISK-ON' : 'NEUTRAL');
 
   function buildGauge() {
     const svg = el('svg', { viewBox: '0 0 400 300', class: 'risk-gauge-svg', role: 'img', 'aria-label': 'Cadran du risque' });
@@ -64,6 +66,8 @@
     const arrow = (now, was) => (was == null ? '' : now > was ? '▲' : now < was ? '▼' : '■');
     const w = row.score_1w; const m = row.score_1m;
     g.sub.textContent = `1S ${arrow(v, w)} ${w ?? '–'}   ·   1M ${arrow(v, m)} ${m ?? '–'}`;
+    const head = wrap.querySelector('.speeches-toolbar-info');
+    if (head && row.source) head.textContent = `${row.source} · ${row.rating || ''} · 0–100`;
     const info = wrap.querySelector('.risk-info');
     if (info) {
       const parts = Array.isArray(row.components) ? row.components : [];
@@ -71,8 +75,8 @@
     }
   }
 
-  function ensure() {
-    const panel = document.getElementById(PANEL_ID);
+  function ensureGauge() {
+    const panel = document.getElementById(GAUGE_PANEL_ID);
     if (!panel) return null;
     if (!wrap) {
       wrap = document.createElement('div');
@@ -80,21 +84,33 @@
       wrap.innerHTML = `
         <div class="speeches-toolbar">
           <span class="speeches-toolbar-title">Appétit pour le risque</span>
-          <span class="speeches-toolbar-info">Indice composite 0–100</span>
+          <span class="speeches-toolbar-info">CNN Fear &amp; Greed Index · 0–100</span>
         </div>
         <div class="risk-gauge"></div>
-        <div class="risk-info"></div>
+        <div class="risk-info"></div>`;
+      g = buildGauge();
+      wrap.querySelector('.risk-gauge').appendChild(g.svg);
+      g.val.textContent = '–';
+      panel.appendChild(wrap);
+    }
+    return wrap;
+  }
+
+  function ensureChart() {
+    const panel = document.getElementById(CHART_PANEL_ID);
+    if (!panel) return null;
+    if (!chartWrap) {
+      chartWrap = document.createElement('div');
+      chartWrap.className = 'risk-wrap';
+      chartWrap.innerHTML = `
         <div class="speeches-toolbar">
           <span class="speeches-toolbar-title">VIX</span>
           <span class="speeches-toolbar-info">Graphique H1</span>
         </div>
         <div class="risk-chart"></div>`;
-      g = buildGauge();
-      wrap.querySelector('.risk-gauge').appendChild(g.svg);
-      g.val.textContent = '–';
-      panel.insertBefore(wrap, panel.firstChild);
+      panel.appendChild(chartWrap);
     }
-    return wrap;
+    return chartWrap;
   }
 
   const cssVar = (n, d) => { try { return getComputedStyle(document.documentElement).getPropertyValue(n).trim() || d; } catch (e) { return d; } };
@@ -170,12 +186,12 @@
     });
   }
 
-  // Le widget doit être créé quand l'onglet est visible (sinon sa taille est nulle).
+  // Le widget doit être créé quand la fenêtre est visible (sinon sa taille est nulle).
   function mountChart() {
-    const panel = document.getElementById(PANEL_ID);
-    if (tvDone || !wrap || !panel || panel.hidden) return;
+    const panel = document.getElementById(CHART_PANEL_ID);
+    if (tvDone || !chartWrap || !panel || panel.hidden) return;
     tvDone = true;
-    const box = wrap.querySelector('.risk-chart');
+    const box = chartWrap.querySelector('.risk-chart');
     box.innerHTML = '<div id="riskChartHost" style="height:100%;width:100%"></div>';
     const start = () => {
       try { buildWidget(); } catch (e) { console.warn('risk.js widget', e); mountEmbedFallback(box); }
@@ -189,9 +205,14 @@
     document.head.appendChild(s);
   }
 
-  async function load() {
-    if (!ensure()) return;
+  // Appelé à l'ouverture de la fenêtre « Indicator »
+  function showChart() {
+    if (!ensureChart()) return;
     mountChart();
+  }
+
+  async function load() {
+    if (!ensureGauge()) return;
     if (loading || !window.Auth || !window.Auth.isConfigured()) return;
     const client = window.Auth.getClient();
     if (!client) return;
@@ -199,7 +220,7 @@
     try {
       if (!(await window.Auth.getSession())) return;
       const { data, error } = await client.from('risk_sentiment')
-        .select('score, score_1w, score_1m, components').eq('id', 'composite').maybeSingle();
+        .select('score, score_1w, score_1m, components, rating, source').eq('id', 'composite').maybeSingle();
       if (error) throw error;
       if (data) setScore(data);
     } catch (e) {
@@ -209,13 +230,14 @@
     }
   }
 
-  window.Risk = { refresh: load };
+  window.Risk = { refresh: load, showChart };
 
   document.addEventListener('DOMContentLoaded', () => {
-    ensure();
+    ensureGauge();
+    ensureChart();
     if (window.Auth) window.Auth.onAuthStateChange((s) => { if (s) load(); });
     setInterval(() => {
-      const p = document.getElementById(PANEL_ID);
+      const p = document.getElementById(GAUGE_PANEL_ID);
       if (!document.hidden && p && !p.hidden) load();
     }, 5 * 60 * 1000);
   });

@@ -412,6 +412,9 @@ button {
   flex-direction: column;
   padding: 20px;
   gap: 8px;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior: contain;
 }
 
 .side-menu.is-open {
@@ -4258,21 +4261,21 @@ body.te-open {
 }
 
 /* bandeaux de l'onglet */
-#tab-2 .speeches-toolbar { background: var(--events-toolbar-bg); border-color: var(--events-toolbar-border); }
-#tab-2 .speeches-toolbar-title { color: var(--events-toolbar-title); }
-#tab-2 .speeches-toolbar-info { color: var(--events-toolbar-info); }
+.risk-wrap .speeches-toolbar, .trump-speeches .speeches-toolbar { background: var(--events-toolbar-bg); border-color: var(--events-toolbar-border); }
+.risk-wrap .speeches-toolbar-title, .trump-speeches .speeches-toolbar-title { color: var(--events-toolbar-title); }
+.risk-wrap .speeches-toolbar-info, .trump-speeches .speeches-toolbar-info { color: var(--events-toolbar-info); }
 
 /* cases des posts de Trump (mêmes classes que les discours, couleurs propres) */
-#tab-2 .speech-card { background: var(--trump-card-bg); border-color: var(--trump-card-border); }
-#tab-2 .speech-card-first { color: var(--trump-first-text); }
-#tab-2 .speech-card-last { color: var(--trump-last-text); }
-#tab-2 .speech-card-role { color: var(--trump-role-text); }
-#tab-2 .speech-card-photo { --speech-silhouette: var(--trump-silhouette); }
-#tab-2 .speech-badge { background: var(--trump-badge-bg); border-color: var(--trump-badge-border); color: var(--trump-badge-text); }
-#tab-2 .speech-star { color: var(--trump-star-off); }
-#tab-2 .speech-star.is-on { color: var(--trump-star-on); }
-#tab-2 .speech-btn { background: var(--trump-btn-bg); border-color: var(--trump-btn-border); color: var(--trump-btn-text); }
-#tab-2 .speech-btn:hover { background: var(--trump-btn-hover-bg); }
+.trump-speeches .speech-card { background: var(--trump-card-bg); border-color: var(--trump-card-border); }
+.trump-speeches .speech-card-first { color: var(--trump-first-text); }
+.trump-speeches .speech-card-last { color: var(--trump-last-text); }
+.trump-speeches .speech-card-role { color: var(--trump-role-text); }
+.trump-speeches .speech-card-photo { --speech-silhouette: var(--trump-silhouette); }
+.trump-speeches .speech-badge { background: var(--trump-badge-bg); border-color: var(--trump-badge-border); color: var(--trump-badge-text); }
+.trump-speeches .speech-star { color: var(--trump-star-off); }
+.trump-speeches .speech-star.is-on { color: var(--trump-star-on); }
+.trump-speeches .speech-btn { background: var(--trump-btn-bg); border-color: var(--trump-btn-border); color: var(--trump-btn-text); }
+.trump-speeches .speech-btn:hover { background: var(--trump-btn-hover-bg); }
 
 .trump-tweet {
   margin-top: 8px;
@@ -4314,3 +4317,59 @@ body.te-open {
 .risk-chip--mid b { color: var(--risk-mid); }
 .risk-chip--on b { color: var(--risk-on); }
 .risk-chart { height: 70vh; min-height: 520px; max-height: 820px; margin: 0 12px 8px; border: 1px solid var(--risk-chart-border); border-radius: 10px; overflow: hidden; background: linear-gradient(var(--risk-chart-bg), var(--risk-chart-bg2)); }
+
+
+/* =====================================================================
+   Architecture des fenêtres — windows.js
+   ===================================================================== */
+:root {
+  --menu-group-title-text: var(--text-dim);
+  --menu-group-title-line: var(--border-dim);
+}
+.side-menu > * { flex-shrink: 0; }
+.menu-list { display: flex; flex-direction: column; gap: 8px; }
+.menu-group { display: flex; flex-direction: column; gap: 8px; margin-bottom: 10px; }
+.menu-group-title {
+  margin: 10px 2px 2px;
+  padding-bottom: 6px;
+  border-bottom: 1px solid var(--menu-group-title-line);
+  font-family: var(--mono);
+  font-size: 11px;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  color: var(--menu-group-title-text);
+}
+/* Fenêtres des groupes : couleurs réglables dans Thème > Général > Fenêtres */
+.menu-tab--win {
+  --tab-border: var(--menu-tab-analyse-border);
+  --tab-text: var(--menu-tab-analyse-text);
+  --tab-hover-text: var(--menu-tab-analyse-hover-text);
+}
+.side-menu > .menu-tab--deconnexion { margin: 4px 0 24px; }
+.cw-soon {
+  margin: 0;
+  padding: 28px 16px;
+  text-align: center;
+  font-family: var(--mono);
+  font-size: 12px;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  color: var(--text-dim);
+}
+.cw-title {
+  display: none;
+  margin: 22px 2px 0;
+  padding-bottom: 6px;
+  border-bottom: 1px solid var(--border-dim);
+  font-family: var(--mono);
+  font-size: 14px;
+  font-weight: 700;
+  letter-spacing: 2px;
+  color: var(--text);
+}
+.currency-panels.is-all .cw-title { display: block; }
+.currency-panels.is-all .currency-panel:first-child .cw-title { margin-top: 4px; }
+.trump-speeches { margin-top: 16px; }
+
+/* Onglets de thème des fenêtres : leurs enfants se rangent dans la colonne du panneau */
+#themeWindowAccordions { display: contents; }

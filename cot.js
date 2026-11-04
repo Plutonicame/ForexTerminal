@@ -1,7 +1,7 @@
 'use strict';
 
 /**
- * cot.js — zone « COT · Positionnement » dans chaque onglet de devise de l'analyse
+ * cot.js — zone « COT · Positionnement » dans la fenêtre « COT » (un panneau par devise, plus « All »)
  * (carte institutionnelle issue du rapport hebdomadaire de la CFTC ; les cartes retail viennent de retail.js).
  *
  * Données : table Supabase "cot_positions", remplie par le bot "cot-bot" qui lit le rapport
@@ -15,7 +15,7 @@
 (function () {
   const REFRESH_MS = 5 * 60 * 1000; // le bot vérifie la CFTC toutes les 5 minutes
   // Les lectures ne tournent que lorsque l'onglet « Analyse par devise » est affiché (économise des requêtes).
-  const analyseActive = () => { const t = document.getElementById('tab-1'); return !t || !t.hidden; };
+  const analyseActive = () => { const t = document.getElementById('tab-cot'); return !t || !t.hidden; };
   const NF = new Intl.NumberFormat('fr-FR');
 
   let rows = {};
@@ -78,8 +78,7 @@
       section = document.createElement('div');
       section.className = 'cot';
       section.innerHTML = '<div class="cot-head"></div><div class="cot-institutional"></div><div class="cot-retail"></div>';
-      const anchor = panel.querySelector('.rates') || panel.querySelector('.calendar');
-      panel.insertBefore(section, anchor ? anchor.nextSibling : panel.firstChild);
+      panel.appendChild(section);
     }
     return section;
   }
@@ -260,7 +259,7 @@
   }
 
   function renderAll() {
-    document.querySelectorAll('.currency-panel[data-currency]').forEach(renderPanel);
+    document.querySelectorAll('.currency-panel[data-win="cot"]').forEach(renderPanel);
   }
 
   // -------------------------------------------------------------------------
