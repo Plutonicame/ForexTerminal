@@ -4418,3 +4418,28 @@ a.nf-title:hover, .nx-link:hover, .br-link:hover { text-decoration: underline; }
 .nx-more { margin-top: 6px; font-size: 14px; line-height: 1.5; }
 .nx-more p { margin: 0 0 8px; }
 .nx-btn, .br-actions .speech-btn { width: auto; min-height: 0; height: auto; padding: 5px 14px; }
+
+/* ===== Indicator : force des devises + courbe des taux ===== */
+:root {
+  --fxs-usd: #2ecc71; --fxs-eur: #4d94ff; --fxs-gbp: #a35cf0; --fxs-jpy: #2fd0e0;
+  --fxs-cad: #fe1111; --fxs-chf: #ff9f1a; --fxs-aud: #f5d90a; --fxs-nzd: #b48cff;
+  --fxs-grid: #2a2a2a; --fxs-zero: #e6e6e6; --fxs-text: #9a9a9a;
+  --yc-bar-top: #4d94ff; --yc-bar-bottom: #0a3a7a; --yc-grid: #2a2a2a; --yc-text: #9a9a9a;
+}
+.fxs-wrap, .yc-wrap { margin-bottom: 16px; }
+.fxs-legend { display: flex; flex-wrap: wrap; gap: 8px; margin: 10px 0; }
+.fxs-chip { display: inline-flex; align-items: center; gap: 6px; padding: 5px 10px; background: var(--bg-card); border: 1px solid var(--border-dim); border-radius: var(--radius-sm); color: var(--text); font-family: var(--mono); font-size: 12px; cursor: pointer; }
+.fxs-chip .fxs-dot { width: 10px; height: 10px; border-radius: 50%; background: var(--chip); }
+.fxs-chip .fxs-val { color: var(--text-dim); }
+.fxs-chip.is-off { opacity: .4; }
+.fxs-chip.is-off .fxs-dot { background: transparent; border: 1px solid var(--chip); }
+.fxs-chart, .yc-chart { position: relative; background: var(--bg-card); border: 1px solid var(--border-dim); border-radius: var(--radius-card); padding: 6px 4px 2px; margin-top: 8px; overflow: hidden; }
+.fxs-chart svg, .yc-chart svg { display: block; max-width: 100%; height: auto; }
+.fxs-chart rect, .yc-chart .yc-bar { touch-action: none; }
+.yc-bar { transition: opacity .15s; }
+.yc-bar:hover { opacity: .8; }
+.ind-empty { margin: 0; padding: 40px 12px; text-align: center; font-size: 13px; color: var(--text-dim); }
+.ind-tip { position: absolute; z-index: 3; display: flex; flex-direction: column; gap: 2px; min-width: 120px; padding: 8px 10px; background: var(--bg); border: 1px solid var(--border-dim); border-radius: var(--radius-sm); font-family: var(--mono); font-size: 12px; color: var(--text); pointer-events: none; }
+.ind-tip[hidden] { display: none; }
+.ind-tip i { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 6px; }
+.ind-tip em { font-style: normal; float: right; margin-left: 14px; color: var(--text-dim); }
