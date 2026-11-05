@@ -1701,6 +1701,15 @@ async function loadNews() {
       isToday: newsRangeIsToday(),
     });
   }
+  // Trump, FX Daily d'ING et annonces rouges FinancialJuice : même période et mêmes devises.
+  if (window.NewsWindows && window.NewsWindows.renderHome) {
+    window.NewsWindows.renderHome({
+      currencies: new Set(newsSelectedCurrencies()),
+      startMs,
+      endMs,
+      label: newsPeriodText(),
+    });
+  }
 
   const result = await fetchNewsCalendarEvents();
   if (requestId !== newsRequestId) return; // une réponse plus récente est déjà arrivée
@@ -1968,6 +1977,7 @@ document.addEventListener('DOMContentLoaded', () => {
     if (tabId === 'tab-indicator' && window.Risk) window.Risk.showChart();
     if (tabId === 'tab-speeches') { if (window.Trump) window.Trump.refresh(); }
     if (tabId === 'tab-5' && window.Fundamental) window.Fundamental.refresh(); // Note fondamentale
+    if (window.NewsWindows) window.NewsWindows.refresh(tabId); // News Feed, Bank Research, Squawk
   });
   initNewsFilters();
   initNewsTab();

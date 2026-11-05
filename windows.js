@@ -37,9 +37,9 @@
       items: [
         { id: 'tab-4', label: 'Nouveau', exists: true, menuClass: 'menu-tab--nouveau' },
         { id: 'tab-calendar', label: 'Calendar', exists: true, currency: { win: 'calendar', all: 'own', calendar: true } },
-        { id: 'tab-newsfeed', label: 'News Feed', soon: true },
-        { id: 'tab-bankresearch', label: 'Bank Research', soon: true },
-        { id: 'tab-squawk', label: 'Squawk', soon: true },
+        { id: 'tab-newsfeed', label: 'News Feed' },
+        { id: 'tab-bankresearch', label: 'Bank Research' },
+        { id: 'tab-squawk', label: 'Squawk' },
         { id: 'tab-speeches', label: 'Discours', currency: { win: 'speeches', all: 'panels' } },
       ],
     },

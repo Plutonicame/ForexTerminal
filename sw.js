@@ -8,7 +8,7 @@
  * ce sera ajouté plus tard si besoin (ex. cache des réponses API).
  */
 
-const CACHE_VERSION = 'fx-terminal-shell-v103';
+const CACHE_VERSION = 'fx-terminal-shell-v105';
 
 const APP_SHELL = [
   './',
@@ -23,6 +23,7 @@ const APP_SHELL = [
   './speeches.js',
   './risk.js',
   './trump.js',
+  './newsfeed.js',
   './rates.js',
   './cot.js',
   './retail.js',
