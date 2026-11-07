@@ -344,9 +344,14 @@ try {
   }
 } catch (e) { /* stockage indisponible ou illisible : tout reste coché */ }
 
-function applyCalendarViewFilters(events) {
-  if (CALENDAR_VIEW_KEYS.every((key) => calendarViewFilters[key])) return events;
+// Une « donnée » a au moins un chiffre (Sortie, Prévu ou Avant). Les événements sans aucun chiffre
+// (budget, décision de taux sans prévision, discours...) ne sont pas des données : ils ne s'affichent
+// que dans « Aujourd'hui / demain » et « Prévision », jamais dans « Sortie ».
+function calendarEventIsData(ev) {
+  return [ev.actual, ev.previous, ev.forecast_low, ev.forecast_mid, ev.forecast_high].some((v) => v !== null && v !== undefined && String(v).trim() !== '');
+}
 
+function applyCalendarViewFilters(events) {
   // Les limites « aujourd'hui / demain » suivent l'heure locale de l'appareil.
   const now = Date.now();
   const d = new Date();
@@ -357,7 +362,7 @@ function applyCalendarViewFilters(events) {
     const t = new Date(ev.event_time).getTime();
     const hasActual = ev.actual !== null && ev.actual !== undefined && String(ev.actual).trim() !== '';
     const released = hasActual || t <= now;
-    if (calendarViewFilters.released && released) return true;
+    if (calendarViewFilters.released && released && calendarEventIsData(ev)) return true;
     if (calendarViewFilters.nearby && t >= todayStart && t < dayAfterTomorrowStart) return true;
     if (calendarViewFilters.forecast && t >= dayAfterTomorrowStart) return true;
     return false;

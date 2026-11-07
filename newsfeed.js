@@ -203,6 +203,15 @@
   }
 
   /* ---------------- Nouveau : tout ce qui est nouveau ---------------- */
+  // Trois sections à ouvrir par bouton (FinancialJuice, investingLive, Banques) ; un bouton n'apparaît que s'il y a du contenu.
+  // Les posts de Trump restent affichés directement.
+  const SECTIONS = [
+    { key: 'fj', label: 'FinancialJuice' },
+    { key: 'il', label: 'Investing Live' },
+    { key: 'bank', label: 'Banques · FX Daily' },
+  ];
+  const openSections = new Set();
+
   function ensureHome() {
     let box = document.getElementById('newsExtras');
     if (!box) {
@@ -212,6 +221,17 @@
       box.id = 'newsExtras';
       anchor.parentNode.insertBefore(box, anchor);
       box.addEventListener('click', (event) => {
+        const sec = event.target.closest('[data-nx-sec]');
+        if (sec) {
+          const key = sec.dataset.nxSec;
+          const body = box.querySelector(`[data-nx-body="${key}"]`);
+          const open = !openSections.has(key);
+          if (open) openSections.add(key); else openSections.delete(key);
+          sec.setAttribute('aria-expanded', String(open));
+          sec.classList.toggle('is-open', open);
+          if (body) body.hidden = !open;
+          return;
+        }
         const btn = event.target.closest('[data-nx-toggle]');
         if (!btn) return;
         const body = btn.closest('.nx-item').querySelector('.nx-more');
@@ -232,7 +252,7 @@
     <div class="nx-item nx-item--${esc(it.kind)}">
       <span class="nx-time">${esc(fmtTime(it.at))}</span>
       <div class="nx-body">
-        <span class="nf-tag${it.kind === 'fj' ? ' nf-tag--red' : ''}">${esc(it.tag)}</span>
+        ${it.tag ? `<span class="nf-tag${it.kind === 'fj' ? ' nf-tag--red' : ''}">${esc(it.tag)}</span>` : ''}
         <span class="nx-title">${esc(it.title)}</span>
         <div class="nx-actions">${more}${link}</div>
         ${it.more ? `<div class="nx-more" hidden>${it.more}</div>` : ''}
@@ -250,33 +270,43 @@
       const startIso = new Date(f.startMs).toISOString();
       const endIso = new Date(f.endMs).toISOString();
       const wantUsd = !f.currencies || !f.currencies.size || f.currencies.has('USD');
-      const [fj, ing, trump] = await Promise.all([
-        c.from('news_items').select('id,title,title_fr,url,published_at').eq('source', 'fj').eq('red', true).gte('published_at', startIso).lt('published_at', endIso).order('published_at', { ascending: false }).limit(100),
-        c.from('bank_research').select('id,bank,title,title_fr,url,published_at,text_fr,summary,analyzed_at').gte('published_at', startIso).lt('published_at', endIso).order('published_at', { ascending: false }).limit(10),
+      const [fj, il, ing, trump] = await Promise.all([
+        c.from('news_items').select('id,title,title_fr,url,published_at').eq('source', 'fj').eq('red', true).gte('published_at', startIso).lt('published_at', endIso).order('published_at', { ascending: false }).limit(150),
+        c.from('news_items').select('id,feed,title,url,published_at').eq('source', 'investinglive').gte('published_at', startIso).lt('published_at', endIso).order('published_at', { ascending: false }).limit(150),
+        c.from('bank_research').select('id,bank,title,title_fr,url,published_at,summary,analyzed_at').gte('published_at', startIso).lt('published_at', endIso).order('published_at', { ascending: false }).limit(10),
         wantUsd
           ? c.from('trump_posts').select('id,posted_at,text_en,text_fr,title_fr,stars,url').gte('posted_at', startIso).lt('posted_at', endIso).gte('stars', 2).order('posted_at', { ascending: false }).limit(60)
           : Promise.resolve({ data: [], error: null }),
       ]);
-      const items = [];
-      (fj.data || []).forEach((r) => items.push({ kind: 'fj', tag: 'FinancialJuice', at: r.published_at, title: r.title_fr || r.title, url: r.url, linkLabel: 'Source' }));
-      (ing.data || []).forEach((r) => items.push({
+      const lists = { fj: [], il: [], bank: [], trump: [] };
+      (fj.data || []).forEach((r) => lists.fj.push({ kind: 'fj', tag: '', at: r.published_at, title: r.title_fr || r.title, url: r.url, linkLabel: 'Source' }));
+      (il.data || []).forEach((r) => lists.il.push({ kind: 'il', tag: r.feed || '', at: r.published_at, title: r.title, url: r.url, linkLabel: 'Article' }));
+      (ing.data || []).forEach((r) => lists.bank.push({
         kind: 'ing', tag: 'ING · FX Daily', at: r.published_at, title: (r.analyzed_at && r.title_fr) || r.title, url: r.url, linkLabel: 'Article original',
         more: r.analyzed_at && Array.isArray(r.summary) && r.summary.length ? `<ul class="br-bullets">${r.summary.map((b) => `<li>${esc(b)}</li>`).join('')}</ul>` : '',
       }));
-      (trump.data || []).forEach((r) => items.push({
+      (trump.data || []).forEach((r) => lists.trump.push({
         kind: 'trump', tag: 'Trump', at: r.posted_at, title: r.title_fr || (r.text_fr || r.text_en || '').slice(0, 140), url: r.url, linkLabel: 'Post original',
         more: paragraphs(r.text_fr || r.text_en),
       }));
-      items.sort((a, b) => new Date(b.at) - new Date(a.at));
 
-      const sig = items.map((i) => i.kind + i.at + i.title).join('|') + '@' + startIso + endIso;
+      const sig = ['fj', 'il', 'bank', 'trump'].map((k) => lists[k].map((i) => i.at + i.title).join('|')).join('#') + '@' + startIso + endIso;
       if (!changed('home', sig)) return;
+      const buttons = SECTIONS.filter((s) => lists[s.key].length).map((s) => {
+        const open = openSections.has(s.key);
+        return `<button type="button" class="nx-sec-btn${open ? ' is-open' : ''}" data-nx-sec="${s.key}" aria-expanded="${open}">${esc(s.label)}<span class="nx-count">${lists[s.key].length}</span></button>`;
+      }).join('');
+      const bodies = SECTIONS.filter((s) => lists[s.key].length).map((s) =>
+        `<div class="nx-list" data-nx-body="${s.key}"${openSections.has(s.key) ? '' : ' hidden'}>${lists[s.key].map(homeItem).join('')}</div>`).join('');
+      const nothing = !lists.trump.length && !buttons;
       box.innerHTML = `
         <div class="speeches-toolbar">
           <span class="speeches-toolbar-title">Nouveautés</span>
-          <span class="speeches-toolbar-info">${esc(f.label || '')} · posts de Trump, FX Daily d'ING, annonces rouges FinancialJuice</span>
+          <span class="speeches-toolbar-info">${esc(f.label || '')}</span>
         </div>
-        ${items.length ? `<div class="nx-list">${items.map(homeItem).join('')}</div>` : '<p class="speeches-empty">Rien de nouveau sur cette période.</p>'}`;
+        ${lists.trump.length ? `<div class="nx-list">${lists.trump.map(homeItem).join('')}</div>` : ''}
+        ${buttons ? `<div class="nx-sec-bar">${buttons}</div>${bodies}` : ''}
+        ${nothing ? '<p class="speeches-empty">Rien de nouveau sur cette période.</p>' : ''}`;
     });
   }
 

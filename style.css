@@ -4443,3 +4443,12 @@ a.nf-title:hover, .nx-link:hover, .br-link:hover { text-decoration: underline; }
 .ind-tip[hidden] { display: none; }
 .ind-tip i { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 6px; }
 .ind-tip em { font-style: normal; float: right; margin-left: 14px; color: var(--text-dim); }
+
+/* Nouveau : sections FinancialJuice / Investing Live / Banques */
+#newsExtras { margin-bottom: 20px; }
+.nx-sec-bar { display: flex; flex-wrap: wrap; gap: 8px; margin: 10px 0 4px; }
+.nx-sec-btn { display: inline-flex; align-items: center; gap: 8px; padding: 8px 14px; background: var(--bg-card); border: 1px solid var(--border-dim); border-radius: var(--radius-sm); color: var(--text); font-family: var(--mono); font-size: 13px; cursor: pointer; }
+.nx-sec-btn:hover, .nx-sec-btn.is-open { border-color: var(--blue-light); color: var(--blue-light); }
+.nx-count { padding: 0 6px; border: 1px solid var(--border-dim); border-radius: 999px; font-size: 11px; color: var(--text-dim); }
+.nx-list[hidden] { display: none; }
+.nx-list + .nx-list, .nx-sec-bar + .nx-list { margin-top: 8px; }
