@@ -4452,3 +4452,65 @@ a.nf-title:hover, .nx-link:hover, .br-link:hover { text-decoration: underline; }
 .nx-count { padding: 0 6px; border: 1px solid var(--border-dim); border-radius: 999px; font-size: 11px; color: var(--text-dim); }
 .nx-list[hidden] { display: none; }
 .nx-list + .nx-list, .nx-sec-bar + .nx-list { margin-top: 8px; }
+
+/* =========================================================
+   Fenêtre « Saisonnalité » (seasonality.js)
+   ========================================================= */
+:root {
+  --seas-line-season: #4d94ff; --seas-line-current: #f5a623; --seas-today: #8a8a8a;
+  --seas-grid: #2a2a2a; --seas-zero: #e6e6e6; --seas-text: #9a9a9a;
+  --seas-pos: #2ecc71; --seas-neg: #fe1111;
+  --seas-card-bg: #161616; --seas-card-border: #2a2a2a; --seas-title: #fafafa; --seas-sub: #9a9a9a;
+  --seas-chip-bg: #161616; --seas-chip-border: #2a2a2a; --seas-chip-text: #fafafa;
+  --seas-chip-active-bg: #404040; --seas-chip-active-text: #fafafa;
+}
+.seas-toolbar .calendar-toolbar-tools { gap: 8px; }
+.seas-toolbar-label { font-family: var(--mono); font-size: 11px; color: var(--seas-sub); }
+.seas-periods { display: flex; flex-wrap: wrap; gap: 6px; }
+.seas-chip { padding: 5px 10px; background: var(--seas-chip-bg); border: 1px solid var(--seas-chip-border); border-radius: var(--radius-sm); color: var(--seas-chip-text); font-family: var(--mono); font-size: 12px; cursor: pointer; }
+.seas-chip.is-active { background: var(--seas-chip-active-bg); color: var(--seas-chip-active-text); border-color: var(--seas-chip-active-text); }
+.seas-note { margin: 0 0 12px; font-family: var(--mono); font-size: 10px; color: var(--seas-sub); }
+.seas { display: flex; flex-direction: column; gap: 12px; }
+.seas-empty { margin: 0; padding: 18px 14px; text-align: center; font-family: var(--mono); font-size: 12px; color: var(--seas-sub); }
+.seas-card { position: relative; background: var(--seas-card-bg); border: 1px solid var(--seas-card-border); border-radius: var(--radius-card); padding: 10px 6px 4px; min-width: 0; }
+.seas-card-head { display: flex; align-items: baseline; justify-content: space-between; flex-wrap: wrap; gap: 4px 12px; padding: 0 8px 6px; }
+.seas-card-title { margin: 0; font-family: var(--mono); font-size: 12px; font-weight: 700; letter-spacing: 1px; text-transform: uppercase; color: var(--seas-title); }
+.seas-card-sub { font-family: var(--mono); font-size: 10px; color: var(--seas-sub); }
+.seas-legend { display: flex; flex-wrap: wrap; gap: 14px; padding: 0 8px 4px; font-family: var(--mono); font-size: 11px; color: var(--seas-sub); }
+.seas-legend-item { display: inline-flex; align-items: center; gap: 6px; }
+.seas-dot { width: 18px; height: 3px; border-radius: 2px; }
+.seas-dot--season { background: var(--seas-line-season); }
+.seas-dot--current { background: var(--seas-line-current); }
+.seas-main { position: relative; }
+.seas-main svg, .seas-spread svg, .seas-card--bars svg { display: block; max-width: 100%; height: auto; }
+.seas-main .seas-hit { touch-action: none; }
+.seas-spread { border-top: 1px solid var(--seas-card-border); margin-top: 6px; padding-top: 6px; }
+.seas-spread-title { padding: 0 8px 2px; font-family: var(--mono); font-size: 10px; color: var(--seas-sub); }
+.seas-tip { position: absolute; z-index: 3; display: flex; flex-direction: column; gap: 2px; min-width: 150px; padding: 8px 10px; background: var(--bg); border: 1px solid var(--border-dim); border-radius: var(--radius-sm); font-family: var(--mono); font-size: 12px; color: var(--text); pointer-events: none; }
+.seas-tip[hidden] { display: none; }
+.seas-tip i { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 6px; }
+.seas-tip em { font-style: normal; float: right; margin-left: 14px; color: var(--text-dim); }
+.seas-bars { display: grid; grid-template-columns: 1fr; gap: 12px; }
+@media (min-width: 720px) { .seas-bars { grid-template-columns: 3fr 2fr; } }
+
+/* =========================================================
+   Fenêtre « Globe » (globe.js)
+   ========================================================= */
+:root {
+  --globe-panel-bg: #161616; --globe-panel-border: #2a2a2a; --globe-text: #fafafa; --globe-sub: #9a9a9a;
+  --globe-tanker: #ff8a1f; --globe-cargo: #4d94ff;
+}
+.globe-wrap { position: relative; width: 100%; height: calc(100vh - var(--topbar-h) - 140px); min-height: 440px; border: 1px solid var(--globe-panel-border); border-radius: var(--radius-card); overflow: hidden; background: #000; }
+.globe-view { position: absolute; inset: 0; }
+.globe-view .cesium-viewer-bottom, .globe-view .cesium-widget-credits { font-size: 10px; }
+.globe-bar { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin: 0 0 10px; }
+.globe-chip { display: inline-flex; align-items: center; gap: 6px; padding: 5px 10px; background: var(--seas-chip-bg); border: 1px solid var(--seas-chip-border); border-radius: var(--radius-sm); color: var(--seas-chip-text); font-family: var(--mono); font-size: 12px; cursor: pointer; }
+.globe-chip.is-off { opacity: .45; }
+.globe-chip .globe-dot { width: 10px; height: 10px; border-radius: 50%; background: var(--c); }
+.globe-info { position: absolute; z-index: 5; left: 10px; bottom: 10px; max-width: min(320px, calc(100% - 20px)); padding: 10px 12px; background: rgba(0,0,0,.78); border: 1px solid var(--globe-panel-border); border-radius: var(--radius-sm); font-family: var(--mono); font-size: 12px; color: var(--globe-text); }
+.globe-info[hidden] { display: none; }
+.globe-info b { display: block; margin-bottom: 4px; }
+.globe-info span { display: block; color: var(--globe-sub); }
+.globe-status { position: absolute; z-index: 5; right: 10px; top: 10px; max-width: min(360px, calc(100% - 20px)); padding: 6px 10px; background: rgba(0,0,0,.7); border: 1px solid var(--globe-panel-border); border-radius: var(--radius-sm); font-family: var(--mono); font-size: 11px; color: var(--globe-sub); }
+.globe-status[hidden] { display: none; }
+.globe-choke { display: flex; flex-wrap: wrap; gap: 6px; margin: 0 0 10px; }

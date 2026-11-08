@@ -46,7 +46,7 @@
     {
       title: 'Macroéconomique',
       items: [
-        { id: 'tab-globe', label: 'Globe', soon: true },
+        { id: 'tab-globe', label: 'Globe' },
         { id: 'tab-rates', label: 'Taux d\'intérêt', currency: { win: 'rates', all: 'panels' } },
       ],
     },
@@ -63,7 +63,7 @@
       title: 'Market Analyse',
       items: [
         { id: 'tab-marketwatch', label: 'Market Watch', soon: true, currency: { win: 'marketwatch', all: 'own' } },
-        { id: 'tab-seasonality', label: 'Saisonnalité', soon: true, currency: { win: 'seasonality', all: 'own' } },
+        { id: 'tab-seasonality', label: 'Saisonnalité', currency: { win: 'seasonality', all: 'panels' } },
         { id: 'tab-fundheat', label: 'Fondamental heatmap', soon: true, currency: { win: 'fundheat', all: 'own' } },
         { id: 'tab-techheat', label: 'Technical heatmap', soon: true, currency: { win: 'techheat', all: 'own' } },
         { id: 'tab-indicator', label: 'Indicator' },

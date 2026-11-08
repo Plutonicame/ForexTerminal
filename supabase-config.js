@@ -12,4 +12,8 @@
 window.APP_CONFIG = {
   SUPABASE_URL: 'https://fuxnyuxcqydzoctedmsp.supabase.co',
   SUPABASE_ANON_KEY: 'sb_publishable_XUHS4kZN3Gncq7M9S_SdKg_gwn-FoXF',
+  // Clé Google Maps Platform (Map Tiles API) pour le globe 3D photoréaliste de Google Earth (fenêtre Globe).
+  // Laisser vide : le globe utilise alors l'imagerie satellite gratuite d'Esri. Cette clé est faite pour être
+  // publique : restreins-la aux référents HTTP de ton site dans la console Google Cloud.
+  GOOGLE_MAPS_API_KEY: 'AIzaSyDcmO3Npn5hKFscgQWY6YAz1AYIBb2JPJw',
 };
