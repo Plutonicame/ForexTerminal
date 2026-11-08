@@ -327,6 +327,13 @@ const THEME_FIELDS = {
     { v: '--seas-chip-active-bg', l: 'Fond actif', section: 'Boutons (période, Spread)' },
     { v: '--seas-chip-active-text', l: 'Texte actif', section: 'Boutons (période, Spread)' },
   ],
+  marketwatch: [
+    { v: '--mw-chart-bg', l: 'Fond des graphiques (au rechargement)', section: 'Graphiques TradingView' },
+    { v: '--mw-grid', l: 'Quadrillage (au rechargement)', section: 'Graphiques TradingView' },
+    { v: '--mw-tile-border', l: 'Bordure des tuiles', section: 'Tuiles' },
+    { v: '--mw-tile-title', l: 'Titre', section: 'Tuiles' },
+    { v: '--mw-tile-sub', l: 'Sous-titre', section: 'Tuiles' },
+  ],
   globe: [
     { v: '--globe-tanker', l: 'Pétroliers', section: 'Navires' },
     { v: '--globe-cargo', l: 'Cargos / porte-conteneurs', section: 'Navires' },

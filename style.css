@@ -4514,3 +4514,20 @@ a.nf-title:hover, .nx-link:hover, .br-link:hover { text-decoration: underline; }
 .globe-status { position: absolute; z-index: 5; right: 10px; top: 10px; max-width: min(360px, calc(100% - 20px)); padding: 6px 10px; background: rgba(0,0,0,.7); border: 1px solid var(--globe-panel-border); border-radius: var(--radius-sm); font-family: var(--mono); font-size: 11px; color: var(--globe-sub); }
 .globe-status[hidden] { display: none; }
 .globe-choke { display: flex; flex-wrap: wrap; gap: 6px; margin: 0 0 10px; }
+
+/* =========================================================
+   Fenêtre « Market Watch » (marketwatch.js) : graphiques TradingView
+   ========================================================= */
+:root {
+  --mw-chart-bg: #161616; --mw-grid: #2a2a2a;
+  --mw-tile-border: #2a2a2a; --mw-tile-title: #fafafa; --mw-tile-sub: #9a9a9a;
+}
+.mw-grid { display: grid; grid-template-columns: 1fr; gap: 10px; }
+@media (min-width: 600px) { .mw-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (min-width: 1000px) { .mw-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); } }
+.mw-tile { min-width: 0; background: var(--mw-chart-bg); border: 1px solid var(--mw-tile-border); border-radius: var(--radius-card); overflow: hidden; }
+.mw-tile-head { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; padding: 6px 10px; border-bottom: 1px solid var(--mw-tile-border); font-family: var(--mono); font-size: 12px; color: var(--mw-tile-title); }
+.mw-tile-head[data-open] { cursor: pointer; }
+.mw-tile-head span { font-size: 10px; color: var(--mw-tile-sub); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.mw-chart { height: 330px; }
+.mw-tile--big .mw-chart { height: calc(100vh - 250px); min-height: 480px; }
