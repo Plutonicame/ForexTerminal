@@ -1985,6 +1985,7 @@ document.addEventListener('DOMContentLoaded', () => {
     if (tabId === 'tab-5' && window.Fundamental) window.Fundamental.refresh(); // Note fondamentale
     if (tabId === 'tab-seasonality' && window.Seasonality) window.Seasonality.refresh();
     if (tabId === 'tab-marketwatch' && window.MarketWatch) window.MarketWatch.refresh();
+    if (tabId === 'tab-bankpos' && window.BankPos) window.BankPos.refresh();
     if (window.Globe) window.Globe.setActive(tabId === 'tab-globe'); // Globe : créé à la 1re ouverture, en pause ailleurs
     if (window.NewsWindows) window.NewsWindows.refresh(tabId); // News Feed, Bank Research, Squawk
   });

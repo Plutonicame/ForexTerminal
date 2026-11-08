@@ -334,6 +334,16 @@ const THEME_FIELDS = {
     { v: '--mw-tile-title', l: 'Titre', section: 'Tuiles' },
     { v: '--mw-tile-sub', l: 'Sous-titre', section: 'Tuiles' },
   ],
+  bankpos: [
+    { v: '--bp-card-bg', l: 'Fond des cartes', section: 'Cartes' },
+    { v: '--bp-card-border', l: 'Bordure des cartes', section: 'Cartes' },
+    { v: '--bp-title', l: 'Titres', section: 'Textes' },
+    { v: '--bp-text', l: 'Texte', section: 'Textes' },
+    { v: '--bp-dim', l: 'Texte secondaire', section: 'Textes' },
+    { v: '--bp-pos', l: 'Achat / hausse', section: 'Variations' },
+    { v: '--bp-neg', l: 'Vente / baisse', section: 'Variations' },
+    { v: '--bp-row-hover', l: 'Survol d\'une ligne', section: 'Variations' },
+  ],
   globe: [
     { v: '--globe-tanker', l: 'Pétroliers', section: 'Navires' },
     { v: '--globe-cargo', l: 'Cargos / porte-conteneurs', section: 'Navires' },
