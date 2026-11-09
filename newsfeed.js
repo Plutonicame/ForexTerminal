@@ -3,12 +3,14 @@
 /**
  * newsfeed.js
  * Fenêtres d'actualité en direct :
- *   - News Feed     : deux colonnes — investingLive (Live Feed) | FinancialJuice (annonces rouges)
+ *   - News Feed     : six colonnes — investingLive | FinancialJuice (annonces rouges) | Investing.com | Bloomberg | Reuters | New York Times
+ *                     (Investing.com, Bloomberg, Reuters et NYT : uniquement ce qui touche les marchés / la finance mondiale, traduit)
  *   - Bank Research : FX Daily d'ING (traduit en français + lien vers l'original)
- *   - Squawk        : accès à la radio économique de FinancialJuice
- *   - Nouveau       : tout ce qui est nouveau (posts de Trump, FX Daily ING, annonces rouges)
- * Données : tables news_items (news-bot), bank_research (ing-bot) et trump_posts (trump-bot).
- * Seuls des titres + liens sont repris pour investingLive et FinancialJuice ; ING est traduit avec un lien vers l'original.
+ *   - Squawk        : voix de synthèse qui lit en français les nouvelles annonces rouges de FinancialJuice + historique
+ *                     (bouton d'activation aussi dans la barre de navigation, à côté de New York)
+ *   - Nouveau       : tout ce qui est nouveau depuis ta dernière visite (posts de Trump, FX Daily ING, annonces, news)
+ * Données : tables news_items (news-bot, press-bot), bank_research (ing-bot) et trump_posts (trump-bot).
+ * Seuls des titres + liens sont repris ; ING est traduit avec un lien vers l'original.
  */
 (function () {
   const FEED_WINDOW = 'tab-newsfeed';
@@ -17,6 +19,20 @@
   const HOME_WINDOW = 'tab-4';
   const SQUAWK_URL = 'https://www.financialjuice.com/home';
   const POLL_MS = 60 * 1000;
+  const FEED_HOURS = 72; // période par défaut (le week-end, 24 h ne montrait presque rien)
+  const KEEP_DAYS = 30;  // durée de conservation des news en base
+  const LS_RANGE = 'fxt-nf-range';
+  const PRESETS = [['today', "Aujourd'hui"], ['24h', '24 h'], ['72h', '72 h'], ['7d', '7 jours'], ['30d', '30 jours']];
+
+  // Colonnes du News Feed. red : on n'affiche que les lignes retenues par le tri (red = true).
+  const SOURCES = [
+    { key: 'investinglive', title: 'investingLive', sub: 'News & articles · titres en anglais', red: false },
+    { key: 'fj', title: 'FinancialJuice', sub: 'Annonces rouges uniquement · traduites', red: true },
+    { key: 'investing', title: 'Investing.com', sub: 'Marchés & macro · traduit', red: true },
+    { key: 'bloomberg', title: 'Bloomberg', sub: 'Marchés & macro, hors actions · traduit', red: true },
+    { key: 'reuters', title: 'Reuters', sub: 'Marchés & macro, hors actions · traduit', red: true },
+    { key: 'nyt', title: 'New York Times', sub: 'Marchés & macro, hors actions · traduit', red: true },
+  ];
 
   const busy = {};
   const signatures = {};
@@ -65,23 +81,104 @@
     return true;
   }
 
+  /* ---------------- Période du News Feed (boutons + calendrier) ---------------- */
+  let feedRange = { mode: '72h', from: '', to: '' };
+  try { const r = JSON.parse(localStorage.getItem(LS_RANGE) || 'null'); if (r && r.mode) feedRange = r; } catch (e) { /* défaut */ }
+
+  const pad = (n) => String(n).padStart(2, '0');
+  const ymd = (d) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+  const dmy = (v) => { const [y, m, d] = String(v).split('-'); return `${d}/${m}/${y}`; };
+
+  // bornes de la période choisie : { since, until (ISO), label }
+  function rangeBounds() {
+    const now = new Date();
+    const m = feedRange.mode;
+    if (m === 'custom' && feedRange.from && feedRange.to) {
+      const a = new Date(feedRange.from + 'T00:00:00');
+      const b = new Date(feedRange.to + 'T23:59:59.999');
+      if (!Number.isNaN(a.getTime()) && !Number.isNaN(b.getTime())) {
+        return { since: a.toISOString(), until: b.toISOString(), label: feedRange.from === feedRange.to ? dmy(feedRange.from) : `${dmy(feedRange.from)} → ${dmy(feedRange.to)}` };
+      }
+    }
+    const hours = { '24h': 24, '72h': 72, '7d': 168, '30d': 720 }[m];
+    if (m === 'today') { const d0 = new Date(now); d0.setHours(0, 0, 0, 0); return { since: d0.toISOString(), until: new Date(now.getTime() + 3600e3).toISOString(), label: "Aujourd'hui" }; }
+    const h = hours || FEED_HOURS;
+    return { since: new Date(now.getTime() - h * 3600e3).toISOString(), until: new Date(now.getTime() + 3600e3).toISOString(), label: 'Depuis ' + (PRESETS.find((x) => x[0] === m) || [0, '72 h'])[1] };
+  }
+
+  function syncRangeUi() {
+    const sec = document.getElementById(FEED_WINDOW);
+    if (!sec) return;
+    const lab = sec.querySelector('[data-nf-range-label]');
+    if (lab) lab.textContent = rangeBounds().label;
+    sec.querySelectorAll('[data-nf-preset]').forEach((b) => b.classList.toggle('is-active', feedRange.mode === b.dataset.nfPreset));
+  }
+
+  function setRange(r) {
+    feedRange = r;
+    try { localStorage.setItem(LS_RANGE, JSON.stringify(r)); } catch (e) { /* ignore */ }
+    signatures.feed = null;
+    syncRangeUi();
+    loadFeed();
+  }
+
   /* ---------------- News Feed ---------------- */
   function ensureFeedLayout() {
     const sec = document.getElementById(FEED_WINDOW);
     if (!sec) return null;
     if (!sec.querySelector('.nf-grid')) {
       sec.innerHTML = `
-        <div class="calendar-toolbar"><span class="calendar-toolbar-title">News Feed</span></div>
-        <div class="nf-grid">
-          <section class="nf-col" aria-label="investingLive Live Feed">
-            <header class="nf-col-head"><span class="nf-col-title">investingLive</span><span class="nf-col-sub">Live Feed · titres en anglais</span></header>
-            <div class="nf-list" data-nf="investinglive"><p class="nf-empty">Chargement…</p></div>
-          </section>
-          <section class="nf-col" aria-label="FinancialJuice annonces rouges">
-            <header class="nf-col-head"><span class="nf-col-title">FinancialJuice</span><span class="nf-col-sub">Annonces rouges uniquement · traduites</span></header>
-            <div class="nf-list" data-nf="fj"><p class="nf-empty">Chargement…</p></div>
-          </section>
+        <div class="calendar-toolbar nf-toolbar">
+          <span class="calendar-toolbar-title">News Feed</span>
+          <div class="calendar-toolbar-tools">
+            <span class="nf-range-label" data-nf-range-label></span>
+            <button type="button" class="nf-cal-btn" data-nf-cal-btn aria-haspopup="dialog" aria-expanded="false" aria-label="Choisir la période des news" title="Choisir la période">
+              <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4.5" width="18" height="16" rx="2"/><path d="M3 9.5h18M8 2.5v4M16 2.5v4"/></svg>
+            </button>
+          </div>
+          <div class="nf-cal" data-nf-cal role="dialog" aria-label="Période des news" hidden>
+            <div class="nf-cal-presets">${PRESETS.map(([k, l]) => `<button type="button" class="seas-chip" data-nf-preset="${k}">${l}</button>`).join('')}</div>
+            <div class="nf-cal-custom">
+              <label>Du <input type="date" data-nf-from></label>
+              <label>au <input type="date" data-nf-to></label>
+              <button type="button" class="seas-chip" data-nf-apply>Afficher</button>
+            </div>
+            <p class="nf-cal-note">Les news sont gardées ${KEEP_DAYS} jours.</p>
+          </div>
+        </div>
+        <div class="nf-grid">${SOURCES.map((x) => `
+          <section class="nf-col" aria-label="${esc(x.title)}">
+            <header class="nf-col-head"><span class="nf-col-title">${esc(x.title)}</span><span class="nf-col-sub">${esc(x.sub)}</span></header>
+            <div class="nf-list" data-nf="${x.key}"><p class="nf-empty">Chargement…</p></div>
+          </section>`).join('')}
         </div>`;
+      const cal = sec.querySelector('[data-nf-cal]');
+      const btn = sec.querySelector('[data-nf-cal-btn]');
+      const from = sec.querySelector('[data-nf-from]');
+      const to = sec.querySelector('[data-nf-to]');
+      const today = new Date();
+      const min = new Date(today.getTime() - KEEP_DAYS * 86400e3);
+      [from, to].forEach((i) => { i.min = ymd(min); i.max = ymd(today); });
+      const toggle = (open) => {
+        cal.hidden = !open;
+        btn.setAttribute('aria-expanded', String(open));
+        if (open) { const b = rangeBounds(); from.value = feedRange.from || ymd(new Date(b.since)); to.value = feedRange.to || ymd(today); }
+      };
+      btn.addEventListener('click', (ev) => { ev.stopPropagation(); toggle(cal.hidden); });
+      cal.addEventListener('click', (ev) => {
+        ev.stopPropagation();
+        const pre = ev.target.closest('[data-nf-preset]');
+        if (pre) { setRange({ mode: pre.dataset.nfPreset, from: '', to: '' }); toggle(false); return; }
+        if (ev.target.closest('[data-nf-apply]')) {
+          if (!from.value || !to.value) return;
+          let a = from.value; let b = to.value;
+          if (a > b) [a, b] = [b, a];
+          setRange({ mode: 'custom', from: a, to: b });
+          toggle(false);
+        }
+      });
+      document.addEventListener('click', () => { if (!cal.hidden) toggle(false); });
+      syncRangeUi();
     }
     return sec;
   }
@@ -94,9 +191,9 @@
       const dk = dayKey(r.published_at);
       if (dk !== lastDay) { lastDay = dk; html += `<p class="nf-day">${esc(fmtDay(r.published_at))}</p>`; }
       const url = safeUrl(r.url);
-      const title = kind === 'fj' ? (r.title_fr || r.title) : r.title;
-      const tag = kind === 'investinglive' && r.feed ? `<span class="nf-tag">${esc(r.feed)}</span>` : '<span class="nf-tag nf-tag--red">Rouge</span>';
-      const orig = kind === 'fj' && r.title_fr && r.title_fr !== r.title ? `<span class="nf-orig">${esc(r.title)}</span>` : '';
+      const title = kind === 'investinglive' ? r.title : (r.title_fr || r.title);
+      const tag = kind === 'fj' ? '<span class="nf-tag nf-tag--red">Rouge</span>' : (r.feed ? `<span class="nf-tag">${esc(r.feed)}</span>` : '');
+      const orig = kind !== 'investinglive' && r.title_fr && r.title_fr !== r.title ? `<span class="nf-orig">${esc(r.title)}</span>` : '';
       const body = url
         ? `<a class="nf-title" href="${esc(url)}" target="_blank" rel="noopener noreferrer">${esc(title)}</a>`
         : `<span class="nf-title">${esc(title)}</span>`;
@@ -110,16 +207,20 @@
       const sec = ensureFeedLayout();
       const c = await client();
       if (!sec || !c) return;
-      const since = new Date(Date.now() - 24 * 3600 * 1000).toISOString();
-      const [inv, fj] = await Promise.all([
-        c.from('news_items').select('id,feed,title,url,published_at').eq('source', 'investinglive').gte('published_at', since).order('published_at', { ascending: false }).limit(120),
-        c.from('news_items').select('id,title,title_fr,url,published_at').eq('source', 'fj').eq('red', true).gte('published_at', since).order('published_at', { ascending: false }).limit(120),
-      ]);
-      if (inv.error || fj.error) throw (inv.error || fj.error);
-      const sig = (inv.data || []).map((r) => r.id).join('|') + '#' + (fj.data || []).map((r) => r.id + (r.title_fr ? 1 : 0)).join('|');
+      const { since, until } = rangeBounds();
+      const res = await Promise.all(SOURCES.map((x) => {
+        let q = c.from('news_items').select('id,feed,title,title_fr,url,published_at').eq('source', x.key).gte('published_at', since).lt('published_at', until);
+        if (x.red) q = q.eq('red', true);
+        return q.order('published_at', { ascending: false }).limit(500);
+      }));
+      const bad = res.find((r) => r.error);
+      if (bad) throw bad.error;
+      const sig = res.map((r) => (r.data || []).map((d) => d.id + (d.title_fr ? 1 : 0)).join('|')).join('#') + '@' + since;
       if (!changed('feed', sig)) return;
-      sec.querySelector('[data-nf="investinglive"]').innerHTML = renderRows(inv.data || [], 'investinglive');
-      sec.querySelector('[data-nf="fj"]').innerHTML = renderRows(fj.data || [], 'fj');
+      SOURCES.forEach((x, i) => {
+        const box = sec.querySelector(`[data-nf="${x.key}"]`);
+        if (box) box.innerHTML = renderRows(res[i].data || [], x.key);
+      });
     });
   }
 
@@ -189,28 +290,158 @@
     });
   }
 
-  /* ---------------- Squawk ---------------- */
-  function buildSquawk() {
-    const sec = document.getElementById(SQUAWK_WINDOW);
-    if (!sec || sec.querySelector('.sq-card')) return;
-    sec.innerHTML = `
-      <div class="calendar-toolbar"><span class="calendar-toolbar-title">Squawk</span></div>
-      <div class="sq-card">
-        <p class="sq-title">Radio économique de FinancialJuice</p>
-        <p class="sq-text">La radio (squawk) de FinancialJuice lit les annonces à voix haute, en direct, en anglais. Elle est diffusée dans le lecteur de FinancialJuice et ne peut pas être intégrée directement dans une autre page : le bouton ouvre le lecteur dans un nouvel onglet, que tu peux laisser tourner en arrière-plan.</p>
-        <a class="sq-btn" href="${SQUAWK_URL}" target="_blank" rel="noopener noreferrer">Ouvrir le squawk FinancialJuice</a>
-      </div>`;
+  /* ---------------- Squawk : voix de synthèse + historique ---------------- */
+  // Lit à voix haute, en français, chaque nouvelle annonce rouge de FinancialJuice (déjà traduite par news-bot).
+  // La vraie voix du squawk FinancialJuice est un flux propriétaire : impossible de l'intégrer ou de la transcrire ici.
+  const LS_SQUAWK = 'fxt-squawk-on';
+  const squawk = { on: false, primed: false, spoken: new Set(), timer: null, voice: null, status: '' };
+
+  function lsGet(k) { try { return localStorage.getItem(k); } catch (e) { return null; } }
+  function lsSet(k, v) { try { localStorage.setItem(k, v); } catch (e) { /* stockage indisponible */ } }
+  const canSpeak = () => typeof window !== 'undefined' && 'speechSynthesis' in window && 'SpeechSynthesisUtterance' in window;
+
+  function pickVoice() {
+    if (!canSpeak()) return null;
+    const list = window.speechSynthesis.getVoices() || [];
+    const fr = list.filter((v) => /^fr/i.test(v.lang));
+    squawk.voice = fr.find((v) => /fr[-_]FR/i.test(v.lang) && !v.localService) || fr.find((v) => /fr[-_]FR/i.test(v.lang)) || fr[0] || null;
+    return squawk.voice;
   }
 
-  /* ---------------- Nouveau : tout ce qui est nouveau ---------------- */
-  // Trois sections à ouvrir par bouton (FinancialJuice, investingLive, Banques) ; un bouton n'apparaît que s'il y a du contenu.
+  function speak(text) {
+    if (!canSpeak() || !text) return;
+    try {
+      const u = new SpeechSynthesisUtterance(text);
+      u.lang = 'fr-FR';
+      if (squawk.voice || pickVoice()) u.voice = squawk.voice;
+      u.rate = 1.05;
+      window.speechSynthesis.speak(u);
+    } catch (e) { console.warn('squawk', e); }
+  }
+
+  function syncSquawkUi() {
+    const nav = document.getElementById('squawkToggle');
+    if (nav) {
+      nav.setAttribute('aria-pressed', String(squawk.on));
+      nav.classList.toggle('is-on', squawk.on);
+      nav.title = squawk.on ? 'Squawk activé (clique pour couper)' : 'Squawk coupé (clique pour activer)';
+    }
+    const btn = document.querySelector('[data-sq-toggle]');
+    if (btn) { btn.textContent = squawk.on ? 'Couper la voix' : 'Activer la voix'; btn.classList.toggle('is-on', squawk.on); }
+    const st = document.querySelector('[data-sq-status]');
+    if (st) st.textContent = squawk.status || (squawk.on ? 'Voix activée : les nouvelles annonces rouges sont lues en français.' : 'Voix coupée.');
+  }
+
+  async function squawkPoll(first) {
+    const c = await client();
+    if (!c) return;
+    const since = new Date(Date.now() - 10 * 60 * 1000).toISOString();
+    const { data, error } = await c.from('news_items').select('id,title,title_fr,published_at').eq('source', 'fj').eq('red', true).gte('published_at', since).order('published_at', { ascending: true }).limit(30);
+    if (error || !data) return;
+    const fresh = data.filter((r) => !squawk.spoken.has(r.id));
+    fresh.forEach((r) => squawk.spoken.add(r.id));
+    const wasPrimed = squawk.primed;
+    squawk.primed = true;
+    if (first || !wasPrimed) return; // à l'activation : on ne relit pas ce qui est déjà tombé
+    fresh.slice(-5).forEach((r) => speak(r.title_fr || r.title));
+  }
+
+  function setSquawk(on, byUser) {
+    if (on && !canSpeak()) { squawk.status = 'Ce navigateur ne sait pas lire à voix haute.'; squawk.on = false; syncSquawkUi(); return; }
+    squawk.on = on;
+    squawk.primed = false;
+    squawk.status = '';
+    lsSet(LS_SQUAWK, on ? '1' : '0');
+    clearInterval(squawk.timer);
+    squawk.timer = null;
+    if (on) {
+      pickVoice();
+      if (byUser) speak('Squawk activé.'); // ce premier son, déclenché par un clic, débloque la voix du navigateur
+      squawkPoll(true);
+      squawk.timer = setInterval(() => squawkPoll(false), 15 * 1000);
+    } else if (canSpeak()) {
+      window.speechSynthesis.cancel();
+    }
+    syncSquawkUi();
+  }
+
+  async function loadSquawkHistory() {
+    await guarded('squawk', async () => {
+      const box = document.querySelector('[data-sq-history]');
+      const c = await client();
+      if (!box || !c) return;
+      const since = new Date(Date.now() - FEED_HOURS * 3600 * 1000).toISOString();
+      const { data, error } = await c.from('news_items').select('id,title,title_fr,url,published_at').eq('source', 'fj').eq('red', true).gte('published_at', since).order('published_at', { ascending: false }).limit(80);
+      if (error) throw error;
+      const sig = (data || []).map((r) => r.id + (r.title_fr ? 1 : 0)).join('|');
+      if (!changed('squawk', sig)) return;
+      box.innerHTML = renderRows(data || [], 'fj');
+    });
+  }
+
+  function buildSquawk() {
+    const sec = document.getElementById(SQUAWK_WINDOW);
+    if (!sec) return;
+    if (!sec.querySelector('.sq-card')) {
+      sec.innerHTML = `
+        <div class="calendar-toolbar"><span class="calendar-toolbar-title">Squawk</span></div>
+        <div class="sq-card">
+          <p class="sq-title">Squawk en français</p>
+          <p class="sq-text">Chaque nouvelle annonce rouge de FinancialJuice est lue à voix haute, en français, dès qu'elle est traduite (quelques secondes à une minute après sa publication). Les annonces lues restent en historique ci-dessous. Le même bouton existe dans la barre du haut, à côté de New York.</p>
+          <div class="sq-actions">
+            <button type="button" class="sq-btn" data-sq-toggle>Activer la voix</button>
+            <button type="button" class="sq-btn" data-sq-test>Tester la voix</button>
+            <a class="sq-btn" href="${SQUAWK_URL}" target="_blank" rel="noopener noreferrer">Squawk FinancialJuice d'origine</a>
+          </div>
+          <p class="sq-status" data-sq-status></p>
+        </div>
+        <div class="nf-col sq-history"><header class="nf-col-head"><span class="nf-col-title">Historique</span><span class="nf-col-sub">Annonces rouges traduites · du plus récent au plus ancien</span></header>
+          <div class="nf-list" data-sq-history><p class="nf-empty">Chargement…</p></div></div>`;
+      sec.addEventListener('click', (ev) => {
+        if (ev.target.closest('[data-sq-toggle]')) setSquawk(!squawk.on, true);
+        else if (ev.target.closest('[data-sq-test]')) { pickVoice(); speak('Test du squawk. Les annonces seront lues ainsi, en français.'); }
+      });
+    }
+    syncSquawkUi();
+  }
+
+  function initSquawkNav() {
+    const nav = document.getElementById('squawkToggle');
+    if (nav) nav.addEventListener('click', () => setSquawk(!squawk.on, true));
+    if (canSpeak()) window.speechSynthesis.addEventListener('voiceschanged', pickVoice);
+    if (lsGet(LS_SQUAWK) === '1') setSquawk(true, false);
+    else syncSquawkUi();
+  }
+
+  /* ---------------- Nouveau : ce qui est nouveau depuis ta dernière visite ---------------- */
+  // Un bouton par source (n'apparaît que s'il y a du nouveau). Pour chaque source on retient, dans ce navigateur,
+  // la date de la dernière annonce vue dès qu'on déroule le bouton. À la visite suivante (rechargement de l'appli, ou retour
+  // après plus de 2 minutes d'absence), seules les annonces plus récentes sont affichées.
   // Les posts de Trump restent affichés directement.
   const SECTIONS = [
     { key: 'fj', label: 'FinancialJuice' },
     { key: 'il', label: 'Investing Live' },
+    { key: 'investing', label: 'Investing.com' },
+    { key: 'bloomberg', label: 'Bloomberg' },
+    { key: 'reuters', label: 'Reuters' },
+    { key: 'nyt', label: 'New York Times' },
     { key: 'bank', label: 'Banques · FX Daily' },
   ];
+  const PRESS = { investing: 'Investing.com', bloomberg: 'Bloomberg', reuters: 'Reuters', nyt: 'New York Times' };
+  const LS_SEEN = 'fxt-nx-seen';
   const openSections = new Set();
+  let showAll = false;
+  let maxAtByKey = {};
+  const readSeen = () => { try { return JSON.parse(lsGet(LS_SEEN) || '{}') || {}; } catch (e) { return {}; } };
+  let baseline = readSeen();   // « dernière visite » : figé pendant la visite pour que la liste ne disparaisse pas sous les yeux
+  let hiddenAt = 0;
+
+  function markSeen(key) {
+    const m = maxAtByKey[key];
+    if (!m) return;
+    const seen = readSeen();
+    if (!seen[key] || m > seen[key]) { seen[key] = m; lsSet(LS_SEEN, JSON.stringify(seen)); }
+  }
 
   function ensureHome() {
     let box = document.getElementById('newsExtras');
@@ -221,12 +452,13 @@
       box.id = 'newsExtras';
       anchor.parentNode.insertBefore(box, anchor);
       box.addEventListener('click', (event) => {
+        if (event.target.closest('[data-nx-all]')) { showAll = !showAll; signatures.home = null; loadHome(); return; }
         const sec = event.target.closest('[data-nx-sec]');
         if (sec) {
           const key = sec.dataset.nxSec;
           const body = box.querySelector(`[data-nx-body="${key}"]`);
           const open = !openSections.has(key);
-          if (open) openSections.add(key); else openSections.delete(key);
+          if (open) { openSections.add(key); markSeen(key); } else openSections.delete(key);
           sec.setAttribute('aria-expanded', String(open));
           sec.classList.toggle('is-open', open);
           if (body) body.hidden = !open;
@@ -270,17 +502,24 @@
       const startIso = new Date(f.startMs).toISOString();
       const endIso = new Date(f.endMs).toISOString();
       const wantUsd = !f.currencies || !f.currencies.size || f.currencies.has('USD');
-      const [fj, il, ing, trump] = await Promise.all([
-        c.from('news_items').select('id,title,title_fr,url,published_at').eq('source', 'fj').eq('red', true).gte('published_at', startIso).lt('published_at', endIso).order('published_at', { ascending: false }).limit(150),
-        c.from('news_items').select('id,feed,title,url,published_at').eq('source', 'investinglive').gte('published_at', startIso).lt('published_at', endIso).order('published_at', { ascending: false }).limit(150),
+      const news = (source, withRed) => {
+        let q = c.from('news_items').select('id,feed,title,title_fr,url,published_at').eq('source', source).gte('published_at', startIso).lt('published_at', endIso);
+        if (withRed) q = q.eq('red', true);
+        return q.order('published_at', { ascending: false }).limit(150);
+      };
+      const [fj, il, inv, bbg, reu, nyt, ing, trump] = await Promise.all([
+        news('fj', true), news('investinglive', false), news('investing', true), news('bloomberg', true), news('reuters', true), news('nyt', true),
         c.from('bank_research').select('id,bank,title,title_fr,url,published_at,summary,analyzed_at').gte('published_at', startIso).lt('published_at', endIso).order('published_at', { ascending: false }).limit(10),
         wantUsd
           ? c.from('trump_posts').select('id,posted_at,text_en,text_fr,title_fr,stars,url').gte('posted_at', startIso).lt('posted_at', endIso).gte('stars', 2).order('posted_at', { ascending: false }).limit(60)
           : Promise.resolve({ data: [], error: null }),
       ]);
-      const lists = { fj: [], il: [], bank: [], trump: [] };
+      const lists = { fj: [], il: [], investing: [], bloomberg: [], reuters: [], nyt: [], bank: [], trump: [] };
       (fj.data || []).forEach((r) => lists.fj.push({ kind: 'fj', tag: '', at: r.published_at, title: r.title_fr || r.title, url: r.url, linkLabel: 'Source' }));
       (il.data || []).forEach((r) => lists.il.push({ kind: 'il', tag: r.feed || '', at: r.published_at, title: r.title, url: r.url, linkLabel: 'Article' }));
+      [['investing', inv], ['bloomberg', bbg], ['reuters', reu], ['nyt', nyt]].forEach(([k, res]) => {
+        (res.data || []).forEach((r) => lists[k].push({ kind: 'press', tag: r.feed || PRESS[k], at: r.published_at, title: r.title_fr || r.title, url: r.url, linkLabel: 'Article' }));
+      });
       (ing.data || []).forEach((r) => lists.bank.push({
         kind: 'ing', tag: 'ING · FX Daily', at: r.published_at, title: (r.analyzed_at && r.title_fr) || r.title, url: r.url, linkLabel: 'Article original',
         more: r.analyzed_at && Array.isArray(r.summary) && r.summary.length ? `<ul class="br-bullets">${r.summary.map((b) => `<li>${esc(b)}</li>`).join('')}</ul>` : '',
@@ -290,23 +529,37 @@
         more: paragraphs(r.text_fr || r.text_en),
       }));
 
-      const sig = ['fj', 'il', 'bank', 'trump'].map((k) => lists[k].map((i) => i.at + i.title).join('|')).join('#') + '@' + startIso + endIso;
+      // plus récente annonce de chaque source ; si la section est déroulée, elle compte comme vue
+      SECTIONS.forEach((s) => { maxAtByKey[s.key] = lists[s.key].reduce((m, i) => (i.at > m ? i.at : m), ''); if (openSections.has(s.key)) markSeen(s.key); });
+      // seulement le nouveau par rapport à la dernière visite
+      const shown = {};
+      let hiddenCount = 0;
+      SECTIONS.forEach((s) => {
+        const base = baseline[s.key];
+        shown[s.key] = showAll || !base ? lists[s.key] : lists[s.key].filter((i) => i.at > base);
+        hiddenCount += lists[s.key].length - shown[s.key].length;
+      });
+
+      const sig = SECTIONS.map((s) => shown[s.key].map((i) => i.at + i.title).join('|')).join('#') + '|' + lists.trump.map((i) => i.at + i.title).join('|') + '@' + startIso + endIso + showAll;
       if (!changed('home', sig)) return;
-      const buttons = SECTIONS.filter((s) => lists[s.key].length).map((s) => {
+      const visible = SECTIONS.filter((s) => shown[s.key].length);
+      const buttons = visible.map((s) => {
         const open = openSections.has(s.key);
-        return `<button type="button" class="nx-sec-btn${open ? ' is-open' : ''}" data-nx-sec="${s.key}" aria-expanded="${open}">${esc(s.label)}<span class="nx-count">${lists[s.key].length}</span></button>`;
+        return `<button type="button" class="nx-sec-btn${open ? ' is-open' : ''}" data-nx-sec="${s.key}" aria-expanded="${open}">${esc(s.label)}<span class="nx-count">${shown[s.key].length}</span></button>`;
       }).join('');
-      const bodies = SECTIONS.filter((s) => lists[s.key].length).map((s) =>
-        `<div class="nx-list" data-nx-body="${s.key}"${openSections.has(s.key) ? '' : ' hidden'}>${lists[s.key].map(homeItem).join('')}</div>`).join('');
+      const bodies = visible.map((s) =>
+        `<div class="nx-list" data-nx-body="${s.key}"${openSections.has(s.key) ? '' : ' hidden'}>${shown[s.key].map(homeItem).join('')}</div>`).join('');
       const nothing = !lists.trump.length && !buttons;
+      const allBtn = (hiddenCount > 0 || showAll) ? `<button type="button" class="speech-btn nx-all" data-nx-all>${showAll ? 'Seulement le nouveau' : `Tout afficher (+${hiddenCount} déjà vues)`}</button>` : '';
       box.innerHTML = `
         <div class="speeches-toolbar">
           <span class="speeches-toolbar-title">Nouveautés</span>
-          <span class="speeches-toolbar-info">${esc(f.label || '')}</span>
+          <span class="speeches-toolbar-info">${esc(f.label || '')}${showAll ? '' : ' · depuis ta dernière visite'}</span>
+          ${allBtn}
         </div>
         ${lists.trump.length ? `<div class="nx-list">${lists.trump.map(homeItem).join('')}</div>` : ''}
         ${buttons ? `<div class="nx-sec-bar">${buttons}</div>${bodies}` : ''}
-        ${nothing ? '<p class="speeches-empty">Rien de nouveau sur cette période.</p>' : ''}`;
+        ${nothing ? `<p class="speeches-empty">${showAll ? 'Rien sur cette période.' : 'Rien de nouveau depuis ta dernière visite.'}</p>` : ''}`;
     });
   }
 
@@ -314,7 +567,7 @@
   function refresh(tabId) {
     if (tabId === FEED_WINDOW) { ensureFeedLayout(); loadFeed(); }
     else if (tabId === BANK_WINDOW) loadBank();
-    else if (tabId === SQUAWK_WINDOW) buildSquawk();
+    else if (tabId === SQUAWK_WINDOW) { buildSquawk(); loadSquawkHistory(); }
     else if (tabId === HOME_WINDOW) loadHome();
   }
 
@@ -324,9 +577,16 @@
     ensureFeedLayout();
     buildSquawk();
     ensureHome();
+    initSquawkNav();
+    // retour dans l'appli après une absence : la « dernière visite » est mise à jour
+    document.addEventListener('visibilitychange', () => {
+      if (document.hidden) { hiddenAt = Date.now(); return; }
+      if (hiddenAt && Date.now() - hiddenAt > 2 * 60 * 1000) { baseline = readSeen(); showAll = false; signatures.home = null; if (isVisible(HOME_WINDOW)) loadHome(); }
+    });
     if (window.Auth) window.Auth.onAuthStateChange((s) => { if (s) { loadFeed(); loadBank(); loadHome(); } });
     setInterval(() => {
       if (isVisible(FEED_WINDOW)) loadFeed();
+      if (isVisible(SQUAWK_WINDOW)) loadSquawkHistory();
       if (isVisible(BANK_WINDOW)) loadBank();
       if (isVisible(HOME_WINDOW)) loadHome();
     }, POLL_MS);

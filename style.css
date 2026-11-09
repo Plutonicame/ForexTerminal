@@ -4375,7 +4375,7 @@ body.te-open {
 #themeWindowAccordions { display: contents; }
 
 /* ===== News Feed / Bank Research / Squawk / Nouveautés ===== */
-.nf-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 12px; align-items: start; }
+.nf-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; margin-top: 12px; align-items: start; }
 .nf-col { background: var(--bg-card); border: 1px solid var(--border-dim); border-radius: var(--radius-card); min-width: 0; }
 .nf-col-head { display: flex; flex-direction: column; gap: 2px; padding: 10px 12px; border-bottom: 1px solid var(--border-dim); position: sticky; top: 0; background: var(--bg-card); border-radius: var(--radius-card) var(--radius-card) 0 0; z-index: 1; }
 .nf-col-title { font-family: var(--mono); font-weight: 700; letter-spacing: 1px; color: var(--text); }
@@ -4564,3 +4564,32 @@ a.nf-title:hover, .nx-link:hover, .br-link:hover { text-decoration: underline; }
 .bp-summary .bp-k { display: block; font-size: 10px; color: var(--bp-dim); text-transform: uppercase; letter-spacing: .5px; }
 .bp-summary b { font-size: 16px; color: var(--bp-title); }
 @media (max-width: 800px) { .bp-two { grid-template-columns: 1fr; } .bp-body { padding: 0 10px 20px; } .bp-note { margin: 8px 10px 12px; } .bp-top3 { display: none; } }
+
+/* ---------- Squawk (voix) + colonnes News Feed supplémentaires ---------- */
+.squawk-toggle { display: inline-flex; align-items: center; justify-content: center; width: 32px; height: 32px; margin-right: 10px; padding: 0; background: var(--bg-card); border: 1px solid var(--border-dim); border-radius: var(--radius-sm); color: var(--text-dim); cursor: pointer; flex: none; }
+.squawk-toggle:hover { border-color: var(--blue-light); color: var(--blue-light); }
+.squawk-toggle.is-on { border-color: var(--blue-light); color: var(--blue-light); }
+.squawk-toggle .sq-off { display: block; }
+.squawk-toggle .sq-wave { display: none; }
+.squawk-toggle.is-on .sq-off { display: none; }
+.squawk-toggle.is-on .sq-wave { display: block; }
+.sq-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+button.sq-btn { background: var(--bg-card); cursor: pointer; }
+button.sq-btn.is-on { border-color: var(--blue-light); color: var(--blue-light); }
+.sq-status { margin: 12px 0 0; font-family: var(--mono); font-size: 12px; color: var(--text-dim); }
+.sq-history { margin-top: 12px; max-width: 900px; }
+.nx-all { margin-left: auto; }
+.nx-item--press .nx-title { color: var(--text); }
+@media (min-width: 761px) and (max-width: 1100px) { .nf-grid { grid-template-columns: 1fr 1fr; } }
+
+/* ---------- News Feed : choix de la période ---------- */
+.nf-toolbar { position: relative; }
+.nf-range-label { font-family: var(--mono); font-size: 12px; color: var(--text-dim); }
+.nf-cal-btn { display: inline-flex; align-items: center; justify-content: center; width: 34px; height: 34px; padding: 0; background: var(--bg-card); border: 1px solid var(--border-dim); border-radius: var(--radius-sm); color: var(--text); cursor: pointer; }
+.nf-cal-btn:hover, .nf-cal-btn[aria-expanded="true"] { border-color: var(--blue-light); color: var(--blue-light); }
+.nf-cal { position: absolute; right: 8px; top: calc(100% + 6px); z-index: 20; display: flex; flex-direction: column; gap: 10px; padding: 12px; min-width: 260px; background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--radius-card); box-shadow: 0 8px 24px rgba(0, 0, 0, .5); }
+.nf-cal[hidden] { display: none; }
+.nf-cal-presets { display: flex; flex-wrap: wrap; gap: 6px; }
+.nf-cal-custom { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; font-family: var(--mono); font-size: 12px; color: var(--text-dim); }
+.nf-cal-custom input[type="date"] { padding: 4px 6px; background: var(--bg); border: 1px solid var(--border-dim); border-radius: var(--radius-sm); color: var(--text); font-family: var(--mono); font-size: 12px; color-scheme: dark; }
+.nf-cal-note { margin: 0; font-size: 11px; color: var(--text-dim); }
