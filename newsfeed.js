@@ -19,10 +19,8 @@
   const HOME_WINDOW = 'tab-4';
   const SQUAWK_URL = 'https://www.financialjuice.com/home';
   const POLL_MS = 60 * 1000;
-  const FEED_HOURS = 72; // période par défaut (le week-end, 24 h ne montrait presque rien)
-  const KEEP_DAYS = 30;  // durée de conservation des news en base
+  const FEED_HOURS = 72; // période par défaut, sans dates choisies (le week-end, 24 h ne montrait presque rien)
   const LS_RANGE = 'fxt-nf-range';
-  const PRESETS = [['today', "Aujourd'hui"], ['24h', '24 h'], ['72h', '72 h'], ['7d', '7 jours'], ['30d', '30 jours']];
 
   // Colonnes du News Feed. red : on n'affiche que les lignes retenues par le tri (red = true).
   const SOURCES = [
@@ -81,42 +79,40 @@
     return true;
   }
 
-  /* ---------------- Période du News Feed (boutons + calendrier) ---------------- */
-  let feedRange = { mode: '72h', from: '', to: '' };
-  try { const r = JSON.parse(localStorage.getItem(LS_RANGE) || 'null'); if (r && r.mode) feedRange = r; } catch (e) { /* défaut */ }
+  /* ---------------- Période du News Feed (bouton calendrier) ---------------- */
+  // Un clic sur le bouton ouvre le calendrier (period-calendar.js) : on clique le jour de début, puis le jour de fin
+  // (même jour deux fois = ce seul jour). Le bouton « Aujourd'hui » du calendrier revient à aujourd'hui, qui est aussi
+  // l'affichage par défaut à chaque ouverture de l'appli (la période choisie n'est pas conservée).
+  let feedRange = null; // { from: 'AAAA-MM-JJ', to: 'AAAA-MM-JJ' } ou null = aujourd'hui
+  let feedCal = null;
+  try { localStorage.removeItem(LS_RANGE); } catch (e) { /* ignore */ } // ancienne version : période mémorisée
 
-  const pad = (n) => String(n).padStart(2, '0');
-  const ymd = (d) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
   const dmy = (v) => { const [y, m, d] = String(v).split('-'); return `${d}/${m}/${y}`; };
+  const ymdLocal = (d) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 
   // bornes de la période choisie : { since, until (ISO), label }
   function rangeBounds() {
-    const now = new Date();
-    const m = feedRange.mode;
-    if (m === 'custom' && feedRange.from && feedRange.to) {
+    if (feedRange) {
       const a = new Date(feedRange.from + 'T00:00:00');
       const b = new Date(feedRange.to + 'T23:59:59.999');
       if (!Number.isNaN(a.getTime()) && !Number.isNaN(b.getTime())) {
-        return { since: a.toISOString(), until: b.toISOString(), label: feedRange.from === feedRange.to ? dmy(feedRange.from) : `${dmy(feedRange.from)} → ${dmy(feedRange.to)}` };
+        const today = ymdLocal(new Date());
+        const label = feedRange.from === feedRange.to ? (feedRange.from === today ? "Aujourd'hui" : dmy(feedRange.from)) : `${dmy(feedRange.from)} → ${dmy(feedRange.to)}`;
+        return { since: a.toISOString(), until: b.toISOString(), label };
       }
     }
-    const hours = { '24h': 24, '72h': 72, '7d': 168, '30d': 720 }[m];
-    if (m === 'today') { const d0 = new Date(now); d0.setHours(0, 0, 0, 0); return { since: d0.toISOString(), until: new Date(now.getTime() + 3600e3).toISOString(), label: "Aujourd'hui" }; }
-    const h = hours || FEED_HOURS;
-    return { since: new Date(now.getTime() - h * 3600e3).toISOString(), until: new Date(now.getTime() + 3600e3).toISOString(), label: 'Depuis ' + (PRESETS.find((x) => x[0] === m) || [0, '72 h'])[1] };
+    const d0 = new Date(); d0.setHours(0, 0, 0, 0);
+    return { since: d0.toISOString(), until: new Date(Date.now() + 3600e3).toISOString(), label: "Aujourd'hui" };
   }
 
   function syncRangeUi() {
     const sec = document.getElementById(FEED_WINDOW);
-    if (!sec) return;
-    const lab = sec.querySelector('[data-nf-range-label]');
+    const lab = sec && sec.querySelector('[data-nf-range-label]');
     if (lab) lab.textContent = rangeBounds().label;
-    sec.querySelectorAll('[data-nf-preset]').forEach((b) => b.classList.toggle('is-active', feedRange.mode === b.dataset.nfPreset));
   }
 
   function setRange(r) {
     feedRange = r;
-    try { localStorage.setItem(LS_RANGE, JSON.stringify(r)); } catch (e) { /* ignore */ }
     signatures.feed = null;
     syncRangeUi();
     loadFeed();
@@ -132,18 +128,9 @@
           <span class="calendar-toolbar-title">News Feed</span>
           <div class="calendar-toolbar-tools">
             <span class="nf-range-label" data-nf-range-label></span>
-            <button type="button" class="nf-cal-btn" data-nf-cal-btn aria-haspopup="dialog" aria-expanded="false" aria-label="Choisir la période des news" title="Choisir la période">
+            <button type="button" class="nf-cal-btn" data-nf-cal-btn aria-label="Choisir la période des news">
               <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4.5" width="18" height="16" rx="2"/><path d="M3 9.5h18M8 2.5v4M16 2.5v4"/></svg>
             </button>
-          </div>
-          <div class="nf-cal" data-nf-cal role="dialog" aria-label="Période des news" hidden>
-            <div class="nf-cal-presets">${PRESETS.map(([k, l]) => `<button type="button" class="seas-chip" data-nf-preset="${k}">${l}</button>`).join('')}</div>
-            <div class="nf-cal-custom">
-              <label>Du <input type="date" data-nf-from></label>
-              <label>au <input type="date" data-nf-to></label>
-              <button type="button" class="seas-chip" data-nf-apply>Afficher</button>
-            </div>
-            <p class="nf-cal-note">Les news sont gardées ${KEEP_DAYS} jours.</p>
           </div>
         </div>
         <div class="nf-grid">${SOURCES.map((x) => `
@@ -152,32 +139,13 @@
             <div class="nf-list" data-nf="${x.key}"><p class="nf-empty">Chargement…</p></div>
           </section>`).join('')}
         </div>`;
-      const cal = sec.querySelector('[data-nf-cal]');
       const btn = sec.querySelector('[data-nf-cal-btn]');
-      const from = sec.querySelector('[data-nf-from]');
-      const to = sec.querySelector('[data-nf-to]');
-      const today = new Date();
-      const min = new Date(today.getTime() - KEEP_DAYS * 86400e3);
-      [from, to].forEach((i) => { i.min = ymd(min); i.max = ymd(today); });
-      const toggle = (open) => {
-        cal.hidden = !open;
-        btn.setAttribute('aria-expanded', String(open));
-        if (open) { const b = rangeBounds(); from.value = feedRange.from || ymd(new Date(b.since)); to.value = feedRange.to || ymd(today); }
-      };
-      btn.addEventListener('click', (ev) => { ev.stopPropagation(); toggle(cal.hidden); });
-      cal.addEventListener('click', (ev) => {
-        ev.stopPropagation();
-        const pre = ev.target.closest('[data-nf-preset]');
-        if (pre) { setRange({ mode: pre.dataset.nfPreset, from: '', to: '' }); toggle(false); return; }
-        if (ev.target.closest('[data-nf-apply]')) {
-          if (!from.value || !to.value) return;
-          let a = from.value; let b = to.value;
-          if (a > b) [a, b] = [b, a];
-          setRange({ mode: 'custom', from: a, to: b });
-          toggle(false);
-        }
-      });
-      document.addEventListener('click', () => { if (!cal.hidden) toggle(false); });
+      if (window.PeriodCalendar && btn) {
+        feedCal = window.PeriodCalendar.create({
+          button: btn, size: 34, value: feedRange, onChange: (r) => setRange(r),
+          labels: { clear: "Aujourd'hui", clearTitle: "Revenir à aujourd'hui", btnIdle: 'Aujourd\'hui — clique pour choisir une autre période', hintFirst: 'Choisis le jour de début (deux clics sur le même jour = ce jour seul)' },
+        });
+      }
       syncRangeUi();
     }
     return sec;

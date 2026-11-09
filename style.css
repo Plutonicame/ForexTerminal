@@ -4582,14 +4582,16 @@ button.sq-btn.is-on { border-color: var(--blue-light); color: var(--blue-light);
 .nx-item--press .nx-title { color: var(--text); }
 @media (min-width: 761px) and (max-width: 1100px) { .nf-grid { grid-template-columns: 1fr 1fr; } }
 
-/* ---------- News Feed : choix de la période ---------- */
+/* ---------- News Feed : bouton calendrier de période (period-calendar.js) ---------- */
+:root {
+  --pcal-btn-bg: #161616; --pcal-btn-bd: #2a2a2a; --pcal-btn-ic: #fafafa;
+  --pcal-btn-hover-bd: #4d94ff; --pcal-btn-hover-ic: #4d94ff;
+  --pcal-btn-active-bg: #4d94ff; --pcal-btn-active-bd: #4d94ff; --pcal-btn-active-ic: #0a0a0a;
+  --pcal-bg: #161616; --pcal-bd: #2a2a2a; --pcal-title: #fafafa; --pcal-nav: #9a9a9a; --pcal-nav-hover: #4d94ff;
+  --pcal-wd: #9a9a9a; --pcal-day-tx: #fafafa; --pcal-day-hover-bg: #2a2a2a; --pcal-today-bd: #4d94ff;
+  --pcal-sel-bg: #4d94ff; --pcal-sel-tx: #0a0a0a; --pcal-range-bg: #1d3557; --pcal-range-tx: #fafafa;
+  --nf-range-text: #9a9a9a;
+  --pcal-hint-tx: #9a9a9a; --pcal-clear-bg: #161616; --pcal-clear-bd: #2a2a2a; --pcal-clear-tx: #fafafa;
+}
 .nf-toolbar { position: relative; }
-.nf-range-label { font-family: var(--mono); font-size: 12px; color: var(--text-dim); }
-.nf-cal-btn { display: inline-flex; align-items: center; justify-content: center; width: 34px; height: 34px; padding: 0; background: var(--bg-card); border: 1px solid var(--border-dim); border-radius: var(--radius-sm); color: var(--text); cursor: pointer; }
-.nf-cal-btn:hover, .nf-cal-btn[aria-expanded="true"] { border-color: var(--blue-light); color: var(--blue-light); }
-.nf-cal { position: absolute; right: 8px; top: calc(100% + 6px); z-index: 20; display: flex; flex-direction: column; gap: 10px; padding: 12px; min-width: 260px; background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--radius-card); box-shadow: 0 8px 24px rgba(0, 0, 0, .5); }
-.nf-cal[hidden] { display: none; }
-.nf-cal-presets { display: flex; flex-wrap: wrap; gap: 6px; }
-.nf-cal-custom { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; font-family: var(--mono); font-size: 12px; color: var(--text-dim); }
-.nf-cal-custom input[type="date"] { padding: 4px 6px; background: var(--bg); border: 1px solid var(--border-dim); border-radius: var(--radius-sm); color: var(--text); font-family: var(--mono); font-size: 12px; color-scheme: dark; }
-.nf-cal-note { margin: 0; font-size: 11px; color: var(--text-dim); }
+.nf-range-label { font-family: var(--mono); font-size: 12px; color: var(--nf-range-text); }
