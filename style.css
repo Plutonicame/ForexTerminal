@@ -4522,18 +4522,21 @@ a.nf-title:hover, .nx-link:hover, .br-link:hover { text-decoration: underline; }
    Fenêtre « Market Watch » (marketwatch.js) : graphiques TradingView
    ========================================================= */
 :root {
-  --mw-chart-bg: #161616; --mw-grid: #2a2a2a; --mw-text: #9a9a9a; --mw-up: #ffffff; --mw-down: #000000; --mw-border: #ffffff; --mw-wick: #ffffff; --mw-last: #ffffff; --mw-line: #2962ff; --mw-cross: #9598a1; --mw-label-bg: #2a2e39; --mw-label-text: #ffffff; --mw-toolbar-bg: #161616; --mw-toolbar-text: #b2b5be; --mw-btn-active-bg: #2a2e39; --mw-btn-active-text: #ffffff;
+  --mw-chart-bg: #161616; --mw-grid: #2a2a2a; --mw-text: #9a9a9a; --mw-up: #2962ff; --mw-down: #f23645; --mw-up-border: #2962ff; --mw-down-border: #f23645; --mw-up-wick: #2962ff; --mw-down-wick: #f23645; --mw-last: #ffffff; --mw-line: #2962ff; --mw-cross: #9598a1; --mw-label-bg: #2a2e39; --mw-label-text: #ffffff; --mw-toolbar-bg: #161616; --mw-toolbar-text: #b2b5be; --mw-btn-active-bg: #2a2e39; --mw-btn-active-text: #ffffff;
   --mw-tile-border: #2a2a2a; --mw-tile-title: #fafafa; --mw-tile-sub: #9a9a9a;
 }
-.mw-grid { display: grid; grid-template-columns: 1fr; gap: 10px; }
+.mw-grid { display: grid; grid-template-columns: 1fr; grid-auto-rows: 300px; gap: 10px; }
+@media (min-width: 1000px) { .mw-grid { grid-template-rows: repeat(2, minmax(0, 1fr)); grid-auto-rows: auto; } }
+.mw-single { display: block; }
+.mw-head-hint { }
 @media (min-width: 600px) { .mw-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
 @media (min-width: 1000px) { .mw-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); } }
-.mw-tile { min-width: 0; background: var(--mw-chart-bg); border: 1px solid var(--mw-tile-border); border-radius: var(--radius-card); overflow: hidden; }
+.mw-tile { display: flex; flex-direction: column; height: 100%; min-width: 0; background: var(--mw-chart-bg); border: 1px solid var(--mw-tile-border); border-radius: var(--radius-card); overflow: hidden; }
 .mw-tile-head { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; padding: 6px 10px; border-bottom: 1px solid var(--mw-tile-border); font-family: var(--mono); font-size: 12px; color: var(--mw-tile-title); }
 .mw-tile-head[data-open] { cursor: pointer; }
+.mw-tile-head[data-open]:hover { background: var(--mw-btn-active-bg); }
 .mw-tile-head span { font-size: 10px; color: var(--mw-tile-sub); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.mw-chart { height: 330px; }
-.mw-tile--big .mw-chart { height: calc(100vh - 250px); min-height: 480px; }
+.mw-chart { flex: 1; min-height: 240px; }
 
 /* ---------- Position des banques (13F) ---------- */
 :root {
@@ -4630,7 +4633,6 @@ button.sq-btn.is-on { border-color: var(--blue-light); color: var(--blue-light);
 .fxc-btn { background: transparent; border: 0; border-radius: 4px; padding: 4px 8px; font: 12px var(--mono); color: var(--mw-toolbar-text); cursor: pointer; white-space: nowrap; }
 .fxc-btn:hover { background: var(--mw-btn-active-bg); }
 .fxc-btn.is-active { background: var(--mw-btn-active-bg); color: var(--mw-btn-active-text); }
-.mw-tile--big .mw-chart.fxc { height: calc(100vh - 250px); min-height: 480px; }
 .mw-grid .fxc-legend span:nth-child(n+3):nth-child(-n+6) { display: none; }
 
 .fxc:focus { outline: none; }

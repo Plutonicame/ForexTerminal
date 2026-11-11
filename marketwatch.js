@@ -32,7 +32,7 @@
   function tile(code, big) {
     const ix = INDEX[code];
     return `<div class="mw-tile${big ? ' mw-tile--big' : ''}" data-code="${code}">
-      <div class="mw-tile-head"${big ? '' : ` data-open="${code}" title="Ouvrir ${code} en grand"`}><b>${code} · ${ix.name}</b><span>${ix.label}</span></div>
+      <div class="mw-tile-head" data-open="${big ? 'ALL' : code}" title="${big ? 'Revenir à la vue All' : 'Ouvrir ' + code + ' en grand'}"><b>${ix.name}</b><span>${ix.label}</span></div>
       <div class="mw-chart" data-big="${big ? 1 : 0}"></div>
     </div>`;
   }
@@ -77,13 +77,29 @@
     const sec = document.getElementById(PANEL_ID);
     if (!sec || sec.hidden) return;
     build();
+    fitHeights();
     sec.querySelectorAll(`.currency-panel[data-win="${WIN}"]`).forEach((p) => {
       if (p.hidden) return;
       p.querySelectorAll('.mw-chart:not([data-ready])').forEach(mount);
     });
   }
 
-  window.MarketWatch = { refresh() { build(); ensure(); charts.forEach((c) => c.reload()); } };
+  // Les graphiques se partagent toute la place disponible : 4 colonnes x 2 lignes sur grand écran, un seul graphique plein cadre sinon.
+  function fitHeights() {
+    const sec = document.getElementById(PANEL_ID);
+    if (!sec || sec.hidden) return;
+    sec.querySelectorAll('.mw-grid, .mw-single').forEach((g) => {
+      if (g.closest('.currency-panel') && g.closest('.currency-panel').hidden) return;
+      const top = g.getBoundingClientRect().top;
+      const h = Math.max(300, Math.floor(window.innerHeight - top - 14));
+      const wide = g.classList.contains('mw-single') || window.innerWidth >= 1000;
+      g.style.height = wide ? h + 'px' : '';
+    });
+  }
+  window.addEventListener('resize', fitHeights);
+  document.addEventListener('fx-currency-select', () => setTimeout(fitHeights, 0));
+
+  window.MarketWatch = { refresh() { build(); ensure(); fitHeights(); setTimeout(fitHeights, 150); charts.forEach((c) => c.reload()); } };
   setInterval(() => { const sec = document.getElementById(PANEL_ID); if (sec && !sec.hidden && !document.hidden) charts.forEach((c) => c.reload()); }, 60000);
 
   document.addEventListener('DOMContentLoaded', () => {

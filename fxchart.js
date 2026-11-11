@@ -207,7 +207,7 @@
       if (cv.width !== Math.round(W * dpr) || cv.height !== Math.round(H * dpr)) { cv.width = Math.round(W * dpr); cv.height = Math.round(H * dpr); cv.style.width = W + 'px'; cv.style.height = H + 'px'; }
       ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
       const bg = cssVar('--mw-chart-bg', '#161616'); const grid = cssVar('--mw-grid', '#2a2a2a'); const txt = cssVar('--mw-text', '#9a9a9a');
-      const up = cssVar('--mw-up', '#ffffff'); const dn = cssVar('--mw-down', '#000000'); const cross = cssVar('--mw-cross', '#9598a1');
+      const up = cssVar('--mw-up', '#2962ff'); const dn = cssVar('--mw-down', '#f23645'); const cross = cssVar('--mw-cross', '#9598a1');
       ctx.fillStyle = bg; ctx.fillRect(0, 0, W, H);
       const pw = plotW(); const ph = plotH();
       if (!st.bars.length) {
@@ -234,18 +234,18 @@
       }
       // séries
       ctx.save(); ctx.beginPath(); ctx.rect(0, 0, pw, ph); ctx.clip();
-      const wick = cssVar('--mw-wick', '#ffffff'); const border = cssVar('--mw-border', '#ffffff'); const bodyW = Math.max(1, Math.floor(st.bw * 0.7));
+      const wickU = cssVar('--mw-up-wick', up); const wickD = cssVar('--mw-down-wick', dn); const bordU = cssVar('--mw-up-border', up); const bordD = cssVar('--mw-down-border', dn); const bodyW = Math.max(1, Math.floor(st.bw * 0.7));
       const lineCol = cssVar('--mw-line', '#2962ff');
       if (st.style === 'candles') {
         for (let i = a; i <= b; i++) {
           const k = st.bars[i]; if (!k) continue;
           const x = Math.round(xOf(i)); const upc = k.c >= k.o;
-          ctx.strokeStyle = wick; ctx.lineWidth = 1;
+          ctx.strokeStyle = upc ? wickU : wickD; ctx.lineWidth = 1;
           ctx.beginPath(); ctx.moveTo(x + 0.5, Y(k.h)); ctx.lineTo(x + 0.5, Y(k.l)); ctx.stroke();
           const yt = Math.round(Y(Math.max(k.o, k.c))); const bh = Math.max(1, Math.round(Y(Math.min(k.o, k.c))) - yt);
           const bx = Math.round(x - bodyW / 2);
           ctx.fillStyle = upc ? up : dn; ctx.fillRect(bx, yt, bodyW, bh);
-          if (bodyW > 2) { ctx.strokeStyle = border; ctx.strokeRect(bx + 0.5, yt + 0.5, Math.max(0, bodyW - 1), Math.max(0, bh - 1)); }
+          if (bodyW > 2) { ctx.strokeStyle = upc ? bordU : bordD; ctx.strokeRect(bx + 0.5, yt + 0.5, Math.max(0, bodyW - 1), Math.max(0, bh - 1)); }
         }
       } else {
         const path = () => { ctx.beginPath(); let first = true; for (let i = a; i <= b; i++) { const k = st.bars[i]; if (!k) continue; const x = xOf(i); if (first) { ctx.moveTo(x, Y(k.c)); first = false; } else ctx.lineTo(x, Y(k.c)); } };
@@ -294,7 +294,7 @@
     function setLegend(idx) {
       const k = st.bars[idx]; if (!k) { legend.innerHTML = `<b>${o.name}</b>`; return; }
       const prev = st.bars[idx - 1]; const chg = prev ? k.c - prev.c : 0; const pct = prev ? (chg / prev.c) * 100 : 0;
-      const col = cssVar('--mw-border', '#ffffff');
+      const col = cssVar('--mw-text', '#9a9a9a');
       const v = (x) => x.toFixed(3);
       legend.innerHTML = `<span class="fxc-l-name">${o.name}</span><span class="fxc-l-tf">${tfLabel(st.tf)}</span>`
         + `<span class="fxc-l-o">O <i style="color:${col}">${v(k.o)}</i></span><span>H <i style="color:${col}">${v(k.h)}</i></span><span>L <i style="color:${col}">${v(k.l)}</i></span><span>C <i style="color:${col}">${v(k.c)}</i></span>`
@@ -339,7 +339,7 @@
       }
       if (d && !d.pinch) {
         const dx = p.x - d.x; const dy = p.y - d.y;
-        if (d.onAxis) goManual(scaleAround(d.range, Math.exp(-dy / 200)));
+        if (d.onAxis) goManual(scaleAround(d.range, Math.exp(dy / 200)));
         else if (d.onTime) st.bw = Math.min(60, Math.max(0.5, d.bw * Math.exp(dx / 200)));
         else {
           st.right = d.right - dx / st.bw; // déplacement horizontal libre
