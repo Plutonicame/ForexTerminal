@@ -4522,7 +4522,7 @@ a.nf-title:hover, .nx-link:hover, .br-link:hover { text-decoration: underline; }
    Fenêtre « Market Watch » (marketwatch.js) : graphiques TradingView
    ========================================================= */
 :root {
-  --mw-chart-bg: #161616; --mw-grid: #2a2a2a;
+  --mw-chart-bg: #161616; --mw-grid: #2a2a2a; --mw-text: #9a9a9a; --mw-up: #089981; --mw-down: #f23645; --mw-line: #2962ff; --mw-cross: #9598a1; --mw-label-bg: #2a2e39; --mw-label-text: #ffffff; --mw-toolbar-bg: #161616; --mw-toolbar-text: #b2b5be; --mw-btn-active-bg: #2a2e39; --mw-btn-active-text: #ffffff;
   --mw-tile-border: #2a2a2a; --mw-tile-title: #fafafa; --mw-tile-sub: #9a9a9a;
 }
 .mw-grid { display: grid; grid-template-columns: 1fr; gap: 10px; }
@@ -4611,3 +4611,24 @@ button.sq-btn.is-on { border-color: var(--blue-light); color: var(--blue-light);
 .sq-vol input{width:140px;accent-color:var(--sq-on-border,#4d94ff)}
 .sq-vol-val{min-width:36px;text-align:right;font:11px var(--mono,monospace);color:var(--sq-off-icon,#9a9a9a)}
 .fxs-chart svg{user-select:none}
+
+/* fxchart : graphique style TradingView */
+.fxc { display: flex; flex-direction: column; background: var(--mw-chart-bg); color: var(--mw-toolbar-text); min-width: 0; }
+.fxc:fullscreen { height: 100vh; }
+.fxc-main { position: relative; flex: 1; min-height: 0; }
+.fxc-canvas { display: block; width: 100%; height: 100%; cursor: crosshair; }
+.fxc-legend { position: absolute; left: 8px; top: 6px; display: flex; flex-wrap: wrap; gap: 4px 10px; align-items: baseline; font: 11px var(--mono); color: var(--mw-toolbar-text); pointer-events: none; }
+.fxc-legend i { font-style: normal; }
+.fxc-l-name { color: var(--mw-tile-title); font-weight: 700; font-size: 12px; }
+.fxc-l-tf { color: var(--mw-text); }
+.fxc-bar, .fxc-ranges { display: flex; align-items: center; gap: 2px; padding: 4px 8px; background: var(--mw-toolbar-bg); border-bottom: 1px solid var(--mw-grid); flex: none; overflow-x: auto; }
+.fxc-ranges { border-bottom: 0; border-top: 1px solid var(--mw-grid); }
+.fxc-sym { font: 700 13px var(--mono); color: var(--mw-tile-title); padding: 0 8px 0 2px; white-space: nowrap; }
+.fxc-sep { width: 1px; height: 18px; background: var(--mw-grid); margin: 0 6px; flex: none; }
+.fxc-grow { flex: 1; }
+.fxc-tz { font: 11px var(--mono); color: var(--mw-text); white-space: nowrap; }
+.fxc-btn { background: transparent; border: 0; border-radius: 4px; padding: 4px 8px; font: 12px var(--mono); color: var(--mw-toolbar-text); cursor: pointer; white-space: nowrap; }
+.fxc-btn:hover { background: var(--mw-btn-active-bg); }
+.fxc-btn.is-active { background: var(--mw-btn-active-bg); color: var(--mw-btn-active-text); }
+.mw-tile--big .mw-chart.fxc { height: calc(100vh - 250px); min-height: 480px; }
+.mw-grid .fxc-legend span:nth-child(n+3):nth-child(-n+6) { display: none; }
