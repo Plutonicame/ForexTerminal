@@ -11,13 +11,37 @@
  * Usage : FXChart.create(element, { currency: 'USD', name: 'USD', big: true, tf: '60' })
  */
 (function () {
+  // unités de temps proposées dans la barre ; n'importe quelle autre (ex. 3, 10, 90, 2H, 3D) se tape au clavier, comme dans TradingView
   const TFS = [
-    { k: '15', label: '15 min', src: '15m', step: 900 },
-    { k: '60', label: '1 h', src: '1h', step: 3600 },
-    { k: '240', label: '4 h', src: '1h', step: 14400 },
-    { k: 'D', label: '1 j', src: '1d', step: 86400 },
-    { k: 'W', label: '1 sem.', src: '1d', step: 604800 },
+    { k: '1', label: '1 min' }, { k: '5', label: '5 min' }, { k: '15', label: '15 min' }, { k: '60', label: '1 h' },
+    { k: '240', label: '4 h' }, { k: 'D', label: '1 j' }, { k: 'W', label: '1 sem.' },
   ];
+  // 'k' : minutes (« 90 »), ou « nD », « nW », « nM » (jours, semaines, mois). Renvoie { k, minutes|days|weeks|months, label, step, src } ou null.
+  function parseTf(txt) {
+    const t = String(txt || '').trim();
+    const m = t.match(/^(\d*)\s*([a-zA-Z]?)$/);
+    if (!m || (!m[1] && !m[2])) return null;
+    const n = m[1] === '' ? 1 : parseInt(m[1], 10);
+    if (!(n >= 1) || n > 100000) return null;
+    const u = m[2];
+    let mins = null; let days = 0; let weeks = 0; let months = 0;
+    if (u === '' || u === 'm') mins = n;
+    else if (u === 'h' || u === 'H') mins = n * 60;
+    else if (u === 'd' || u === 'D') days = n;
+    else if (u === 'w' || u === 'W') weeks = n;
+    else if (u === 'M') months = n;
+    else return null;
+    if (mins !== null && mins >= 1440 && mins % 1440 === 0) { days = mins / 1440; mins = null; }
+    if (mins !== null) {
+      const src = mins % 60 === 0 ? '1h' : mins % 15 === 0 ? '15m' : mins % 5 === 0 ? '5m' : '1m';
+      const label = mins % 60 === 0 ? (mins / 60) + ' h' : mins + ' min';
+      return { k: String(mins), mins, label, step: mins * 60, src };
+    }
+    if (days) return { k: days === 1 ? 'D' : days + 'D', days, label: days + ' j', step: days * 86400, src: '1d' };
+    if (weeks) return { k: weeks === 1 ? 'W' : weeks + 'W', weeks, label: weeks + ' sem.', step: weeks * 604800, src: '1d' };
+    return { k: months === 1 ? 'M' : months + 'M', months, label: months + ' mois', step: months * 2592000, src: '1d' };
+  }
+  const tfOf = (k) => parseTf(k === 'D' ? '1D' : k === 'W' ? '1W' : k === 'M' ? '1M' : k) || parseTf('60');
   const RANGES = [
     { l: '1J', d: 1 }, { l: '5J', d: 5 }, { l: '1M', d: 30 }, { l: '3M', d: 91 }, { l: '6M', d: 182 }, { l: '1A', d: 365 }, { l: 'Tout', d: 0 },
   ];
@@ -60,91 +84,101 @@
     cache.set(key, { bars, at: Date.now() });
     return bars;
   }
-  function aggregate(bars, step, weekly) {
+  function aggregate(bars, tf) {
     const out = [];
     let cur = null; let key = null;
     for (const b of bars) {
       let k;
-      if (weekly) { const d = new Date(b.t * 1000); const dow = (d.getUTCDay() + 6) % 7; k = Math.floor(b.t / 86400) - dow; } else k = Math.floor(b.t / step);
+      if (tf.months) { const d = new Date(b.t * 1000); k = Math.floor((d.getUTCFullYear() * 12 + d.getUTCMonth()) / tf.months); }
+      else if (tf.weeks) { const d0 = Math.floor(b.t / 86400); k = Math.floor((d0 + 3) / (7 * tf.weeks)); }
+      else if (tf.days) k = Math.floor(b.t / 86400 / tf.days);
+      else k = Math.floor(b.t / tf.step);
       if (k !== key) { cur = { t: b.t, o: b.o, h: b.h, l: b.l, c: b.c }; out.push(cur); key = k; } else { cur.h = Math.max(cur.h, b.h); cur.l = Math.min(cur.l, b.l); cur.c = b.c; }
     }
     return out;
   }
   async function loadBars(cur, tfk, force) {
-    const tf = TFS.find((x) => x.k === tfk) || TFS[1];
+    const tf = tfOf(tfk);
     const base = await loadSrc(cur, tf.src, force);
     if (!base) return null;
-    if (tf.k === '240') return aggregate(base, 14400, false);
-    if (tf.k === 'W') return aggregate(base, 0, true);
-    return base;
+    const native = { '1m': 60, '5m': 300, '15m': 900, '1h': 3600, '1d': 86400 }[tf.src];
+    if (tf.step === native && !tf.months && !tf.weeks && !(tf.days > 1)) return base;
+    return aggregate(base, tf);
   }
 
   /* ---------- graphique ---------- */
+  const tfLabel = (k) => tfOf(k).label;
   function create(host, opts) {
     const o = Object.assign({ currency: 'USD', name: 'USD', big: false, tf: '60' }, opts || {});
-    const st = { tf: o.tf, style: 'candles', bars: [], right: 0, bw: 8, yScale: 1, yShift: 0, auto: true, cross: null, drag: null, pointers: new Map(), w: 0, h: 0, ready: false, msg: 'Chargement…' };
+    const st = { tf: o.tf, style: 'candles', bars: [], right: 0, bw: 8, auto: true, log: false, man: [0, 1], cross: null, drag: null, pointers: new Map(), w: 0, h: 0, msg: 'Chargement…' };
     host.classList.add('fxc');
+    host.tabIndex = 0;
     host.innerHTML = '';
     const bar = document.createElement('div'); bar.className = 'fxc-bar';
     const main = document.createElement('div'); main.className = 'fxc-main';
     const cv = document.createElement('canvas'); cv.className = 'fxc-canvas';
     const legend = document.createElement('div'); legend.className = 'fxc-legend';
-    main.append(cv, legend);
+    const kb = document.createElement('div'); kb.className = 'fxc-kb'; kb.hidden = true;
+    kb.innerHTML = '<div class="fxc-kb-title">Intervalle</div><input class="fxc-kb-in" type="text" maxlength="8" autocomplete="off" spellcheck="false"><div class="fxc-kb-hint">Ex. 1, 5, 15, 1H, 4H, D, W, M (Entrée pour valider)</div>';
+    main.append(cv, legend, kb);
     const ranges = document.createElement('div'); ranges.className = 'fxc-ranges';
     if (o.big) host.append(bar, main, ranges); else host.append(main);
     const ctx = cv.getContext('2d');
+    const kbIn = kb.querySelector('input');
 
     if (o.big) {
       bar.innerHTML = `<span class="fxc-sym">${o.name}</span><span class="fxc-sep"></span>`
         + TFS.map((t) => `<button type="button" class="fxc-btn" data-tf="${t.k}">${t.label}</button>`).join('')
+        + '<button type="button" class="fxc-btn is-active" data-tf-custom hidden></button>'
         + '<span class="fxc-sep"></span>'
         + '<button type="button" class="fxc-btn" data-style="candles" title="Bougies">Bougies</button><button type="button" class="fxc-btn" data-style="line" title="Ligne">Ligne</button><button type="button" class="fxc-btn" data-style="area" title="Aire">Aire</button>'
         + '<span class="fxc-grow"></span><button type="button" class="fxc-btn" data-fs title="Plein écran">⛶</button>';
       ranges.innerHTML = RANGES.map((r) => `<button type="button" class="fxc-btn fxc-rng" data-rng="${r.d}">${r.l}</button>`).join('') + '<span class="fxc-grow"></span><span class="fxc-tz">Paris (UTC+1/+2)</span>';
     }
     const syncBtns = () => {
-      bar.querySelectorAll('[data-tf]').forEach((b) => b.classList.toggle('is-active', b.dataset.tf === st.tf));
+      let known = false;
+      bar.querySelectorAll('[data-tf]').forEach((b) => { const on = b.dataset.tf === st.tf; if (on) known = true; b.classList.toggle('is-active', on); });
+      const cu = bar.querySelector('[data-tf-custom]');
+      if (cu) { cu.hidden = known; cu.textContent = tfLabel(st.tf); }
       bar.querySelectorAll('[data-style]').forEach((b) => b.classList.toggle('is-active', b.dataset.style === st.style));
     };
 
-    /* géométrie */
+    /* géométrie : aucune limite de déplacement (comme TradingView) */
     const plotW = () => Math.max(10, st.w - AXIS_W);
     const plotH = () => Math.max(10, st.h - AXIS_H);
     const xOf = (i) => plotW() - (st.right - i) * st.bw - st.bw / 2;
     const iOf = (x) => st.right - (plotW() - x - st.bw / 2) / st.bw;
+    const T = (v) => (st.log ? Math.log(Math.max(v, 1e-9)) : v);
+    const TI = (v) => (st.log ? Math.exp(v) : v);
     const visRange = () => {
       const n = st.bars.length;
-      const a = Math.max(0, Math.floor(iOf(0)) - 1); const b = Math.min(n - 1, Math.ceil(iOf(plotW())) + 1);
-      return [a, b];
+      return [Math.max(0, Math.floor(iOf(0)) - 1), Math.min(n - 1, Math.ceil(iOf(plotW())) + 1)];
     };
-    function priceRange() {
+    function autoRange() {
       const [a, b] = visRange();
       let lo = Infinity; let hi = -Infinity;
-      for (let i = a; i <= b; i++) { const k = st.bars[i]; if (!k) continue; if (st.style === 'candles') { if (k.l < lo) lo = k.l; if (k.h > hi) hi = k.h; } else { if (k.c < lo) lo = k.c; if (k.c > hi) hi = k.c; } }
-      if (!isFinite(lo)) { lo = 99; hi = 101; }
-      if (hi - lo < 1e-6) { hi += 0.01; lo -= 0.01; }
+      for (let i = a; i <= b; i++) {
+        const k = st.bars[i]; if (!k) continue;
+        const l = T(st.style === 'candles' ? k.l : k.c); const h = T(st.style === 'candles' ? k.h : k.c);
+        if (l < lo) lo = l; if (h > hi) hi = h;
+      }
+      if (!isFinite(lo)) { const c = st.bars.length ? T(st.bars[st.bars.length - 1].c) : T(100); lo = c - 1; hi = c + 1; }
+      if (hi - lo < 1e-9) { hi += 0.01; lo -= 0.01; }
       const pad = (hi - lo) * 0.1;
-      lo -= pad; hi += pad;
-      const mid = (lo + hi) / 2; const half = ((hi - lo) / 2) * st.yScale;
-      return [mid - half + st.yShift, mid + half + st.yShift];
+      return [lo - pad, hi + pad];
     }
-    function clampView() {
-      const n = st.bars.length;
-      if (!n) return;
-      st.bw = Math.min(40, Math.max(1.5, st.bw));
-      const maxRight = n - 1 + PAD_RIGHT_BARS;
-      const minRight = Math.min(maxRight, (plotW() / st.bw) * 0.3 - 1 + 0); // garde toujours un peu de données visibles
-      st.right = Math.min(maxRight, Math.max(minRight, st.right));
-    }
+    const priceRange = () => (st.auto ? autoRange() : st.man);
+    const goManual = (r) => { st.auto = false; st.man = r; };
+    function clampView() { st.bw = Math.min(60, Math.max(0.5, st.bw)); }
     function fit(days) {
       const n = st.bars.length;
       if (!n) return;
-      const step = (TFS.find((t) => t.k === st.tf) || TFS[1]).step;
+      const step = tfOf(st.tf).step;
       let cnt = days ? Math.max(20, Math.round((days * 86400) / step * (step >= 86400 ? 5 / 7 : 1))) : n;
       cnt = Math.min(n, cnt);
       st.bw = plotW() / (cnt + PAD_RIGHT_BARS);
       st.right = n - 1 + PAD_RIGHT_BARS;
-      st.yScale = 1; st.yShift = 0; st.auto = true;
+      st.auto = true;
       clampView();
     }
 
@@ -155,12 +189,17 @@
       const out = []; for (let v = Math.ceil(lo / step) * step; v <= hi; v += step) out.push(v);
       return { out, step };
     }
-    const decimals = (step) => Math.max(0, Math.min(4, Math.ceil(-Math.log10(step)) + (step < 1 ? 0 : 0)));
+    const decimals = (step) => Math.max(0, Math.min(4, Math.ceil(-Math.log10(step))));
+    const dfmt = (v, dec) => v.toFixed(Math.min(4, Math.max(dec, 2)));
     function timeLabel(t, prev, tfStep) {
+      if (tfStep >= 2592000) return F.md.format(new Date(t * 1000));
       if (tfStep >= 604800) return F.md.format(new Date(t * 1000));
       if (tfStep >= 86400) { const ds = new Date(t * 1000); return F.y.format(ds) !== F.y.format(new Date(prev * 1000)) ? F.y.format(ds) : (F.mo.format(ds) !== F.mo.format(new Date(prev * 1000)) ? F.mo.format(ds) : F.d.format(ds)); }
       return parisDay(t) !== parisDay(prev) ? F.d.format(new Date(t * 1000)) + ' ' + F.mo.format(new Date(t * 1000)) : F.hm.format(new Date(t * 1000));
     }
+    // boutons A (échelle automatique) et L (échelle logarithmique), au bas de l'échelle de prix
+    const btnRect = (which) => ({ x: plotW() + (which === 'A' ? 6 : 33), y: plotH() - 26, w: 24, h: 20 });
+    const inRect = (p, r) => p.x >= r.x && p.x <= r.x + r.w && p.y >= r.y && p.y <= r.y + r.h;
     function draw() {
       const W = st.w; const H = st.h;
       if (!W || !H) return;
@@ -175,26 +214,28 @@
         ctx.fillStyle = txt; ctx.font = '13px ' + mono(); ctx.textAlign = 'center'; ctx.fillText(st.msg, pw / 2, ph / 2); return;
       }
       const [lo, hi] = priceRange();
-      const Y = (v) => ((hi - v) / (hi - lo)) * ph;
-      const tf = TFS.find((t) => t.k === st.tf) || TFS[1];
+      const Y = (v) => ((hi - T(v)) / (hi - lo)) * ph;
+      const yToPrice = (y) => TI(hi - (y / ph) * (hi - lo));
+      const tf = tfOf(st.tf);
       ctx.font = '11px ' + mono();
-      // quadrillage + échelle de prix
-      const tk = niceTicks(lo, hi, Math.max(3, Math.round(ph / 55)));
+      // échelle de prix (sans quadrillage)
+      const pLo = TI(lo); const pHi = TI(hi);
+      const tk = niceTicks(Math.min(pLo, pHi), Math.max(pLo, pHi), Math.max(3, Math.round(ph / 55)));
       const dec = decimals(tk.step);
-      ctx.strokeStyle = grid; ctx.lineWidth = 1; ctx.fillStyle = txt; ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
-      tk.out.forEach((v) => { const y = Math.round(Y(v)) + 0.5; ctx.fillText(v.toFixed(dec), pw + 8, y); });
+      ctx.fillStyle = txt; ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
+      tk.out.forEach((v) => { const y = Math.round(Y(v)) + 0.5; if (y > 6 && y < ph - 6) ctx.fillText(dfmt(v, dec), pw + 8, y); });
       // échelle de temps
-      const [a, b] = visRange(); const minPx = 84;
-      const every = Math.max(1, Math.ceil(minPx / st.bw));
-      ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+      const [a, b] = visRange(); const every = Math.max(1, Math.ceil(84 / st.bw));
+      ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillStyle = txt;
       for (let i = Math.ceil(a / every) * every; i <= b; i += every) {
         const x = Math.round(xOf(i)) + 0.5; if (x < 20 || x > pw - 20) continue;
         const k = st.bars[i]; if (!k) continue;
-        ctx.fillStyle = txt; ctx.fillText(timeLabel(k.t, st.bars[Math.max(0, i - every)].t, tf.step), x, ph + AXIS_H / 2 + 1);
+        ctx.fillText(timeLabel(k.t, st.bars[Math.max(0, i - every)].t, tf.step), x, ph + AXIS_H / 2 + 1);
       }
       // séries
       ctx.save(); ctx.beginPath(); ctx.rect(0, 0, pw, ph); ctx.clip();
       const wick = cssVar('--mw-wick', '#ffffff'); const border = cssVar('--mw-border', '#ffffff'); const bodyW = Math.max(1, Math.floor(st.bw * 0.7));
+      const lineCol = cssVar('--mw-line', '#2962ff');
       if (st.style === 'candles') {
         for (let i = a; i <= b; i++) {
           const k = st.bars[i]; if (!k) continue;
@@ -204,20 +245,15 @@
           const yt = Math.round(Y(Math.max(k.o, k.c))); const bh = Math.max(1, Math.round(Y(Math.min(k.o, k.c))) - yt);
           const bx = Math.round(x - bodyW / 2);
           ctx.fillStyle = upc ? up : dn; ctx.fillRect(bx, yt, bodyW, bh);
-          ctx.strokeStyle = border; ctx.strokeRect(bx + 0.5, yt + 0.5, Math.max(0, bodyW - 1), Math.max(0, bh - 1));
+          if (bodyW > 2) { ctx.strokeStyle = border; ctx.strokeRect(bx + 0.5, yt + 0.5, Math.max(0, bodyW - 1), Math.max(0, bh - 1)); }
         }
       } else {
-        const lineCol = cssVar('--mw-line', '#2962ff');
-        ctx.beginPath();
-        let first = true; let lx = 0;
-        for (let i = a; i <= b; i++) { const k = st.bars[i]; if (!k) continue; const x = xOf(i); if (first) { ctx.moveTo(x, Y(k.c)); first = false; } else ctx.lineTo(x, Y(k.c)); lx = x; }
+        const path = () => { ctx.beginPath(); let first = true; for (let i = a; i <= b; i++) { const k = st.bars[i]; if (!k) continue; const x = xOf(i); if (first) { ctx.moveTo(x, Y(k.c)); first = false; } else ctx.lineTo(x, Y(k.c)); } };
         if (st.style === 'area') {
-          ctx.save(); ctx.lineTo(lx, ph); ctx.lineTo(xOf(a), ph); ctx.closePath();
-          const g = ctx.createLinearGradient(0, 0, 0, ph); g.addColorStop(0, lineCol + '66'); g.addColorStop(1, lineCol + '05'); ctx.fillStyle = g; ctx.fill(); ctx.restore();
-          ctx.beginPath(); first = true;
-          for (let i = a; i <= b; i++) { const k = st.bars[i]; if (!k) continue; const x = xOf(i); if (first) { ctx.moveTo(x, Y(k.c)); first = false; } else ctx.lineTo(x, Y(k.c)); }
+          path(); ctx.lineTo(xOf(b), ph); ctx.lineTo(xOf(a), ph); ctx.closePath();
+          const g = ctx.createLinearGradient(0, 0, 0, ph); g.addColorStop(0, lineCol + '66'); g.addColorStop(1, lineCol + '05'); ctx.fillStyle = g; ctx.fill();
         }
-        ctx.strokeStyle = lineCol; ctx.lineWidth = 2; ctx.lineJoin = 'round'; ctx.stroke();
+        path(); ctx.strokeStyle = lineCol; ctx.lineWidth = 2; ctx.lineJoin = 'round'; ctx.stroke();
       }
       ctx.restore();
       // dernier cours
@@ -225,19 +261,29 @@
       const ly = Math.round(Y(last.c)) + 0.5;
       if (ly >= 0 && ly <= ph) {
         ctx.save(); ctx.setLineDash([2, 3]); ctx.strokeStyle = lc; ctx.beginPath(); ctx.moveTo(0, ly); ctx.lineTo(pw, ly); ctx.stroke(); ctx.restore();
-        ctx.fillStyle = lc; ctx.fillRect(pw, ly - 9, AXIS_W, 18); ctx.fillStyle = '#000'; ctx.textAlign = 'left'; ctx.textBaseline = 'middle'; ctx.fillText(last.c.toFixed(dec + 1 > 3 ? 3 : dec + 1), pw + 8, ly);
+        ctx.fillStyle = lc; ctx.fillRect(pw, ly - 9, AXIS_W, 18); ctx.fillStyle = '#000'; ctx.textAlign = 'left'; ctx.textBaseline = 'middle'; ctx.fillText(dfmt(last.c, 3), pw + 8, ly);
       }
       // bordures des échelles
       ctx.strokeStyle = grid; ctx.beginPath(); ctx.moveTo(pw + 0.5, 0); ctx.lineTo(pw + 0.5, H); ctx.moveTo(0, ph + 0.5); ctx.lineTo(W, ph + 0.5); ctx.stroke();
-      // curseur
+      // boutons A / L : visibles quand la souris est sur l'échelle de prix
       const cr = st.cross;
+      if (cr && cr.x > pw) {
+        ctx.font = '700 11px ' + mono(); ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+        [['A', st.auto], ['L', st.log]].forEach(([w, on]) => {
+          const r = btnRect(w);
+          ctx.fillStyle = on ? cssVar('--mw-btn-active-bg', '#2a2e39') : bg; ctx.fillRect(r.x, r.y, r.w, r.h);
+          ctx.strokeStyle = on ? cssVar('--mw-btn-active-text', '#ffffff') : grid; ctx.strokeRect(r.x + 0.5, r.y + 0.5, r.w - 1, r.h - 1);
+          ctx.fillStyle = on ? cssVar('--mw-btn-active-text', '#ffffff') : txt; ctx.fillText(w, r.x + r.w / 2, r.y + r.h / 2 + 1);
+        });
+        ctx.font = '11px ' + mono();
+      }
+      // curseur en croix
       if (cr && cr.x >= 0 && cr.x <= pw && cr.y >= 0 && cr.y <= ph) {
         const idx = Math.max(0, Math.min(st.bars.length - 1, Math.round(iOf(cr.x))));
         const cx = Math.round(xOf(idx)) + 0.5; const cy = Math.round(cr.y) + 0.5;
         ctx.save(); ctx.setLineDash([4, 4]); ctx.strokeStyle = cross; ctx.beginPath(); ctx.moveTo(cx, 0); ctx.lineTo(cx, ph); ctx.moveTo(0, cy); ctx.lineTo(pw, cy); ctx.stroke(); ctx.restore();
         const lab = cssVar('--mw-label-bg', '#2a2e39'); const labT = cssVar('--mw-label-text', '#ffffff');
-        const pv = hi - (cr.y / ph) * (hi - lo);
-        ctx.fillStyle = lab; ctx.fillRect(pw, cy - 9, AXIS_W, 18); ctx.fillStyle = labT; ctx.textAlign = 'left'; ctx.textBaseline = 'middle'; ctx.fillText(pv.toFixed(dec + 1 > 3 ? 3 : dec + 1), pw + 8, cy);
+        ctx.fillStyle = lab; ctx.fillRect(pw, cy - 9, AXIS_W, 18); ctx.fillStyle = labT; ctx.textAlign = 'left'; ctx.textBaseline = 'middle'; ctx.fillText(dfmt(yToPrice(cr.y), 3), pw + 8, cy);
         const k = st.bars[idx];
         const tl = tf.step >= 86400 ? F.fullD.format(new Date(k.t * 1000)) : F.full.format(new Date(k.t * 1000));
         const tw = ctx.measureText(tl).width + 14; const tx = Math.max(0, Math.min(pw - tw, cx - tw / 2));
@@ -248,35 +294,40 @@
     function setLegend(idx) {
       const k = st.bars[idx]; if (!k) { legend.innerHTML = `<b>${o.name}</b>`; return; }
       const prev = st.bars[idx - 1]; const chg = prev ? k.c - prev.c : 0; const pct = prev ? (chg / prev.c) * 100 : 0;
-      const col = cssVar('--mw-border', '#ffffff'); const ccol = col;
-      const tf = TFS.find((t) => t.k === st.tf) || TFS[1];
+      const col = cssVar('--mw-border', '#ffffff');
       const v = (x) => x.toFixed(3);
-      legend.innerHTML = `<span class="fxc-l-name">${o.name}</span><span class="fxc-l-tf">${tf.label}</span>`
+      legend.innerHTML = `<span class="fxc-l-name">${o.name}</span><span class="fxc-l-tf">${tfLabel(st.tf)}</span>`
         + `<span class="fxc-l-o">O <i style="color:${col}">${v(k.o)}</i></span><span>H <i style="color:${col}">${v(k.h)}</i></span><span>L <i style="color:${col}">${v(k.l)}</i></span><span>C <i style="color:${col}">${v(k.c)}</i></span>`
-        + `<span><i style="color:${ccol}">${chg >= 0 ? '+' : ''}${chg.toFixed(3)} (${pct >= 0 ? '+' : ''}${pct.toFixed(2)}%)</i></span>`;
+        + `<span><i style="color:${col}">${chg >= 0 ? '+' : ''}${chg.toFixed(3)} (${pct >= 0 ? '+' : ''}${pct.toFixed(2)}%)</i></span>`;
     }
     let raf = 0;
     const redraw = () => { if (raf) return; raf = requestAnimationFrame(() => { raf = 0; draw(); }); };
 
     /* interactions */
     const pos = (ev) => { const r = cv.getBoundingClientRect(); return { x: ev.clientX - r.left, y: ev.clientY - r.top }; };
+    const scaleAround = (r, k) => { const mid = (r[0] + r[1]) / 2; const half = ((r[1] - r[0]) / 2) * k; return [mid - half, mid + half]; };
     cv.style.touchAction = 'none';
     cv.addEventListener('wheel', (ev) => {
       ev.preventDefault();
       if (!st.bars.length) return;
       const p = pos(ev);
-      if (p.x > plotW()) { st.yScale = Math.min(20, Math.max(0.05, st.yScale * (ev.deltaY < 0 ? 0.9 : 1.1))); redraw(); return; }
+      if (p.x > plotW()) { goManual(scaleAround(priceRange(), ev.deltaY < 0 ? 0.9 : 1.1)); redraw(); return; }
       const anchor = iOf(p.x);
-      st.bw = Math.min(40, Math.max(1.5, st.bw * (ev.deltaY < 0 ? 1.15 : 1 / 1.15)));
+      st.bw = Math.min(60, Math.max(0.5, st.bw * (ev.deltaY < 0 ? 1.15 : 1 / 1.15)));
       st.right = anchor + (plotW() - p.x - st.bw / 2) / st.bw;
-      clampView(); redraw();
+      redraw();
     }, { passive: false });
     cv.addEventListener('pointerdown', (ev) => {
+      host.focus({ preventScroll: true });
       const p = pos(ev);
+      if (p.x > plotW()) {
+        if (inRect(p, btnRect('A'))) { st.auto = true; redraw(); return; }
+        if (inRect(p, btnRect('L'))) { const r = priceRange(); const pl = TI(r[0]); const ph2 = TI(r[1]); st.log = !st.log; if (!st.auto) st.man = [T(pl), T(ph2)]; redraw(); return; }
+      }
       st.pointers.set(ev.pointerId, p);
       try { cv.setPointerCapture(ev.pointerId); } catch (e) { /* ignore */ }
       if (st.pointers.size === 2) { const [p1, p2] = [...st.pointers.values()]; st.drag = { pinch: true, d: Math.hypot(p1.x - p2.x, p1.y - p2.y), bw: st.bw }; return; }
-      st.drag = { x: p.x, y: p.y, right: st.right, yShift: st.yShift, yScale: st.yScale, onAxis: p.x > plotW(), onTime: p.y > plotH() && p.x <= plotW(), bw: st.bw, moved: false };
+      st.drag = { x: p.x, y: p.y, right: st.right, range: priceRange().slice(), onAxis: p.x > plotW(), onTime: p.y > plotH() && p.x <= plotW(), bw: st.bw, vert: false };
     });
     cv.addEventListener('pointermove', (ev) => {
       const p = pos(ev);
@@ -284,20 +335,20 @@
       const d = st.drag;
       if (d && d.pinch && st.pointers.size === 2) {
         const [p1, p2] = [...st.pointers.values()]; const nd = Math.hypot(p1.x - p2.x, p1.y - p2.y);
-        st.bw = Math.min(40, Math.max(1.5, d.bw * (nd / (d.d || 1)))); clampView(); redraw(); return;
+        st.bw = Math.min(60, Math.max(0.5, d.bw * (nd / (d.d || 1)))); redraw(); return;
       }
       if (d && !d.pinch) {
         const dx = p.x - d.x; const dy = p.y - d.y;
-        if (Math.abs(dx) + Math.abs(dy) > 3) d.moved = true;
-        if (d.onAxis) { st.yScale = Math.min(20, Math.max(0.05, d.yScale * Math.exp(-dy / 200))); st.auto = false; }
-        else if (d.onTime) { st.bw = Math.min(40, Math.max(1.5, d.bw * Math.exp(dx / 200))); }
+        if (d.onAxis) goManual(scaleAround(d.range, Math.exp(-dy / 200)));
+        else if (d.onTime) st.bw = Math.min(60, Math.max(0.5, d.bw * Math.exp(dx / 200)));
         else {
-          st.right = d.right - dx / st.bw;
-          // le glissé vertical ne déplace pas l'échelle : elle s'ajuste seule aux bougies visibles
+          st.right = d.right - dx / st.bw; // déplacement horizontal libre
+          if (Math.abs(dy) > 4) d.vert = true;
+          if (d.vert) { const k = ((d.range[1] - d.range[0]) / plotH()) * dy; goManual([d.range[0] + k, d.range[1] + k]); } // déplacement vertical libre
         }
-        clampView(); st.cross = d.onAxis || d.onTime ? null : p; redraw(); return;
+        st.cross = d.onAxis || d.onTime ? p : p; redraw(); return;
       }
-      st.cross = p; redraw();
+      st.cross = p; cv.style.cursor = p.x > plotW() ? ((inRect(p, btnRect('A')) || inRect(p, btnRect('L'))) ? 'pointer' : 'ns-resize') : 'crosshair'; redraw();
     });
     const up = (ev) => { st.pointers.delete(ev.pointerId); if (st.pointers.size < 2 && st.drag && st.drag.pinch) st.drag = null; if (!st.pointers.size) st.drag = null; };
     cv.addEventListener('pointerup', up);
@@ -305,19 +356,46 @@
     cv.addEventListener('pointerleave', (ev) => { if (ev.pointerType === 'mouse' && !st.drag) { st.cross = null; redraw(); } });
     cv.addEventListener('dblclick', (ev) => {
       const p = pos(ev);
-      if (p.x > plotW()) { st.yScale = 1; st.yShift = 0; st.auto = true; } else fit(0);
+      if (p.x > plotW()) st.auto = true; else fit(0);
       redraw();
     });
+    function setTf(k) { if (!parseTf(k === 'D' ? '1D' : k === 'W' ? '1W' : k)) return; st.tf = k; syncBtns(); load(true, true); }
     bar.addEventListener('click', (ev) => {
       const t = ev.target.closest('button'); if (!t) return;
-      if (t.dataset.tf) { st.tf = t.dataset.tf; syncBtns(); load(true, true); }
+      if (t.dataset.tf) setTf(t.dataset.tf);
       else if (t.dataset.style) { st.style = t.dataset.style; syncBtns(); redraw(); }
-      else if (t.hasAttribute('data-fs')) { const el = host; if (document.fullscreenElement) document.exitFullscreen(); else if (el.requestFullscreen) el.requestFullscreen(); }
+      else if (t.hasAttribute('data-fs')) { if (document.fullscreenElement) document.exitFullscreen(); else if (host.requestFullscreen) host.requestFullscreen(); }
     });
     ranges.addEventListener('click', (ev) => { const t = ev.target.closest('[data-rng]'); if (!t) return; fit(Number(t.dataset.rng)); redraw(); });
 
-    const defDays = () => ({ '15': o.big ? 3 : 2, '60': o.big ? 10 : 5, '240': 30, D: 180, W: 0 }[st.tf] || 5);
+    /* clavier : taper une unité de temps (1, 5, 15, 1H, 4H, D, W, M…) puis Entrée, comme dans TradingView */
+    function closeKb() { kb.hidden = true; kbIn.value = ''; kb.classList.remove('is-bad'); }
+    function normTf(txt) {
+      const t = txt.trim();
+      if (/^d$/i.test(t)) return 'D'; if (/^w$/i.test(t)) return 'W';
+      if (/^\d*[dD]$/.test(t)) return (t.replace(/\D/g, '') || '1') === '1' ? 'D' : t.replace(/\D/g, '') + 'D';
+      if (/^\d*[wW]$/.test(t)) return (t.replace(/\D/g, '') || '1') === '1' ? 'W' : t.replace(/\D/g, '') + 'W';
+      if (/^\d*M$/.test(t)) return (t.replace(/\D/g, '') || '1') === '1' ? 'M' : t.replace(/\D/g, '') + 'M';
+      const p = parseTf(t); return p ? p.k : null;
+    }
+    host.addEventListener('keydown', (ev) => {
+      if (ev.ctrlKey || ev.metaKey || ev.altKey) return;
+      if (ev.target === kbIn) {
+        if (ev.key === 'Enter') { ev.preventDefault(); const k = normTf(kbIn.value); if (k) { closeKb(); setTf(k); } else { kb.classList.add('is-bad'); } }
+        else if (ev.key === 'Escape') { ev.preventDefault(); closeKb(); host.focus({ preventScroll: true }); }
+        else kb.classList.remove('is-bad');
+        ev.stopPropagation();
+        return;
+      }
+      if (/^[0-9a-zA-Z]$/.test(ev.key)) {
+        ev.preventDefault();
+        kb.hidden = false; kbIn.value = ev.key; kbIn.focus(); try { kbIn.setSelectionRange(kbIn.value.length, kbIn.value.length); } catch (e) { /* ignore */ }
+      }
+    });
+    kbIn.addEventListener('blur', () => { setTimeout(() => { if (document.activeElement !== kbIn) closeKb(); }, 120); });
+
     /* chargement */
+    const defDays = () => { const t = tfOf(st.tf); const m = t.mins; if (m !== undefined) return m <= 1 ? 0.5 : m <= 5 ? 1 : m <= 15 ? (o.big ? 3 : 2) : m <= 60 ? (o.big ? 10 : 5) : 30; return t.months ? 0 : t.weeks ? 0 : 180; };
     let busy = false;
     async function load(force, refit) {
       if (busy) return;
@@ -327,10 +405,10 @@
         const prevN = st.bars.length;
         const bars = await loadBars(o.currency, st.tf, force);
         if (!bars || bars.length < 2) { st.bars = []; st.msg = bars === null ? 'Données indisponibles (connecte-toi ou attends le robot).' : 'Pas encore de données.'; redraw(); return; }
-        st.bars = bars; st.ready = true;
+        st.bars = bars;
         if (refit || !prevN) fit(defDays());
         else if (wasEnd) st.right = bars.length - 1 + PAD_RIGHT_BARS;
-        clampView(); redraw();
+        redraw();
       } catch (e) { console.warn('fxchart', e); } finally { busy = false; }
     }
     const ro = window.ResizeObserver ? new ResizeObserver(() => {
@@ -338,13 +416,13 @@
       if (w === st.w && h === st.h) return;
       const first = !st.w; st.w = w; st.h = h;
       if (first && st.bars.length) fit(defDays());
-      clampView(); redraw();
+      redraw();
     }) : null;
     if (ro) ro.observe(main);
     syncBtns();
     load(false, true);
-    return { reload: () => load(true, false), redraw, destroy() { if (ro) ro.disconnect(); }, el: host };
+    return { reload: () => load(true, false), redraw, destroy() { if (ro) ro.disconnect(); }, el: host, setTf };
   }
 
-  window.FXChart = { create, TFS };
+  window.FXChart = { create, TFS, parseTf };
 })();
