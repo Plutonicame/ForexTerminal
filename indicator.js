@@ -70,7 +70,7 @@
     wrapFx.innerHTML = `
       <div class="speeches-toolbar">
         <span class="speeches-toolbar-title">Force des devises</span>
-        <span class="speeches-toolbar-info" data-fxs-info>Depuis l'ouverture de la semaine (dimanche 23 h)</span>
+        <span class="speeches-toolbar-info" data-fxs-info>Depuis l'ouverture de la semaine (dimanche 23 h) · molette ou glisser pour zoomer</span>
       </div>
       <div class="fxs-legend" data-fxs-legend></div>
       <div class="fxs-chart" data-fxs-chart><p class="ind-empty">Chargement…</p></div>`;
@@ -110,6 +110,7 @@
     }).join('');
   }
 
+  let fxView = null;
   function renderFx() {
     if (!wrapFx) return;
     renderLegend();
@@ -123,10 +124,35 @@
     const H = W < 560 ? 300 : 380;
     const m = { l: 52, r: 14, t: 14, b: 28 };
     const ws = Math.floor(new Date(fxData.week_start).getTime() / 1000);
-    const x0 = ws; const x1 = ws + 5 * DAY;
+    const fx0 = ws; const fx1 = ws + 5 * DAY;
+    if (fxView && (fxView.ws !== ws || fxView.b - fxView.a >= fx1 - fx0 - 60)) fxView = null;
+    const x0 = fxView ? fxView.a : fx0; const x1 = fxView ? fxView.b : fx1;
+    // courbes rebasées : chaque devise part de 0 au bord gauche de la zone visible
+    const T = s.t;
+    const valAt = (arr, t) => {
+      if (t <= T[0]) return arr[0];
+      if (t >= T[T.length - 1]) return arr[T.length - 1];
+      let a = 0; let b = T.length - 1;
+      while (b - a > 1) { const mid = (a + b) >> 1; if (T[mid] <= t) a = mid; else b = mid; }
+      return arr[a] + (arr[b] - arr[a]) * ((t - T[a]) / ((T[b] - T[a]) || 1));
+    };
     const shown = CURRENCIES.filter((c) => !hidden.has(c) && s[c]);
+    const vis = {};
+    let nvis = 0;
+    shown.forEach((c) => {
+      const base = fxView ? valAt(s[c], x0) : 0;
+      const pts = [];
+      if (fxView && x0 >= T[0] && x0 <= T[T.length - 1]) pts.push([x0, 0]);
+      for (let i = 0; i < T.length; i++) if (T[i] >= x0 && T[i] <= x1) pts.push([T[i], s[c][i] - base]);
+      vis[c] = pts; nvis = Math.max(nvis, pts.length);
+    });
+    if (fxView) wrapFx.querySelectorAll('.fxs-chip').forEach((chip) => {
+      const pts = vis[chip.dataset.cur]; const v = chip.querySelector('.fxs-val');
+      if (pts && pts.length && v) v.textContent = fmt(pts[pts.length - 1][1], 2) + '%';
+    });
+    if (nvis < 2) { fxView = null; host.innerHTML = '<p class="ind-empty">Aucune donnée dans cette zone (double-clique pour tout afficher).</p>'; return; }
     let lo = 0; let hi = 0;
-    shown.forEach((c) => s[c].forEach((v) => { if (v < lo) lo = v; if (v > hi) hi = v; }));
+    shown.forEach((c) => vis[c].forEach((p) => { if (p[1] < lo) lo = p[1]; if (p[1] > hi) hi = p[1]; }));
     if (hi - lo < 0.2) { hi = Math.max(hi, 0.1); lo = Math.min(lo, -0.1); }
     const pad = (hi - lo) * 0.08; lo -= pad; hi += pad;
     const step = niceStep(hi - lo, 6);
@@ -145,17 +171,22 @@
     }
     // repères de jours : lundi 00 h à vendredi 00 h (heure de Paris)
     for (let d = 1; d <= 5; d++) {
-      const t = x0 + 3600 + (d - 1) * DAY;
+      const t = fx0 + 3600 + (d - 1) * DAY;
       if (t > x1) break;
+      if (t < x0) continue;
       const x = X(t);
       svg('line', { x1: x, x2: x, y1: m.t, y2: H - m.b, stroke: grid, 'stroke-width': 1, 'stroke-dasharray': '2 4' }, root);
       const lab = svg('text', { x: x + 4, y: H - 9, fill: txt, 'font-size': 11, 'font-family': 'var(--mono)' }, root);
       lab.textContent = parisTime(t + 3600, { weekday: 'short' }).replace('.', '');
     }
+    if (fxView) {
+      const lab = svg('text', { x: W - m.r, y: m.t + 10, 'text-anchor': 'end', fill: txt, 'font-size': 10, 'font-family': 'var(--mono)' }, root);
+      lab.textContent = 'Zoom · double-clic pour réinitialiser · base 0 = ' + parisTime(x0, { weekday: 'short', hour: '2-digit', minute: '2-digit' });
+    }
     if (y0 <= 0 && y1 >= 0) svg('line', { x1: m.l, x2: W - m.r, y1: Y(0), y2: Y(0), stroke: zero, 'stroke-width': 1, 'stroke-dasharray': '5 4', opacity: 0.8 }, root);
 
     shown.forEach((c) => {
-      const pts = s.t.map((t, i) => `${X(t).toFixed(1)},${Y(s[c][i]).toFixed(1)}`).join(' ');
+      const pts = vis[c].map((p) => `${X(p[0]).toFixed(1)},${Y(p[1]).toFixed(1)}`).join(' ');
       svg('polyline', { points: pts, fill: 'none', stroke: cssVar('--fxs-' + c.toLowerCase(), '#888'), 'stroke-width': 2, 'stroke-linejoin': 'round', 'stroke-linecap': 'round' }, root);
     });
 
@@ -164,25 +195,69 @@
     const tip = el('div', 'ind-tip', '', host);
     tip.hidden = true;
     const overlay = svg('rect', { x: m.l, y: m.t, width: W - m.l - m.r, height: H - m.t - m.b, fill: 'transparent' }, root);
+    const ref = shown.find((c) => vis[c].length) || shown[0];
+    const P = vis[ref] || [];
     function at(ev) {
+      if (drag || !P.length) return;
       const r = root.getBoundingClientRect();
       const px = (ev.clientX - r.left) * (W / r.width);
       const t = x0 + ((px - m.l) / (W - m.l - m.r)) * (x1 - x0);
-      let a = 0; let b = s.t.length - 1;
-      while (b - a > 1) { const mid = (a + b) >> 1; if (s.t[mid] < t) a = mid; else b = mid; }
-      const i = Math.abs(s.t[a] - t) <= Math.abs(s.t[b] - t) ? a : b;
-      const x = X(s.t[i]);
+      let a = 0; let b = P.length - 1;
+      while (b - a > 1) { const mid = (a + b) >> 1; if (P[mid][0] < t) a = mid; else b = mid; }
+      const i = Math.abs(P[a][0] - t) <= Math.abs(P[b][0] - t) ? a : b;
+      const x = X(P[i][0]);
       cross.setAttribute('x1', x); cross.setAttribute('x2', x); cross.setAttribute('opacity', 0.5);
-      const rows = shown.map((c) => [c, s[c][i]]).sort((p, q) => q[1] - p[1]);
-      tip.innerHTML = `<b>${parisTime(s.t[i], { weekday: 'short', hour: '2-digit', minute: '2-digit' })}</b>` + rows.map(([c, v]) => `<span><i style="background:var(--fxs-${c.toLowerCase()})"></i>${c} <em>${fmt(v, 2)}%</em></span>`).join('');
+      const rows = shown.map((c) => [c, vis[c][i] ? vis[c][i][1] : 0]).sort((p, q) => q[1] - p[1]);
+      tip.innerHTML = `<b>${parisTime(P[i][0], { weekday: 'short', hour: '2-digit', minute: '2-digit' })}</b>` + rows.map(([c, v]) => `<span><i style="background:var(--fxs-${c.toLowerCase()})"></i>${c} <em>${fmt(v, 2)}%</em></span>`).join('');
       tip.hidden = false;
       const hw = host.clientWidth;
       const left = x * (r.width / W);
       tip.style.left = (left + 150 > hw ? left - 150 : left + 12) + 'px';
       tip.style.top = '8px';
     }
+    // zoom horizontal uniquement : molette (ancrée sur le curseur) ou glisser pour sélectionner une plage ; double-clic = tout afficher
+    const MINSPAN = 1800;
+    const tAt = (ev) => { const r = root.getBoundingClientRect(); const px = (ev.clientX - r.left) * (W / r.width); return x0 + Math.min(1, Math.max(0, (px - m.l) / (W - m.l - m.r))) * (x1 - x0); };
+    const setView = (a, b) => {
+      if (b - a < MINSPAN) { const mid = (a + b) / 2; a = mid - MINSPAN / 2; b = mid + MINSPAN / 2; }
+      if (a < fx0) { b += fx0 - a; a = fx0; }
+      if (b > fx1) { a -= b - fx1; b = fx1; }
+      a = Math.max(fx0, a);
+      fxView = (b - a >= fx1 - fx0 - 60) ? null : { ws, a, b };
+      renderFx();
+    };
+    let drag = null;
+    const sel = svg('rect', { y: m.t, height: H - m.t - m.b, fill: txt, opacity: 0, 'pointer-events': 'none' }, root);
+    overlay.style.touchAction = 'pan-y';
+    overlay.addEventListener('wheel', (ev) => {
+      ev.preventDefault();
+      const t = tAt(ev);
+      const k = ev.deltaY < 0 ? 0.8 : 1.25;
+      setView(t - (t - x0) * k, t + (x1 - t) * k);
+    }, { passive: false });
+    overlay.addEventListener('dblclick', () => { fxView = null; renderFx(); });
+    overlay.addEventListener('pointerdown', (ev) => {
+      if (ev.button > 0) return;
+      drag = { px: ev.clientX, t: tAt(ev), moved: false };
+      try { overlay.setPointerCapture(ev.pointerId); } catch (e) { /* ignore */ }
+    });
+    overlay.addEventListener('pointermove', (ev) => {
+      if (!drag) return;
+      if (Math.abs(ev.clientX - drag.px) > 6) drag.moved = true;
+      if (!drag.moved) return;
+      tip.hidden = true; cross.setAttribute('opacity', 0);
+      const xa = X(Math.min(drag.t, tAt(ev))); const xb = X(Math.max(drag.t, tAt(ev)));
+      sel.setAttribute('x', xa); sel.setAttribute('width', Math.max(0, xb - xa)); sel.setAttribute('opacity', 0.18);
+    });
+    const endDrag = (ev) => {
+      if (!drag) return;
+      const d = drag; drag = null;
+      sel.setAttribute('opacity', 0);
+      if (d.moved) { const t = tAt(ev); setView(Math.min(d.t, t), Math.max(d.t, t)); }
+    };
+    overlay.addEventListener('pointerup', endDrag);
+    overlay.addEventListener('pointercancel', () => { drag = null; sel.setAttribute('opacity', 0); });
     overlay.addEventListener('pointermove', at);
-    overlay.addEventListener('pointerdown', at);
     overlay.addEventListener('pointerleave', () => { cross.setAttribute('opacity', 0); tip.hidden = true; });
 
     const info = wrapFx.querySelector('[data-fxs-info]');

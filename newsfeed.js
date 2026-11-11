@@ -22,6 +22,7 @@
   const FEED_HOURS = 72; // période par défaut, sans dates choisies (le week-end, 24 h ne montrait presque rien)
   const LS_RANGE = 'fxt-nf-range';
 
+  const SRC_LABEL = { fj: 'FinancialJuice', investinglive: 'Investing Live', investing: 'Investing.com', bloomberg: 'Bloomberg', reuters: 'Reuters', nyt: 'New York Times' };
   // Colonnes du News Feed. red : on n'affiche que les lignes retenues par le tri (red = true).
   const SOURCES = [
     { key: 'investinglive', title: 'investingLive', sub: 'News & articles · titres en anglais', red: false },
@@ -160,12 +161,14 @@
       if (dk !== lastDay) { lastDay = dk; html += `<p class="nf-day">${esc(fmtDay(r.published_at))}</p>`; }
       const url = safeUrl(r.url);
       const title = kind === 'investinglive' ? r.title : (r.title_fr || r.title);
-      const tag = kind === 'fj' ? '<span class="nf-tag nf-tag--red">Rouge</span>' : (r.feed ? `<span class="nf-tag">${esc(r.feed)}</span>` : '');
+      const star = r.top ? '<span class="nf-star" title="Dans l\'onglet Nouveau et lue par le Squawk">★</span>' : '';
+      const tag = kind === 'mixed' ? `<span class="nf-tag">${esc(SRC_LABEL[r.source] || r.source)}</span>`
+        : kind === 'fj' ? '<span class="nf-tag nf-tag--red">Rouge</span>' : (r.feed ? `<span class="nf-tag">${esc(r.feed)}</span>` : '');
       const orig = kind !== 'investinglive' && r.title_fr && r.title_fr !== r.title ? `<span class="nf-orig">${esc(r.title)}</span>` : '';
       const body = url
         ? `<a class="nf-title" href="${esc(url)}" target="_blank" rel="noopener noreferrer">${esc(title)}</a>`
         : `<span class="nf-title">${esc(title)}</span>`;
-      html += `<div class="nf-row"><span class="nf-time">${esc(fmtTime(r.published_at))}</span><div class="nf-body">${tag}${body}${orig}</div></div>`;
+      html += `<div class="nf-row"><span class="nf-time">${esc(fmtTime(r.published_at))}</span><div class="nf-body">${star}${tag}${body}${orig}</div></div>`;
     });
     return html;
   }
@@ -177,7 +180,7 @@
       if (!sec || !c) return;
       const { since, until } = rangeBounds();
       const res = await Promise.all(SOURCES.map((x) => {
-        let q = c.from('news_items').select('id,feed,title,title_fr,url,published_at').eq('source', x.key).gte('published_at', since).lt('published_at', until);
+        let q = c.from('news_items').select('id,feed,title,title_fr,url,published_at,top').eq('source', x.key).gte('published_at', since).lt('published_at', until);
         if (x.red) q = q.eq('red', true);
         return q.order('published_at', { ascending: false }).limit(500);
       }));
@@ -259,10 +262,11 @@
   }
 
   /* ---------------- Squawk : voix de synthèse + historique ---------------- */
-  // Lit à voix haute, en français, chaque nouvelle annonce rouge de FinancialJuice (déjà traduite par news-bot).
+  // Lit à voix haute, en français, chaque nouvelle news « top » (celles de l'onglet Nouveau, toutes sources) déjà traduite par les robots.
   // La vraie voix du squawk FinancialJuice est un flux propriétaire : impossible de l'intégrer ou de la transcrire ici.
   const LS_SQUAWK = 'fxt-squawk-on';
-  const squawk = { on: false, primed: false, spoken: new Set(), timer: null, voice: null, status: '' };
+  const LS_VOL = 'fxt-squawk-vol';
+  const squawk = { vol: 1, on: false, primed: false, spoken: new Set(), timer: null, voice: null, status: '' };
 
   function lsGet(k) { try { return localStorage.getItem(k); } catch (e) { return null; } }
   function lsSet(k, v) { try { localStorage.setItem(k, v); } catch (e) { /* stockage indisponible */ } }
@@ -283,6 +287,7 @@
       u.lang = 'fr-FR';
       if (squawk.voice || pickVoice()) u.voice = squawk.voice;
       u.rate = 1.05;
+      u.volume = squawk.vol;
       window.speechSynthesis.speak(u);
     } catch (e) { console.warn('squawk', e); }
   }
@@ -292,19 +297,19 @@
     if (nav) {
       nav.setAttribute('aria-pressed', String(squawk.on));
       nav.classList.toggle('is-on', squawk.on);
-      nav.title = squawk.on ? 'Squawk activé (clique pour couper)' : 'Squawk coupé (clique pour activer)';
+      nav.title = squawk.on ? 'Squawk activé (clic = couper · clic droit = volume)' : 'Squawk coupé (clic = activer · clic droit = volume)';
     }
     const btn = document.querySelector('[data-sq-toggle]');
     if (btn) { btn.textContent = squawk.on ? 'Couper la voix' : 'Activer la voix'; btn.classList.toggle('is-on', squawk.on); }
     const st = document.querySelector('[data-sq-status]');
-    if (st) st.textContent = squawk.status || (squawk.on ? 'Voix activée : les nouvelles annonces rouges sont lues en français.' : 'Voix coupée.');
+    if (st) st.textContent = squawk.status || (squawk.on ? 'Voix activée : les nouvelles news importantes sont lues en français.' : 'Voix coupée.');
   }
 
   async function squawkPoll(first) {
     const c = await client();
     if (!c) return;
     const since = new Date(Date.now() - 10 * 60 * 1000).toISOString();
-    const { data, error } = await c.from('news_items').select('id,title,title_fr,published_at').eq('source', 'fj').eq('red', true).gte('published_at', since).order('published_at', { ascending: true }).limit(30);
+    const { data, error } = await c.from('news_items').select('id,title,title_fr,published_at').eq('top', true).gte('published_at', since).order('published_at', { ascending: true }).limit(40);
     if (error || !data) return;
     const fresh = data.filter((r) => !squawk.spoken.has(r.id));
     fresh.forEach((r) => squawk.spoken.add(r.id));
@@ -339,11 +344,11 @@
       const c = await client();
       if (!box || !c) return;
       const since = new Date(Date.now() - FEED_HOURS * 3600 * 1000).toISOString();
-      const { data, error } = await c.from('news_items').select('id,title,title_fr,url,published_at').eq('source', 'fj').eq('red', true).gte('published_at', since).order('published_at', { ascending: false }).limit(80);
+      const { data, error } = await c.from('news_items').select('id,source,feed,title,title_fr,url,published_at,top').eq('top', true).gte('published_at', since).order('published_at', { ascending: false }).limit(150);
       if (error) throw error;
       const sig = (data || []).map((r) => r.id + (r.title_fr ? 1 : 0)).join('|');
       if (!changed('squawk', sig)) return;
-      box.innerHTML = renderRows(data || [], 'fj');
+      box.innerHTML = renderRows(data || [], 'mixed');
     });
   }
 
@@ -355,7 +360,7 @@
         <div class="calendar-toolbar"><span class="calendar-toolbar-title">Squawk</span></div>
         <div class="sq-card">
           <p class="sq-title">Squawk en français</p>
-          <p class="sq-text">Chaque nouvelle annonce rouge de FinancialJuice est lue à voix haute, en français, dès qu'elle est traduite (quelques secondes à une minute après sa publication). Les annonces lues restent en historique ci-dessous. Le même bouton existe dans la barre du haut, à côté de New York.</p>
+          <p class="sq-text">Chaque nouvelle news importante de l'onglet Nouveau (FinancialJuice, Investing Live, Investing.com, Bloomberg, Reuters, New York Times) est lue à voix haute, en français, dès qu'elle est triée et traduite (en général dans la minute qui suit). Ce qui a été lu reste en historique ci-dessous. Le même bouton existe dans la barre du haut, à côté de New York.</p>
           <div class="sq-actions">
             <button type="button" class="sq-btn" data-sq-toggle>Activer la voix</button>
             <button type="button" class="sq-btn" data-sq-test>Tester la voix</button>
@@ -363,7 +368,7 @@
           </div>
           <p class="sq-status" data-sq-status></p>
         </div>
-        <div class="nf-col sq-history"><header class="nf-col-head"><span class="nf-col-title">Historique</span><span class="nf-col-sub">Annonces rouges traduites · du plus récent au plus ancien</span></header>
+        <div class="nf-col sq-history"><header class="nf-col-head"><span class="nf-col-title">Historique</span><span class="nf-col-sub">News importantes lues · du plus récent au plus ancien</span></header>
           <div class="nf-list" data-sq-history><p class="nf-empty">Chargement…</p></div></div>`;
       sec.addEventListener('click', (ev) => {
         if (ev.target.closest('[data-sq-toggle]')) setSquawk(!squawk.on, true);
@@ -373,9 +378,32 @@
     syncSquawkUi();
   }
 
+  function initVolume(nav) {
+    const v = parseFloat(lsGet(LS_VOL));
+    if (v >= 0 && v <= 1) squawk.vol = v;
+    const pop = document.createElement('div');
+    pop.className = 'sq-vol'; pop.hidden = true;
+    pop.innerHTML = '<span class="sq-vol-ico">🔈</span><input type="range" min="0" max="100" step="1" aria-label="Volume du Squawk"><span class="sq-vol-val"></span>';
+    document.body.appendChild(pop);
+    const rng = pop.querySelector('input'); const val = pop.querySelector('.sq-vol-val');
+    const show = () => { rng.value = Math.round(squawk.vol * 100); val.textContent = rng.value + '%'; };
+    rng.addEventListener('input', () => { squawk.vol = rng.value / 100; val.textContent = rng.value + '%'; lsSet(LS_VOL, String(squawk.vol)); });
+    rng.addEventListener('change', () => { if (canSpeak()) { window.speechSynthesis.cancel(); speak('Volume'); } });
+    nav.addEventListener('contextmenu', (ev) => {
+      ev.preventDefault();
+      show();
+      pop.hidden = false;
+      const r = nav.getBoundingClientRect();
+      pop.style.top = (r.bottom + 6) + 'px';
+      pop.style.left = Math.max(8, Math.min(window.innerWidth - pop.offsetWidth - 8, r.left + r.width / 2 - pop.offsetWidth / 2)) + 'px';
+    });
+    document.addEventListener('pointerdown', (ev) => { if (!pop.hidden && !pop.contains(ev.target)) pop.hidden = true; });
+    document.addEventListener('keydown', (ev) => { if (ev.key === 'Escape') pop.hidden = true; });
+  }
+
   function initSquawkNav() {
     const nav = document.getElementById('squawkToggle');
-    if (nav) nav.addEventListener('click', () => setSquawk(!squawk.on, true));
+    if (nav) { nav.addEventListener('click', () => setSquawk(!squawk.on, true)); initVolume(nav); }
     if (canSpeak()) window.speechSynthesis.addEventListener('voiceschanged', pickVoice);
     if (lsGet(LS_SQUAWK) === '1') setSquawk(true, false);
     else syncSquawkUi();
@@ -383,8 +411,9 @@
 
   /* ---------------- Nouveau : ce qui est nouveau depuis ta dernière visite ---------------- */
   // Un bouton par source (n'apparaît que s'il y a du nouveau). Pour chaque source on retient, dans ce navigateur,
-  // la date de la dernière annonce vue dès qu'on déroule le bouton. À la visite suivante (rechargement de l'appli, ou retour
-  // après plus de 2 minutes d'absence), seules les annonces plus récentes sont affichées.
+  // la date de la dernière annonce lue dès qu'on déroule le bouton. Quand on revient dans l'onglet Nouveau (ou après
+  // plus de 2 minutes d'absence), ce qui a été lu a disparu : seules les annonces plus récentes sont affichées.
+  // Arriver dans Nouveau puis partir sans rien dérouler ne marque rien comme lu.
   // Les posts de Trump restent affichés directement.
   const SECTIONS = [
     { key: 'fj', label: 'FinancialJuice' },
@@ -470,13 +499,9 @@
       const startIso = new Date(f.startMs).toISOString();
       const endIso = new Date(f.endMs).toISOString();
       const wantUsd = !f.currencies || !f.currencies.size || f.currencies.has('USD');
-      const news = (source, withRed) => {
-        let q = c.from('news_items').select('id,feed,title,title_fr,url,published_at').eq('source', source).gte('published_at', startIso).lt('published_at', endIso);
-        if (withRed) q = q.eq('red', true);
-        return q.order('published_at', { ascending: false }).limit(150);
-      };
+      const news = (source) => c.from('news_items').select('id,feed,title,title_fr,url,published_at').eq('source', source).eq('top', true).gte('published_at', startIso).lt('published_at', endIso).order('published_at', { ascending: false }).limit(150);
       const [fj, il, inv, bbg, reu, nyt, ing, trump] = await Promise.all([
-        news('fj', true), news('investinglive', false), news('investing', true), news('bloomberg', true), news('reuters', true), news('nyt', true),
+        news('fj'), news('investinglive'), news('investing'), news('bloomberg'), news('reuters'), news('nyt'),
         c.from('bank_research').select('id,bank,title,title_fr,url,published_at,summary,analyzed_at').gte('published_at', startIso).lt('published_at', endIso).order('published_at', { ascending: false }).limit(10),
         wantUsd
           ? c.from('trump_posts').select('id,posted_at,text_en,text_fr,title_fr,stars,url').gte('posted_at', startIso).lt('posted_at', endIso).gte('stars', 2).order('posted_at', { ascending: false }).limit(60)
@@ -484,7 +509,7 @@
       ]);
       const lists = { fj: [], il: [], investing: [], bloomberg: [], reuters: [], nyt: [], bank: [], trump: [] };
       (fj.data || []).forEach((r) => lists.fj.push({ kind: 'fj', tag: '', at: r.published_at, title: r.title_fr || r.title, url: r.url, linkLabel: 'Source' }));
-      (il.data || []).forEach((r) => lists.il.push({ kind: 'il', tag: r.feed || '', at: r.published_at, title: r.title, url: r.url, linkLabel: 'Article' }));
+      (il.data || []).forEach((r) => lists.il.push({ kind: 'il', tag: r.feed || '', at: r.published_at, title: r.title_fr || r.title, url: r.url, linkLabel: 'Article' }));
       [['investing', inv], ['bloomberg', bbg], ['reuters', reu], ['nyt', nyt]].forEach(([k, res]) => {
         (res.data || []).forEach((r) => lists[k].push({ kind: 'press', tag: r.feed || PRESS[k], at: r.published_at, title: r.title_fr || r.title, url: r.url, linkLabel: 'Article' }));
       });
@@ -536,7 +561,14 @@
     if (tabId === FEED_WINDOW) { ensureFeedLayout(); loadFeed(); }
     else if (tabId === BANK_WINDOW) loadBank();
     else if (tabId === SQUAWK_WINDOW) { buildSquawk(); loadSquawkHistory(); }
-    else if (tabId === HOME_WINDOW) loadHome();
+    else if (tabId === HOME_WINDOW) {
+      // on (re)vient dans Nouveau : ce qui a été lu (bouton déroulé) la fois d'avant a disparu, seul le nouveau reste
+      baseline = readSeen();
+      showAll = false;
+      openSections.clear();
+      signatures.home = null;
+      loadHome();
+    }
   }
 
   window.NewsWindows = { refresh, renderHome: loadHome };
