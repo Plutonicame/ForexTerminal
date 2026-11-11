@@ -168,7 +168,7 @@
       if (cv.width !== Math.round(W * dpr) || cv.height !== Math.round(H * dpr)) { cv.width = Math.round(W * dpr); cv.height = Math.round(H * dpr); cv.style.width = W + 'px'; cv.style.height = H + 'px'; }
       ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
       const bg = cssVar('--mw-chart-bg', '#161616'); const grid = cssVar('--mw-grid', '#2a2a2a'); const txt = cssVar('--mw-text', '#9a9a9a');
-      const up = cssVar('--mw-up', '#089981'); const dn = cssVar('--mw-down', '#f23645'); const cross = cssVar('--mw-cross', '#9598a1');
+      const up = cssVar('--mw-up', '#ffffff'); const dn = cssVar('--mw-down', '#000000'); const cross = cssVar('--mw-cross', '#9598a1');
       ctx.fillStyle = bg; ctx.fillRect(0, 0, W, H);
       const pw = plotW(); const ph = plotH();
       if (!st.bars.length) {
@@ -182,28 +182,29 @@
       const tk = niceTicks(lo, hi, Math.max(3, Math.round(ph / 55)));
       const dec = decimals(tk.step);
       ctx.strokeStyle = grid; ctx.lineWidth = 1; ctx.fillStyle = txt; ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
-      tk.out.forEach((v) => { const y = Math.round(Y(v)) + 0.5; ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(pw, y); ctx.stroke(); ctx.fillText(v.toFixed(dec), pw + 8, y); });
+      tk.out.forEach((v) => { const y = Math.round(Y(v)) + 0.5; ctx.fillText(v.toFixed(dec), pw + 8, y); });
       // échelle de temps
       const [a, b] = visRange(); const minPx = 84;
       const every = Math.max(1, Math.ceil(minPx / st.bw));
       ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
       for (let i = Math.ceil(a / every) * every; i <= b; i += every) {
         const x = Math.round(xOf(i)) + 0.5; if (x < 20 || x > pw - 20) continue;
-        ctx.strokeStyle = grid; ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, ph); ctx.stroke();
         const k = st.bars[i]; if (!k) continue;
         ctx.fillStyle = txt; ctx.fillText(timeLabel(k.t, st.bars[Math.max(0, i - every)].t, tf.step), x, ph + AXIS_H / 2 + 1);
       }
       // séries
       ctx.save(); ctx.beginPath(); ctx.rect(0, 0, pw, ph); ctx.clip();
-      const wick = cssVar('--mw-wick', ''); const bodyW = Math.max(1, Math.floor(st.bw * 0.7));
+      const wick = cssVar('--mw-wick', '#ffffff'); const border = cssVar('--mw-border', '#ffffff'); const bodyW = Math.max(1, Math.floor(st.bw * 0.7));
       if (st.style === 'candles') {
         for (let i = a; i <= b; i++) {
           const k = st.bars[i]; if (!k) continue;
-          const x = Math.round(xOf(i)); const upc = k.c >= k.o; const col = upc ? up : dn;
-          ctx.strokeStyle = wick || col; ctx.lineWidth = 1;
+          const x = Math.round(xOf(i)); const upc = k.c >= k.o;
+          ctx.strokeStyle = wick; ctx.lineWidth = 1;
           ctx.beginPath(); ctx.moveTo(x + 0.5, Y(k.h)); ctx.lineTo(x + 0.5, Y(k.l)); ctx.stroke();
-          const yt = Y(Math.max(k.o, k.c)); const yb = Y(Math.min(k.o, k.c));
-          ctx.fillStyle = col; ctx.fillRect(Math.round(x - bodyW / 2), Math.round(yt), bodyW, Math.max(1, Math.round(yb - yt)));
+          const yt = Math.round(Y(Math.max(k.o, k.c))); const bh = Math.max(1, Math.round(Y(Math.min(k.o, k.c))) - yt);
+          const bx = Math.round(x - bodyW / 2);
+          ctx.fillStyle = upc ? up : dn; ctx.fillRect(bx, yt, bodyW, bh);
+          ctx.strokeStyle = border; ctx.strokeRect(bx + 0.5, yt + 0.5, Math.max(0, bodyW - 1), Math.max(0, bh - 1));
         }
       } else {
         const lineCol = cssVar('--mw-line', '#2962ff');
@@ -220,11 +221,11 @@
       }
       ctx.restore();
       // dernier cours
-      const last = st.bars[st.bars.length - 1]; const lastUp = last.c >= last.o; const lc = lastUp ? up : dn;
+      const last = st.bars[st.bars.length - 1]; const lc = cssVar('--mw-last', '#ffffff');
       const ly = Math.round(Y(last.c)) + 0.5;
       if (ly >= 0 && ly <= ph) {
         ctx.save(); ctx.setLineDash([2, 3]); ctx.strokeStyle = lc; ctx.beginPath(); ctx.moveTo(0, ly); ctx.lineTo(pw, ly); ctx.stroke(); ctx.restore();
-        ctx.fillStyle = lc; ctx.fillRect(pw, ly - 9, AXIS_W, 18); ctx.fillStyle = '#fff'; ctx.textAlign = 'left'; ctx.textBaseline = 'middle'; ctx.fillText(last.c.toFixed(dec + 1 > 3 ? 3 : dec + 1), pw + 8, ly);
+        ctx.fillStyle = lc; ctx.fillRect(pw, ly - 9, AXIS_W, 18); ctx.fillStyle = '#000'; ctx.textAlign = 'left'; ctx.textBaseline = 'middle'; ctx.fillText(last.c.toFixed(dec + 1 > 3 ? 3 : dec + 1), pw + 8, ly);
       }
       // bordures des échelles
       ctx.strokeStyle = grid; ctx.beginPath(); ctx.moveTo(pw + 0.5, 0); ctx.lineTo(pw + 0.5, H); ctx.moveTo(0, ph + 0.5); ctx.lineTo(W, ph + 0.5); ctx.stroke();
@@ -247,8 +248,7 @@
     function setLegend(idx) {
       const k = st.bars[idx]; if (!k) { legend.innerHTML = `<b>${o.name}</b>`; return; }
       const prev = st.bars[idx - 1]; const chg = prev ? k.c - prev.c : 0; const pct = prev ? (chg / prev.c) * 100 : 0;
-      const up = cssVar('--mw-up', '#089981'); const dn = cssVar('--mw-down', '#f23645');
-      const col = k.c >= k.o ? up : dn; const ccol = chg >= 0 ? up : dn;
+      const col = cssVar('--mw-border', '#ffffff'); const ccol = col;
       const tf = TFS.find((t) => t.k === st.tf) || TFS[1];
       const v = (x) => x.toFixed(3);
       legend.innerHTML = `<span class="fxc-l-name">${o.name}</span><span class="fxc-l-tf">${tf.label}</span>`
