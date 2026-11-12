@@ -4642,3 +4642,7 @@ button.sq-btn.is-on { border-color: var(--blue-light); color: var(--blue-light);
 .fxc-kb-in { width: 100%; box-sizing: border-box; padding: 7px 9px; background: #131722; color: #fff; border: 1px solid #2962ff; border-radius: 4px; font: 14px var(--mono); text-transform: none; }
 .fxc-kb.is-bad .fxc-kb-in { border-color: #f23645; }
 .fxc-kb-hint { margin-top: 8px; font: 10px var(--mono); color: #787b86; }
+
+.mw-reset { display: inline-flex; align-items: center; justify-content: center; width: 28px; height: 28px; margin-left: 10px; padding: 0; background: var(--mw-toolbar-bg); color: var(--mw-toolbar-text); border: 1px solid var(--mw-grid); border-radius: 6px; cursor: pointer; flex: none; }
+.mw-reset:hover { background: var(--mw-btn-active-bg); color: var(--mw-btn-active-text); }
+.calendar-toolbar:has(.mw-reset) { display: flex; align-items: center; }

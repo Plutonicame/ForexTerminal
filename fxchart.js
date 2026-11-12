@@ -106,6 +106,22 @@
     return aggregate(base, tf);
   }
 
+  /* ---------- cours en direct (table fx_live, rafraîchie par le robot fx-live-bot toutes les ~10 s) ---------- */
+  const live = new Map(); // devise -> { price, at }
+  const liveSubs = new Set();
+  const tickSubs = new Set();
+  let liveTimer = null;
+  async function pollLive() {
+    if (document.hidden || !liveSubs.size) return;
+    try {
+      const c = await client();
+      if (!c) return;
+      const { data } = await c.from('fx_live').select('currency,price,updated_at');
+      if (data && data.length) { data.forEach((r) => live.set(r.currency, { price: r.price, at: new Date(r.updated_at).getTime() })); liveSubs.forEach((f) => f()); }
+    } catch (e) { /* on réessaiera */ }
+  }
+  function startLive() { if (liveTimer) return; pollLive(); liveTimer = setInterval(pollLive, 4000); setInterval(() => { if (!document.hidden) tickSubs.forEach((f) => f()); }, 1000); }
+
   /* ---------- graphique ---------- */
   const tfLabel = (k) => tfOf(k).label;
   function create(host, opts) {
@@ -262,6 +278,12 @@
       if (ly >= 0 && ly <= ph) {
         ctx.save(); ctx.setLineDash([2, 3]); ctx.strokeStyle = lc; ctx.beginPath(); ctx.moveTo(0, ly); ctx.lineTo(pw, ly); ctx.stroke(); ctx.restore();
         ctx.fillStyle = lc; ctx.fillRect(pw, ly - 9, AXIS_W, 18); ctx.fillStyle = '#000'; ctx.textAlign = 'left'; ctx.textBaseline = 'middle'; ctx.fillText(dfmt(last.c, 3), pw + 8, ly);
+        if (!tf.months) { // temps restant avant la prochaine bougie
+          const rem = Math.max(0, tf.step - (((Date.now() / 1000) - last.t) % tf.step));
+          const hh = Math.floor(rem / 3600); const mm = Math.floor((rem % 3600) / 60); const ss = Math.floor(rem % 60);
+          const txtc = (hh ? String(hh).padStart(2, '0') + ':' : '') + String(mm).padStart(2, '0') + ':' + String(ss).padStart(2, '0');
+          ctx.fillStyle = lc; ctx.fillRect(pw, ly + 9, AXIS_W, 18); ctx.fillStyle = '#000'; ctx.fillText(txtc, pw + 8, ly + 18);
+        }
       }
       // bordures des échelles
       ctx.strokeStyle = grid; ctx.beginPath(); ctx.moveTo(pw + 0.5, 0); ctx.lineTo(pw + 0.5, H); ctx.moveTo(0, ph + 0.5); ctx.lineTo(W, ph + 0.5); ctx.stroke();
@@ -397,19 +419,47 @@
     /* chargement */
     const defDays = () => { const t = tfOf(st.tf); const m = t.mins; if (m !== undefined) return m <= 1 ? 0.5 : m <= 5 ? 1 : m <= 15 ? (o.big ? 3 : 2) : m <= 60 ? (o.big ? 10 : 5) : 30; return t.months ? 0 : t.weeks ? 0 : 180; };
     let busy = false;
+    const followingEnd = () => st.bars.length === 0 || Math.abs(st.right - (st.bars.length - 1 + PAD_RIGHT_BARS)) < 0.5;
+    // applique le dernier cours en direct à la bougie en cours (ou ouvre la suivante)
+    function applyLive() {
+      const lv = live.get(o.currency);
+      const n = st.bars.length;
+      if (!lv || !n || Date.now() - lv.at > 180000) return;
+      const tf = tfOf(st.tf); const last = st.bars[n - 1]; const now = Date.now() / 1000;
+      const follow = followingEnd();
+      if (!tf.months && now >= last.t + tf.step && lv.price !== last.c) {
+        const t = last.t + Math.floor((now - last.t) / tf.step) * tf.step;
+        st.bars.push({ t, o: last.c, h: Math.max(last.c, lv.price), l: Math.min(last.c, lv.price), c: lv.price });
+        if (follow) st.right += 1;
+      } else if (now < last.t + tf.step || tf.months) {
+        last.c = lv.price; last.h = Math.max(last.h, lv.price); last.l = Math.min(last.l, lv.price);
+      } else return;
+      redraw();
+    }
     async function load(force, refit) {
       if (busy) return;
       busy = true;
       try {
-        const wasEnd = st.bars.length === 0 || st.right >= st.bars.length - 1 + PAD_RIGHT_BARS - 0.5;
-        const prevN = st.bars.length;
+        const prevN = st.bars.length; const prevLastT = prevN ? st.bars[prevN - 1].t : null;
+        const following = followingEnd();
         const bars = await loadBars(o.currency, st.tf, force);
         if (!bars || bars.length < 2) { st.bars = []; st.msg = bars === null ? 'Données indisponibles (connecte-toi ou attends le robot).' : 'Pas encore de données.'; redraw(); return; }
         st.bars = bars;
+        const n = bars.length;
         if (refit || !prevN) fit(defDays());
-        else if (wasEnd) st.right = bars.length - 1 + PAD_RIGHT_BARS;
+        else if (following) st.right = n - 1 + PAD_RIGHT_BARS;
+        else { // l'utilisateur a déplacé le graphique : on garde exactement la même position dans le temps
+          let lo = 0; let hi = n - 1;
+          while (lo < hi) { const mid = (lo + hi + 1) >> 1; if (bars[mid].t <= prevLastT) lo = mid; else hi = mid - 1; }
+          st.right += lo - (prevN - 1);
+        }
         redraw();
+        applyLive();
       } catch (e) { console.warn('fxchart', e); } finally { busy = false; }
+    }
+    function resetView() {
+      st.tf = o.tf; st.style = 'candles'; st.log = false; st.auto = true; syncBtns(); closeKb();
+      return load(true, true);
     }
     const ro = window.ResizeObserver ? new ResizeObserver(() => {
       const r = main.getBoundingClientRect(); const w = Math.round(r.width); const h = Math.round(r.height);
@@ -421,7 +471,8 @@
     if (ro) ro.observe(main);
     syncBtns();
     load(false, true);
-    return { reload: () => load(true, false), redraw, destroy() { if (ro) ro.disconnect(); }, el: host, setTf };
+    liveSubs.add(applyLive); tickSubs.add(redraw); startLive();
+    return { reload: () => load(true, false), resetView, redraw, destroy() { if (ro) ro.disconnect(); liveSubs.delete(applyLive); tickSubs.delete(redraw); }, el: host, setTf };
   }
 
   window.FXChart = { create, TFS, parseTf };

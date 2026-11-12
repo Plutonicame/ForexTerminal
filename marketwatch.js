@@ -46,8 +46,9 @@
 
     const bar = document.createElement('div');
     bar.className = 'calendar-toolbar';
-    bar.innerHTML = '<span class="calendar-toolbar-title">Market Watch</span><span class="speeches-toolbar-info">Indice de chaque devise · calculé sur les 28 paires (moyenne géométrique)</span>';
+    bar.innerHTML = '<span class="calendar-toolbar-title">Market Watch</span><button type="button" class="mw-reset" title="Réinitialiser tous les graphiques (unité de temps, position, échelle)" aria-label="Réinitialiser les graphiques"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><path d="M7 15l4-5 3 3 5-7"/></svg></button><span class="speeches-toolbar-info">Indice de chaque devise · calculé sur les 28 paires (moyenne géométrique)</span>';
     sec.insertBefore(bar, host);
+    bar.querySelector('.mw-reset').addEventListener('click', () => { charts.forEach((c) => c.resetView()); });
 
     host.querySelectorAll('.currency-panel').forEach((p) => {
       const code = p.dataset.currency;
