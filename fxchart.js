@@ -371,7 +371,7 @@
         }
         st.cross = d.onAxis || d.onTime ? p : p; redraw(); return;
       }
-      st.cross = p; cv.style.cursor = p.x > plotW() ? ((inRect(p, btnRect('A')) || inRect(p, btnRect('L'))) ? 'pointer' : 'ns-resize') : 'crosshair'; redraw();
+      st.cross = p; cv.style.cursor = p.x > plotW() ? ((inRect(p, btnRect('A')) || inRect(p, btnRect('L'))) ? 'pointer' : 'ns-resize') : (p.y > plotH() ? 'ew-resize' : 'crosshair'); redraw();
     });
     const up = (ev) => { st.pointers.delete(ev.pointerId); if (st.pointers.size < 2 && st.drag && st.drag.pinch) st.drag = null; if (!st.pointers.size) st.drag = null; };
     cv.addEventListener('pointerup', up);
