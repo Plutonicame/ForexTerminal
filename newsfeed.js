@@ -161,14 +161,13 @@
       if (dk !== lastDay) { lastDay = dk; html += `<p class="nf-day">${esc(fmtDay(r.published_at))}</p>`; }
       const url = safeUrl(r.url);
       const title = kind === 'investinglive' ? r.title : (r.title_fr || r.title);
-      const star = r.top ? '<span class="nf-star" title="Dans l\'onglet Nouveau et lue par le Squawk">★</span>' : '';
       const tag = kind === 'mixed' ? `<span class="nf-tag">${esc(SRC_LABEL[r.source] || r.source)}</span>`
         : kind === 'fj' ? '<span class="nf-tag nf-tag--red">Rouge</span>' : (r.feed ? `<span class="nf-tag">${esc(r.feed)}</span>` : '');
       const orig = kind !== 'investinglive' && r.title_fr && r.title_fr !== r.title ? `<span class="nf-orig">${esc(r.title)}</span>` : '';
       const body = url
         ? `<a class="nf-title" href="${esc(url)}" target="_blank" rel="noopener noreferrer">${esc(title)}</a>`
         : `<span class="nf-title">${esc(title)}</span>`;
-      html += `<div class="nf-row"><span class="nf-time">${esc(fmtTime(r.published_at))}</span><div class="nf-body">${star}${tag}${body}${orig}</div></div>`;
+      html += `<div class="nf-row${r.top ? ' nf-row--top' : ''}"${r.top ? ' title="Dans l\'onglet Nouveau et lue par le Squawk"' : ''}><span class="nf-time">${esc(fmtTime(r.published_at))}</span><div class="nf-body">${tag}${body}${orig}</div></div>`;
     });
     return html;
   }
