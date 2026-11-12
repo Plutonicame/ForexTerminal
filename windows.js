@@ -72,7 +72,7 @@
     {
       title: 'Outils',
       items: [
-        { id: 'tab-riskcalc', label: 'Calculateur de risque', soon: true },
+        { id: 'tab-riskcalc', label: 'Calculateur de risque' },
         { id: 'tab-5', label: 'Note fondamentale', exists: true, menuClass: 'menu-tab--fondamentale' },
         { id: 'tab-3', label: 'Paramètres', exists: true, menuClass: 'menu-tab--parametres' },
       ],
