@@ -251,7 +251,7 @@
       }
       // séries
       ctx.save(); ctx.beginPath(); ctx.rect(0, 0, pw, ph); ctx.clip();
-      const wickU = cssVar('--mw-up-wick', up); const wickD = cssVar('--mw-down-wick', dn); const bordU = cssVar('--mw-up-border', up); const bordD = cssVar('--mw-down-border', dn); const bodyW = Math.max(1, Math.floor(st.bw * 0.7));
+      const wickU = cssVar('--mw-up-wick', up); const wickD = cssVar('--mw-down-wick', dn); const bordU = cssVar('--mw-up-border', up); const bordD = cssVar('--mw-down-border', dn); const bodyW = st.bw >= 4 ? Math.max(3, Math.floor(st.bw * 0.75) | 1) : Math.max(1, Math.floor(st.bw * 0.7));
       const lineCol = cssVar('--mw-line', '#2962ff');
       if (st.style === 'candles') {
         for (let i = a; i <= b; i++) {
@@ -428,6 +428,15 @@
     kbIn.addEventListener('blur', () => { setTimeout(() => { if (document.activeElement !== kbIn) closeKb(); }, 120); });
 
     /* chargement */
+    // cadrage par défaut : bougies assez larges pour que les corps se distinguent bien des mèches
+    function fitDefault() {
+      const n = st.bars.length; const t = tfOf(st.tf);
+      if (!n) return;
+      if (t.weeks || t.months) { fit(0); return; }
+      const target = o.big ? 8 : 6;
+      if ((n + PAD_RIGHT_BARS) * target < plotW()) { fit(0); return; }
+      st.bw = target; st.right = n - 1 + PAD_RIGHT_BARS; st.auto = true; clampView();
+    }
     const defDays = () => { const t = tfOf(st.tf); const m = t.mins; if (m !== undefined) return m <= 1 ? 0.5 : m <= 5 ? 1 : m <= 15 ? (o.big ? 3 : 2) : m <= 60 ? (o.big ? 10 : 5) : 30; return t.months ? 0 : t.weeks ? 0 : 180; };
     let busy = false;
     const followingEnd = () => st.bars.length === 0 || Math.abs(st.right - (st.bars.length - 1 + PAD_RIGHT_BARS)) < 0.5;
@@ -457,7 +466,7 @@
         if (!bars || bars.length < 2) { st.bars = []; st.msg = bars === null ? 'Données indisponibles (connecte-toi ou attends le robot).' : 'Pas encore de données.'; redraw(); return; }
         st.bars = bars;
         const n = bars.length;
-        if (refit || !prevN) fit(defDays());
+        if (refit || !prevN) fitDefault();
         else if (following) st.right = n - 1 + PAD_RIGHT_BARS;
         else { // l'utilisateur a déplacé le graphique : on garde exactement la même position dans le temps
           let lo = 0; let hi = n - 1;
@@ -476,7 +485,7 @@
       const r = main.getBoundingClientRect(); const w = Math.round(r.width); const h = Math.round(r.height);
       if (w === st.w && h === st.h) return;
       const first = !st.w; st.w = w; st.h = h;
-      if (first && st.bars.length) fit(defDays());
+      if (first && st.bars.length) fitDefault();
       redraw();
     }) : null;
     if (ro) ro.observe(main);
