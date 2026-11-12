@@ -135,12 +135,13 @@
     const cv = document.createElement('canvas'); cv.className = 'fxc-canvas';
     const legend = document.createElement('div'); legend.className = 'fxc-legend';
     const kb = document.createElement('div'); kb.className = 'fxc-kb'; kb.hidden = true;
-    kb.innerHTML = '<div class="fxc-kb-title">Intervalle</div><input class="fxc-kb-in" type="text" maxlength="8" autocomplete="off" spellcheck="false"><div class="fxc-kb-hint">Ex. 1, 5, 15, 1H, 4H, D, W, M (Entrée pour valider)</div>';
+    kb.innerHTML = '<div class="fxc-kb-title">Changer l’intervalle <span class="fxc-kb-i" title="Tape un nombre de minutes (5, 15, 90), ou 1H, 4H, D, W, M, puis Entrée">i</span></div><input class="fxc-kb-in" type="text" maxlength="8" autocomplete="off" spellcheck="false"><div class="fxc-kb-hint"></div>';
     main.append(cv, legend, kb);
     const ranges = document.createElement('div'); ranges.className = 'fxc-ranges';
     if (o.big) host.append(bar, main, ranges); else host.append(main);
     const ctx = cv.getContext('2d');
     const kbIn = kb.querySelector('input');
+    const kbHint = kb.querySelector('.fxc-kb-hint');
 
     if (o.big) {
       bar.innerHTML = `<span class="fxc-sym">${o.name}</span><span class="fxc-sep"></span>`
@@ -362,7 +363,7 @@
       if (d && !d.pinch) {
         const dx = p.x - d.x; const dy = p.y - d.y;
         if (d.onAxis) goManual(scaleAround(d.range, Math.exp(dy / 200)));
-        else if (d.onTime) st.bw = Math.min(60, Math.max(0.5, d.bw * Math.exp(dx / 200)));
+        else if (d.onTime) st.bw = Math.min(60, Math.max(0.5, d.bw * Math.exp(-dx / 200)));
         else {
           st.right = d.right - dx / st.bw; // déplacement horizontal libre
           if (Math.abs(dy) > 4) d.vert = true;
@@ -391,7 +392,17 @@
     ranges.addEventListener('click', (ev) => { const t = ev.target.closest('[data-rng]'); if (!t) return; fit(Number(t.dataset.rng)); redraw(); });
 
     /* clavier : taper une unité de temps (1, 5, 15, 1H, 4H, D, W, M…) puis Entrée, comme dans TradingView */
-    function closeKb() { kb.hidden = true; kbIn.value = ''; kb.classList.remove('is-bad'); }
+    function closeKb() { kb.hidden = true; kbIn.value = ''; kbHint.textContent = ''; kb.classList.remove('is-bad'); }
+    function describeTf(txt) {
+      const k = normTf(txt); const t = k && parseTf(k === 'D' ? '1D' : k === 'W' ? '1W' : k === 'M' ? '1M' : k);
+      if (!t) return null;
+      const pl = (n, w) => n + ' ' + w + (n > 1 ? 's' : '');
+      if (t.mins) return t.mins % 60 === 0 ? pl(t.mins / 60, 'heure') : pl(t.mins, 'minute');
+      if (t.days) return pl(t.days, 'jour'); if (t.weeks) return pl(t.weeks, 'semaine');
+      return t.months + ' mois';
+    }
+    const showHint = () => { const d = describeTf(kbIn.value); kbHint.textContent = kbIn.value.trim() === '' ? '' : (d || 'Intervalle invalide'); kb.classList.toggle('is-bad', !d && kbIn.value.trim() !== ''); };
+    kbIn.addEventListener('input', showHint);
     function normTf(txt) {
       const t = txt.trim();
       if (/^d$/i.test(t)) return 'D'; if (/^w$/i.test(t)) return 'W';
@@ -405,13 +416,13 @@
       if (ev.target === kbIn) {
         if (ev.key === 'Enter') { ev.preventDefault(); const k = normTf(kbIn.value); if (k) { closeKb(); setTf(k); } else { kb.classList.add('is-bad'); } }
         else if (ev.key === 'Escape') { ev.preventDefault(); closeKb(); host.focus({ preventScroll: true }); }
-        else kb.classList.remove('is-bad');
+        
         ev.stopPropagation();
         return;
       }
       if (/^[0-9a-zA-Z]$/.test(ev.key)) {
         ev.preventDefault();
-        kb.hidden = false; kbIn.value = ev.key; kbIn.focus(); try { kbIn.setSelectionRange(kbIn.value.length, kbIn.value.length); } catch (e) { /* ignore */ }
+        kb.hidden = false; kbIn.value = ev.key; showHint(); kbIn.focus(); try { kbIn.setSelectionRange(kbIn.value.length, kbIn.value.length); } catch (e) { /* ignore */ }
       }
     });
     kbIn.addEventListener('blur', () => { setTimeout(() => { if (document.activeElement !== kbIn) closeKb(); }, 120); });

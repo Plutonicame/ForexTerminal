@@ -4636,12 +4636,14 @@ button.sq-btn.is-on { border-color: var(--blue-light); color: var(--blue-light);
 .mw-grid .fxc-legend span:nth-child(n+3):nth-child(-n+6) { display: none; }
 
 .fxc:focus { outline: none; }
-.fxc-kb { position: absolute; left: 50%; top: 30%; transform: translateX(-50%); z-index: 5; width: 240px; padding: 12px 14px; background: #1e222d; border: 1px solid #363a45; border-radius: 8px; box-shadow: 0 8px 28px rgba(0,0,0,.6); }
+.fxc-kb { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); z-index: 5; width: min(300px, 90%); box-sizing: border-box; padding: 26px 28px 20px; background: rgba(28, 28, 28, .88); -webkit-backdrop-filter: blur(14px); backdrop-filter: blur(14px); border: 1px solid rgba(255, 255, 255, .1); border-radius: 16px; box-shadow: 0 12px 40px rgba(0, 0, 0, .65); text-align: center; }
 .fxc-kb[hidden] { display: none; }
-.fxc-kb-title { font: 700 13px var(--mono); color: #d1d4dc; margin-bottom: 8px; }
-.fxc-kb-in { width: 100%; box-sizing: border-box; padding: 7px 9px; background: #131722; color: #fff; border: 1px solid #2962ff; border-radius: 4px; font: 14px var(--mono); text-transform: none; }
+.fxc-kb-title { font: 700 17px -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; color: #b2b5be; margin-bottom: 18px; display: flex; align-items: center; justify-content: center; gap: 8px; }
+.fxc-kb-i { display: inline-flex; align-items: center; justify-content: center; width: 17px; height: 17px; border: 1.5px solid #787b86; border-radius: 50%; font: italic 700 11px serif; color: #787b86; cursor: help; }
+.fxc-kb-in { width: 100%; box-sizing: border-box; padding: 11px 12px; background: transparent; color: #fff; border: 2px solid #2962ff; border-radius: 10px; font: 20px -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; text-align: center; outline: none; caret-color: #fff; }
 .fxc-kb.is-bad .fxc-kb-in { border-color: #f23645; }
-.fxc-kb-hint { margin-top: 8px; font: 10px var(--mono); color: #787b86; }
+.fxc-kb-hint { margin-top: 10px; min-height: 16px; font: 12px -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; color: #9a9a9a; }
+.fxc-kb.is-bad .fxc-kb-hint { color: #f23645; }
 
 .mw-reset { display: inline-flex; align-items: center; justify-content: center; width: 28px; height: 28px; margin-left: 10px; padding: 0; background: var(--mw-reset-bg); color: var(--mw-reset-icon); border: 1px solid var(--mw-reset-border); border-radius: 6px; cursor: pointer; flex: none; }
 .mw-reset:hover { filter: brightness(1.35); }
