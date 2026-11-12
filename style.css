@@ -4425,7 +4425,7 @@ a.nf-title:hover, .nx-link:hover, .br-link:hover { text-decoration: underline; }
   --fxs-cad: #fe1111; --fxs-chf: #ff9f1a; --fxs-aud: #f5d90a; --fxs-nzd: #b48cff;
   --fxs-grid: #2a2a2a; --fxs-zero: #e6e6e6; --fxs-text: #9a9a9a;
   --yc-bar-top: #4d94ff; --yc-bar-bottom: #0a3a7a; --yc-grid: #2a2a2a; --yc-text: #9a9a9a;
-  --fxs-bg: #161616; --fxs-border: #2a2a2a; --yc-bg: #161616; --yc-border: #2a2a2a;
+  --fxs-bg: #161616; --fxs-border: #2a2a2a; --fxs-reset-bg: #161616; --fxs-reset-border: #4a4a4a; --fxs-reset-icon: #b2b5be; --mw-reset-bg: #161616; --mw-reset-border: #4a4a4a; --mw-reset-icon: #b2b5be; --yc-bg: #161616; --yc-border: #2a2a2a;
 }
 .fxs-wrap, .yc-wrap { margin-bottom: 16px; }
 .fxs-legend { display: flex; flex-wrap: wrap; gap: 8px; margin: 10px 0; }
@@ -4643,6 +4643,9 @@ button.sq-btn.is-on { border-color: var(--blue-light); color: var(--blue-light);
 .fxc-kb.is-bad .fxc-kb-in { border-color: #f23645; }
 .fxc-kb-hint { margin-top: 8px; font: 10px var(--mono); color: #787b86; }
 
-.mw-reset { display: inline-flex; align-items: center; justify-content: center; width: 28px; height: 28px; margin-left: 10px; padding: 0; background: var(--mw-toolbar-bg); color: var(--mw-toolbar-text); border: 1px solid var(--mw-grid); border-radius: 6px; cursor: pointer; flex: none; }
-.mw-reset:hover { background: var(--mw-btn-active-bg); color: var(--mw-btn-active-text); }
+.mw-reset { display: inline-flex; align-items: center; justify-content: center; width: 28px; height: 28px; margin-left: 10px; padding: 0; background: var(--mw-reset-bg); color: var(--mw-reset-icon); border: 1px solid var(--mw-reset-border); border-radius: 6px; cursor: pointer; flex: none; }
+.mw-reset:hover { filter: brightness(1.35); }
 .calendar-toolbar:has(.mw-reset) { display: flex; align-items: center; }
+
+.fxs-reset { display: inline-flex; align-items: center; justify-content: center; width: 30px; height: 30px; padding: 0; background: var(--fxs-reset-bg); color: var(--fxs-reset-icon); border: 1px solid var(--fxs-reset-border); border-radius: 6px; cursor: pointer; flex: none; }
+.fxs-reset:hover { filter: brightness(1.35); }

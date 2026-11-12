@@ -85,6 +85,7 @@
     panel.insertBefore(wrapFx, panel.firstChild);
 
     wrapFx.querySelector('[data-fxs-legend]').addEventListener('click', (event) => {
+      if (event.target.closest('[data-fxs-reset]')) { fxView = null; renderFx(); return; }
       const b = event.target.closest('[data-cur]');
       if (!b) return;
       const c = b.dataset.cur;
@@ -107,7 +108,7 @@
       const last = n && s[c] ? s[c][n - 1] : null;
       const off = hidden.has(c);
       return `<button type="button" class="fxs-chip${off ? ' is-off' : ''}" data-cur="${c}" aria-pressed="${off ? 'false' : 'true'}" style="--chip:var(--fxs-${c.toLowerCase()})"><span class="fxs-dot"></span><span class="fxs-cur">${c}</span><span class="fxs-val">${last == null ? '' : fmt(last, 2) + '%'}</span></button>`;
-    }).join('');
+    }).join('') + '<button type="button" class="fxs-reset" data-fxs-reset title="Replacer le graphique (tout afficher)" aria-label="Replacer le graphique"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><path d="M7 15l4-5 3 3 5-7"/></svg></button>';
   }
 
   let fxView = null;
