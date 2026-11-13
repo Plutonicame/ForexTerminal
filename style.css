@@ -4236,6 +4236,10 @@ body.te-open {
   --risk-candle-down-body: #000000;
   --risk-candle-border: #ffffff;
   --risk-candle-wick: #ffffff;
+  --risk-mark-1d: #4d94ff; --risk-mark-1w: #f5c542; --risk-mark-1m: #c084fc; --risk-mark-text: #e6e6e6;
+  --risk-hist-bg: #161616; --risk-hist-border: #2a2a2a; --risk-hist-title: #e6e6e6;
+  --risk-hz-off: #3a1517; --risk-hz-mid: #1e1e1e; --risk-hz-on: #11264a;
+  --risk-hline: #4a4a4a; --risk-hist-line: #ffffff; --risk-hist-axis: #8a8a8a; --risk-hist-last: #ffffff;
   /* posts de Trump : cases */
   --trump-card-bg: var(--speech-card-bg);
   --trump-card-border: var(--speech-card-border);
@@ -4687,3 +4691,30 @@ button.sq-btn.is-on { border-color: var(--blue-light); color: var(--blue-light);
 .rc-dl dt { color: var(--rc-dt); }
 .rc-dl dd { margin: 0; text-align: right; color: var(--rc-dd); font-weight: 700; }
 .rc-note { margin: 12px 0 0; font-size: 11px; line-height: 1.5; color: var(--rc-note); }
+
+/* repères 1J / 1S / 1M dans le cadran */
+.risk-mark-line { stroke-width: 3; stroke-linecap: round; }
+.risk-mark--1d .risk-mark-line { stroke: var(--risk-mark-1d); } .risk-mark--1w .risk-mark-line { stroke: var(--risk-mark-1w); } .risk-mark--1m .risk-mark-line { stroke: var(--risk-mark-1m); }
+.risk-mark-txt { font-family: var(--mono, monospace); font-size: 12px; font-weight: 700; fill: var(--risk-mark-text); }
+.risk-mark--1d .risk-mark-txt { fill: var(--risk-mark-1d); } .risk-mark--1w .risk-mark-txt { fill: var(--risk-mark-1w); } .risk-mark--1m .risk-mark-txt { fill: var(--risk-mark-1m); }
+/* historique 30 jours */
+.risk-hist { max-width: 820px; margin: 6px auto 4px; padding: 10px 14px 6px; background: var(--risk-hist-bg); border: 1px solid var(--risk-hist-border); border-radius: var(--radius-card); }
+.risk-hist-title { font-family: var(--mono, monospace); font-size: 12px; font-weight: 700; letter-spacing: 1px; text-transform: uppercase; color: var(--risk-hist-title); margin-bottom: 6px; display: flex; flex-wrap: wrap; gap: 6px 14px; align-items: center; }
+.risk-hist-key { font-weight: 400; letter-spacing: 0; text-transform: none; font-size: 11px; color: var(--risk-hist-axis); display: inline-flex; align-items: center; gap: 4px; flex-wrap: wrap; }
+.risk-k { display: inline-block; width: 10px; height: 10px; border-radius: 2px; margin-left: 8px; }
+.risk-k--off { background: var(--risk-hz-off); outline: 1px solid var(--risk-hline); } .risk-k--mid { background: var(--risk-hz-mid); outline: 1px solid var(--risk-hline); } .risk-k--on { background: var(--risk-hz-on); outline: 1px solid var(--risk-hline); }
+.risk-hist-box { position: relative; }
+.risk-hist-svg { width: 100%; height: auto; display: block; }
+.risk-hist-empty { margin: 0; padding: 20px; text-align: center; font-family: var(--mono, monospace); font-size: 12px; color: var(--risk-hist-axis); }
+.risk-hz--off { fill: var(--risk-hz-off); } .risk-hz--mid { fill: var(--risk-hz-mid); } .risk-hz--on { fill: var(--risk-hz-on); }
+.risk-hline { stroke: var(--risk-hline); stroke-width: 1; stroke-dasharray: 4 4; } .risk-hline--mid { opacity: .5; }
+.risk-hvline { stroke: var(--risk-hline); stroke-width: 1; opacity: .25; }
+.risk-haxis { font-family: var(--mono, monospace); font-size: 11px; fill: var(--risk-hist-axis); }
+.risk-hline-data { fill: none; stroke: var(--risk-hist-line); stroke-width: 2; stroke-linejoin: round; stroke-linecap: round; }
+.risk-hlast { fill: var(--risk-hist-last); stroke: var(--risk-hist-bg); stroke-width: 2; }
+.risk-hlast-txt { font-family: var(--mono, monospace); font-size: 13px; font-weight: 700; fill: var(--risk-hist-last); }
+.risk-hdot { stroke: var(--risk-hist-bg); stroke-width: 2; } .risk-hdot--1d { fill: var(--risk-mark-1d); } .risk-hdot--1w { fill: var(--risk-mark-1w); } .risk-hdot--1m { fill: var(--risk-mark-1m); }
+.risk-hdot-txt { font-family: var(--mono, monospace); font-size: 11px; font-weight: 700; } .risk-hdot-txt--1d { fill: var(--risk-mark-1d); } .risk-hdot-txt--1w { fill: var(--risk-mark-1w); } .risk-hdot-txt--1m { fill: var(--risk-mark-1m); }
+.risk-hcross { stroke: var(--risk-hist-axis); stroke-width: 1; stroke-dasharray: 3 3; }
+.risk-htip { position: absolute; top: 4px; padding: 4px 8px; background: #2a2e39; color: #fff; border-radius: 4px; font: 11px var(--mono, monospace); pointer-events: none; white-space: nowrap; }
+.risk-htip[hidden] { display: none; }
