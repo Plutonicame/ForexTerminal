@@ -4658,6 +4658,8 @@ button.sq-btn.is-on { border-color: var(--blue-light); color: var(--blue-light);
   --rc-card-bg: #161616; --rc-card-border: #2a2a2a; --rc-title: #fafafa; --rc-text: #e6e6e6; --rc-dim: #9a9a9a;
   --rc-input-bg: #0d0d0d; --rc-input-border: #2a2a2a; --rc-input-focus: #4d94ff;
   --rc-btn-active-bg: #404040; --rc-btn-active-text: #fafafa; --rc-result: #4d94ff;
+  --rc-input-text: #e6e6e6; --rc-label: #9a9a9a; --rc-hint: #7a7a7a; --rc-seg-bg: #0d0d0d; --rc-seg-text: #9a9a9a; --rc-seg-border: #2a2a2a;
+  --rc-big-label: #9a9a9a; --rc-big-sub: #9a9a9a; --rc-line: #2a2a2a; --rc-dt: #9a9a9a; --rc-dd: #fafafa; --rc-note: #7a7a7a;
 }
 .rc-wrap { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 12px; padding: 0 14px 20px; align-items: start; }
 @media (max-width: 800px) { .rc-wrap { grid-template-columns: 1fr; } }
@@ -4665,23 +4667,23 @@ button.sq-btn.is-on { border-color: var(--blue-light); color: var(--blue-light);
 .rc-h { margin: 0 0 12px; font-size: 12px; font-weight: 700; letter-spacing: 1px; text-transform: uppercase; color: var(--rc-title); }
 .rc-field { display: flex; flex-direction: column; gap: 5px; margin-bottom: 12px; }
 .rc-field[hidden] { display: none; }
-.rc-label { font-size: 11px; color: var(--rc-dim); letter-spacing: .5px; }
-.rc-hint { font-size: 11px; color: var(--rc-dim); }
-.rc-in { width: 100%; box-sizing: border-box; padding: 9px 10px; background: var(--rc-input-bg); color: var(--rc-text); border: 1px solid var(--rc-input-border); border-radius: var(--radius-sm); font: 14px var(--mono); outline: none; }
+.rc-label { font-size: 11px; color: var(--rc-label); letter-spacing: .5px; }
+.rc-hint { font-size: 11px; color: var(--rc-hint); }
+.rc-in { width: 100%; box-sizing: border-box; padding: 9px 10px; background: var(--rc-input-bg); color: var(--rc-input-text); border: 1px solid var(--rc-input-border); border-radius: var(--radius-sm); font: 14px var(--mono); outline: none; }
 .rc-in:focus { border-color: var(--rc-input-focus); }
 .rc-row { display: flex; gap: 8px; align-items: stretch; }
 .rc-row .rc-in { flex: 1; min-width: 0; }
-.rc-seg { display: flex; border: 1px solid var(--rc-input-border); border-radius: var(--radius-sm); overflow: hidden; flex: none; }
-.rc-seg-btn { padding: 0 12px; background: var(--rc-input-bg); color: var(--rc-dim); border: 0; font: 12px var(--mono); cursor: pointer; white-space: nowrap; }
-.rc-seg-btn + .rc-seg-btn { border-left: 1px solid var(--rc-input-border); }
+.rc-seg { display: flex; border: 1px solid var(--rc-seg-border); border-radius: var(--radius-sm); overflow: hidden; flex: none; }
+.rc-seg-btn { padding: 0 12px; background: var(--rc-seg-bg); color: var(--rc-seg-text); border: 0; font: 12px var(--mono); cursor: pointer; white-space: nowrap; }
+.rc-seg-btn + .rc-seg-btn { border-left: 1px solid var(--rc-seg-border); }
 .rc-seg-btn.is-active { background: var(--rc-btn-active-bg); color: var(--rc-btn-active-text); }
-.rc-big { display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 14px 8px 16px; margin-bottom: 10px; border-bottom: 1px solid var(--rc-card-border); }
-.rc-big-l { font-size: 11px; color: var(--rc-dim); letter-spacing: .5px; }
+.rc-big { display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 14px 8px 16px; margin-bottom: 10px; border-bottom: 1px solid var(--rc-line); }
+.rc-big-l { font-size: 11px; color: var(--rc-big-label); letter-spacing: .5px; }
 .rc-big-v { font-size: 30px; font-weight: 700; color: var(--rc-result); }
-.rc-big-s { font-size: 12px; color: var(--rc-dim); }
+.rc-big-s { font-size: 12px; color: var(--rc-big-sub); }
 .rc-dl { margin: 0; display: flex; flex-direction: column; }
-.rc-dl > div { display: flex; justify-content: space-between; gap: 12px; padding: 7px 0; border-bottom: 1px solid var(--rc-card-border); font-size: 12px; }
+.rc-dl > div { display: flex; justify-content: space-between; gap: 12px; padding: 7px 0; border-bottom: 1px solid var(--rc-line); font-size: 12px; }
 .rc-dl > div:last-child { border-bottom: 0; }
-.rc-dl dt { color: var(--rc-dim); }
-.rc-dl dd { margin: 0; text-align: right; color: var(--rc-text); font-weight: 700; }
-.rc-note { margin: 12px 0 0; font-size: 11px; line-height: 1.5; color: var(--rc-dim); }
+.rc-dl dt { color: var(--rc-dt); }
+.rc-dl dd { margin: 0; text-align: right; color: var(--rc-dd); font-weight: 700; }
+.rc-note { margin: 12px 0 0; font-size: 11px; line-height: 1.5; color: var(--rc-note); }
