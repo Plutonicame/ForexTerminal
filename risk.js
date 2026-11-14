@@ -63,24 +63,44 @@
     return { svg, segs, needle, val, lab, sub, marks };
   }
 
-  /* ---------- graphique de l'historique (30 jours), façon RSI : zone rouge < 30, zone bleue > 70, zone grise au milieu ---------- */
-  const H_LOW = 30; const H_HIGH = 70; const H_DAYS = 30;
-  let histRow = null;
+  /* ---------- graphique de l'historique : Semaine / Mois / Trimestre / Année (clic droit : 1 à 20 ans) ---------- */
+  const H_LOW = 30; const H_HIGH = 70;
+  const YEAR_CHOICES = [1, 3, 5, 7, 10, 15, 20];
+  const TFS = [['w', 'Semaine', 7], ['m', 'Mois', 30], ['q', 'Trimestre', 91], ['y', 'Année', 365]];
+  const LS_KEY = 'fxt-risk-range';
+  let histRow = null; let histLast = null; let histLongLoading = false;
+  let rng = { tf: 'm', years: 1 };
+  try { const sv = JSON.parse(localStorage.getItem(LS_KEY) || 'null'); if (sv && TFS.some((t) => t[0] === sv.tf)) rng = { tf: sv.tf, years: YEAR_CHOICES.includes(sv.years) ? sv.years : 1 }; } catch (e) { /* pas de stockage */ }
+  const saveRng = () => { try { localStorage.setItem(LS_KEY, JSON.stringify(rng)); } catch (e) { /* ignore */ } };
   const dFmt = new Intl.DateTimeFormat('fr-FR', { timeZone: 'Europe/Paris', day: 'numeric', month: 'short' });
+  const mFmt = new Intl.DateTimeFormat('fr-FR', { timeZone: 'Europe/Paris', month: 'short', year: '2-digit' });
   const dtFmt = new Intl.DateTimeFormat('fr-FR', { timeZone: 'Europe/Paris', weekday: 'short', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit', hour12: false });
+  const dyFmt = new Intl.DateTimeFormat('fr-FR', { timeZone: 'Europe/Paris', day: 'numeric', month: 'short', year: 'numeric' });
+  const rangeDays = () => (rng.tf === 'y' ? rng.years * 365 : TFS.find((t) => t[0] === rng.tf)[2]);
+  const tfLabel = (t) => (t[0] === 'y' ? (rng.tf === 'y' && rng.years > 1 ? `${rng.years} ans` : 'Année') : t[1]);
+
   function renderHistory(row, v) {
-    histRow = row;
+    if (row) { histRow = row; histLast = v; } else { row = histRow; v = histLast; }
     const box = wrap && wrap.querySelector('.risk-hist-box');
-    if (!box) return;
+    if (!box || !row) return;
+    updateTfButtons();
     const now = Date.now() / 1000;
-    const t0 = now - H_DAYS * 86400;
-    let pts = (Array.isArray(row.history) ? row.history : []).filter((p) => p[0] >= t0 - 86400).map((p) => [p[0], Number(p[1])]);
+    const days = rangeDays();
+    const useLong = days > 95 && Array.isArray(row.history_long) && row.history_long.length > 20;
+    const src = useLong ? row.history_long : (Array.isArray(row.history) ? row.history : []);
+    let pts = src.filter((p) => p[0] >= now - days * 86400 - 86400).map((p) => [p[0], Number(p[1])]);
     if (!pts.length || now - pts[pts.length - 1][0] > 3600) pts.push([now, v]); else pts[pts.length - 1] = [pts[pts.length - 1][0], v];
     if (pts.length < 2) { box.innerHTML = '<p class="risk-hist-empty">Historique en cours de collecte…</p>'; return; }
-    const W = 800; const Ht = 250; const m = { l: 14, r: 46, t: 16, b: 28 };
+    // si CNN ne remonte pas assez loin, l'axe commence au premier point disponible
+    const t0 = Math.max(now - days * 86400, pts[0][0]);
+    const span = (now - t0) / 86400;
+    const note = wrap.querySelector('.risk-hist-note');
+    if (note) note.textContent = (days > 95 && span < days * 0.93) ? `Données CNN disponibles depuis ${dyFmt.format(new Date(t0 * 1000))}` : '';
+    const W = Math.max(320, Math.round(box.clientWidth || 800)); const Ht = Math.max(220, Math.round(box.clientHeight || 360));
+    const m = { l: 14, r: 46, t: 16, b: 28 };
     const X = (t) => m.l + ((t - t0) / (now - t0)) * (W - m.l - m.r);
     const Y = (val) => m.t + (1 - val / 100) * (Ht - m.t - m.b);
-    const svg = el('svg', { viewBox: `0 0 ${W} ${Ht}`, class: 'risk-hist-svg', role: 'img', 'aria-label': 'Historique du sentiment du risque sur 30 jours' });
+    const svg = el('svg', { viewBox: `0 0 ${W} ${Ht}`, width: W, height: Ht, class: 'risk-hist-svg', role: 'img', 'aria-label': 'Historique du risque' });
     const x0 = m.l; const x1 = W - m.r;
     el('rect', { x: x0, y: Y(100), width: x1 - x0, height: Y(H_HIGH) - Y(100), class: 'risk-hz risk-hz--on' }, svg);
     el('rect', { x: x0, y: Y(H_HIGH), width: x1 - x0, height: Y(H_LOW) - Y(H_HIGH), class: 'risk-hz risk-hz--mid' }, svg);
@@ -90,16 +110,21 @@
       const t = el('text', { x: x1 + 8, y: Y(lv), class: 'risk-haxis', 'dominant-baseline': 'middle' }, svg);
       t.textContent = String(lv);
     });
-    for (let d = 0; d <= H_DAYS; d += 7) {
+    // graduations de temps : pas choisi selon la durée affichée
+    const maxTicks = Math.max(3, Math.floor((x1 - x0) / 90));
+    const step = [1, 2, 7, 14, 30, 61, 91, 182, 365, 730, 1825].find((st) => span / st <= maxTicks) || 1825;
+    for (let d = 0; d <= span + 0.5; d += step) {
       const tt = now - d * 86400; const x = X(tt);
+      if (x < x0 - 1) break;
       el('line', { x1: x, x2: x, y1: m.t, y2: Ht - m.b, class: 'risk-hvline' }, svg);
-      const t = el('text', { x, y: Ht - 8, class: 'risk-haxis', 'text-anchor': x < 40 ? 'start' : 'middle' }, svg);
-      t.textContent = d === 0 ? 'Auj.' : dFmt.format(new Date(tt * 1000));
+      const t = el('text', { x, y: Ht - 8, class: 'risk-haxis', 'text-anchor': x < x0 + 26 ? 'start' : 'middle' }, svg);
+      t.textContent = d === 0 ? 'Auj.' : (step >= 61 ? mFmt : dFmt).format(new Date(tt * 1000));
     }
     el('polyline', { points: pts.map((p) => `${X(p[0]).toFixed(1)},${Y(p[1]).toFixed(1)}`).join(' '), class: 'risk-hline-data' }, svg);
-    // repères 1J / 1S / 1M sur la courbe
-    [['1d', 1, '1J'], ['1w', 7, '1S'], ['1m', 30, '1M']].forEach(([k, days, txt]) => {
-      const tt = now - days * 86400;
+    // repères 1J / 1S / 1M sur la courbe (si la période les contient)
+    [['1d', 1, '1J'], ['1w', 7, '1S'], ['1m', 30, '1M']].forEach(([k, dd, txt]) => {
+      const tt = now - dd * 86400;
+      if (tt < t0 || days > 95) return;
       let best = pts[0]; pts.forEach((p) => { if (Math.abs(p[0] - tt) < Math.abs(best[0] - tt)) best = p; });
       const x = X(tt); const y = Y(best[1]);
       el('circle', { cx: x, cy: y, r: 5, class: `risk-hdot risk-hdot--${k}` }, svg);
@@ -123,15 +148,57 @@
       const x = X(best[0]); const y = Y(best[1]);
       cross.setAttribute('x1', x); cross.setAttribute('x2', x); cross.setAttribute('visibility', 'visible');
       dot.setAttribute('cx', x); dot.setAttribute('cy', y); dot.setAttribute('visibility', 'visible');
-      tip.hidden = false; tip.textContent = `${dtFmt.format(new Date(best[0] * 1000))} · ${Math.round(best[1] * 10) / 10}`;
-      const left = (x / W) * r.width;
-      tip.style.left = Math.max(4, Math.min(r.width - 150, left - 70)) + 'px';
+      tip.hidden = false; tip.textContent = `${(useLong ? dyFmt : dtFmt).format(new Date(best[0] * 1000))} · ${Math.round(best[1] * 10) / 10}`;
+      tip.style.left = Math.max(4, Math.min(r.width - 170, (x / W) * r.width - 70)) + 'px';
     };
     ov.addEventListener('pointermove', move);
     ov.addEventListener('pointerleave', () => { cross.setAttribute('visibility', 'hidden'); dot.setAttribute('visibility', 'hidden'); tip.hidden = true; });
     box.innerHTML = '';
     box.appendChild(svg); box.appendChild(tip);
   }
+
+  /* boutons de période (même design que la case « session » de la barre du haut) */
+  let tfMenu = null;
+  function closeMenu() { if (tfMenu) { tfMenu.remove(); tfMenu = null; } }
+  function updateTfButtons() {
+    if (!wrap) return;
+    wrap.querySelectorAll('.risk-tf').forEach((b) => {
+      const t = TFS.find((x) => x[0] === b.dataset.tf);
+      b.textContent = tfLabel(t);
+      b.classList.toggle('is-on', b.dataset.tf === rng.tf);
+    });
+  }
+  function setRange(tf, years) {
+    rng.tf = tf; if (years) rng.years = years;
+    saveRng(); renderHistory();
+    if (rangeDays() > 95) ensureLong();
+  }
+  // l'historique long (plusieurs années) n'est chargé qu'à la demande
+  async function ensureLong() {
+    if (!histRow || histRow.history_long || histLongLoading || !window.Auth) return;
+    const client = window.Auth.getClient(); if (!client) return;
+    histLongLoading = true;
+    try {
+      const { data } = await client.from('risk_sentiment').select('history_long').eq('id', 'composite').maybeSingle();
+      if (data && Array.isArray(data.history_long)) { histRow.history_long = data.history_long; renderHistory(); }
+    } catch (e) { console.warn('risk.js long', e); } finally { histLongLoading = false; }
+  }
+  function openYearMenu(btn, ev) {
+    ev.preventDefault(); closeMenu();
+    tfMenu = document.createElement('div'); tfMenu.className = 'risk-tf-menu';
+    YEAR_CHOICES.forEach((n) => {
+      const it = document.createElement('button'); it.type = 'button'; it.className = 'risk-tf-item' + (rng.tf === 'y' && rng.years === n ? ' is-on' : '');
+      it.textContent = n === 1 ? '1 an' : `${n} ans`;
+      it.addEventListener('click', () => { closeMenu(); setRange('y', n); });
+      tfMenu.appendChild(it);
+    });
+    const hist = btn.closest('.risk-hist'); hist.appendChild(tfMenu);
+    const hr = hist.getBoundingClientRect(); const br = btn.getBoundingClientRect();
+    tfMenu.style.top = (br.bottom - hr.top + 4) + 'px';
+    tfMenu.style.left = Math.max(4, br.right - hr.left - tfMenu.offsetWidth) + 'px';
+  }
+  document.addEventListener('pointerdown', (e) => { if (tfMenu && !tfMenu.contains(e.target)) closeMenu(); });
+  window.addEventListener('resize', () => { const p = document.getElementById(GAUGE_PANEL_ID); if (p && !p.hidden && histRow) renderHistory(); });
 
   let g = null;
   function setScore(row) {
@@ -177,11 +244,16 @@
           <span class="speeches-toolbar-info">CNN Fear &amp; Greed Index · 0–100</span>
         </div>
         <div class="risk-gauge"></div>
-        <div class="risk-hist"><div class="risk-hist-title">Historique sur 30 jours <span class="risk-hist-key"><i class="risk-k risk-k--off"></i>&lt; 30 peur <i class="risk-k risk-k--mid"></i>30–70 neutre <i class="risk-k risk-k--on"></i>&gt; 70 avidité</span></div><div class="risk-hist-box"></div></div>
+        <div class="risk-hist"><div class="risk-hist-head"><div class="risk-hist-title">Historique du risque <span class="risk-hist-key"><i class="risk-k risk-k--off"></i>&lt; 30 peur <i class="risk-k risk-k--mid"></i>30–70 neutre <i class="risk-k risk-k--on"></i>&gt; 70 avidité</span><span class="risk-hist-note"></span></div><div class="risk-tfs">${TFS.map((t) => `<button type="button" class="risk-tf risk-tf--${t[0]}" data-tf="${t[0]}">${t[1]}</button>`).join('')}</div></div><div class="risk-hist-box"></div></div>
         <div class="risk-info"></div>`;
       g = buildGauge();
       wrap.querySelector('.risk-gauge').appendChild(g.svg);
       g.val.textContent = '–';
+      wrap.querySelectorAll('.risk-tf').forEach((b) => {
+        b.addEventListener('click', () => { closeMenu(); setRange(b.dataset.tf); });
+        if (b.dataset.tf === 'y') b.addEventListener('contextmenu', (ev) => openYearMenu(b, ev));
+      });
+      updateTfButtons();
       panel.appendChild(wrap);
     }
     return wrap;
@@ -313,7 +385,7 @@
       const { data, error } = await client.from('risk_sentiment')
         .select('score, score_1d, score_1w, score_1m, components, rating, source, history').eq('id', 'composite').maybeSingle();
       if (error) throw error;
-      if (data) setScore(data);
+      if (data) { if (histRow && histRow.history_long) data.history_long = histRow.history_long; setScore(data); if (rangeDays() > 95) ensureLong(); }
     } catch (e) {
       console.warn('risk.js', e);
     } finally {
