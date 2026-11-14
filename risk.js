@@ -65,7 +65,7 @@
 
   /* ---------- graphique de l'historique : Semaine / Mois / Trimestre / Année (clic droit : 1 à 20 ans) ---------- */
   const H_LOW = 30; const H_HIGH = 70;
-  const YEAR_CHOICES = [1, 3, 5, 7, 10, 15, 20];
+  const YEAR_CHOICES = [1, 3, 5];
   const TFS = [['w', 'Semaine', 7], ['m', 'Mois', 30], ['q', 'Trimestre', 91], ['y', 'Année', 365]];
   const LS_KEY = 'fxt-risk-range';
   let histRow = null; let histLast = null; let histLongLoading = false;
