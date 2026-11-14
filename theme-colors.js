@@ -684,7 +684,7 @@ const THEME_FIELDS = {
     ['speeches', /^(Discours|Donald Trump) — /],
     ['rates', /^Attentes de taux — /],
     ['cot', /^COT( Retail)? — /],
-    ['risk', /^Cadran du risque/],
+    ['risk', /^(Cadran du risque|Historique du risque)/],
     ['indicator', /^(Graphique VIX|Force des devises|Courbe des taux)/],
   ];
   const shared = /^(Barre des devises|Boutons des devises|Devise sélectionnée)/;
