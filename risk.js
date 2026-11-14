@@ -117,7 +117,7 @@
       const tt = now - d * 86400; const x = X(tt);
       if (x < x0 - 1) break;
       el('line', { x1: x, x2: x, y1: m.t, y2: Ht - m.b, class: 'risk-hvline' }, svg);
-      const t = el('text', { x, y: Ht - 8, class: 'risk-haxis', 'text-anchor': x < x0 + 26 ? 'start' : 'middle' }, svg);
+      const t = el('text', { x, y: Ht - 8, class: 'risk-haxis risk-haxis--x', 'text-anchor': x < x0 + 26 ? 'start' : 'middle' }, svg);
       t.textContent = d === 0 ? 'Auj.' : (step >= 61 ? mFmt : dFmt).format(new Date(tt * 1000));
     }
     el('polyline', { points: pts.map((p) => `${X(p[0]).toFixed(1)},${Y(p[1]).toFixed(1)}`).join(' '), class: 'risk-hline-data' }, svg);

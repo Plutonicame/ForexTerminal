@@ -4248,6 +4248,9 @@ body.te-open {
   --risk-tfm-item-bg: #161616; --risk-tfm-item-text: #fafafa; --risk-tfm-item-border: #2a2a2a;
   --risk-tfm-hover-bg: #2a2a2a; --risk-tfm-hover-text: #ffffff;
   --risk-tfm-on-bg: #0062d2; --risk-tfm-on-text: #ffffff; --risk-tfm-on-border: #4d94ff;
+  --risk-hline-mid: #4a4a4a; --risk-hgrid: #4a4a4a; --risk-hist-xaxis: #8a8a8a; --risk-hist-legend: #8a8a8a; --risk-hist-note: #8a8a8a; --risk-hist-empty: #8a8a8a;
+  --risk-hcross: #8a8a8a; --risk-htip-bg: #2a2e39; --risk-htip-text: #ffffff; --risk-hlast-ring: #161616;
+  --risk-tf-hover-bg: #2a2a2a; --risk-tf-hover-text: #ffffff; --risk-tf-hover-border: #ffffff;
   --risk-hline: #4a4a4a; --risk-hist-line: #ffffff; --risk-hist-axis: #8a8a8a; --risk-hist-last: #ffffff;
   /* posts de Trump : cases */
   --trump-card-bg: var(--speech-card-bg);
@@ -4709,14 +4712,15 @@ button.sq-btn.is-on { border-color: var(--blue-light); color: var(--blue-light);
 /* historique 30 jours */
 .risk-hist { position: relative; max-width: none; margin: 6px 24px 4px; padding: 10px 14px 6px; background: var(--risk-hist-bg); border: 1px solid var(--risk-hist-border); border-radius: var(--radius-card); }
 .risk-hist-title { font-family: var(--mono, monospace); font-size: 12px; font-weight: 700; letter-spacing: 1px; text-transform: uppercase; color: var(--risk-hist-title); margin-bottom: 6px; display: flex; flex-wrap: wrap; gap: 6px 14px; align-items: center; }
-.risk-hist-key { font-weight: 400; letter-spacing: 0; text-transform: none; font-size: 11px; color: var(--risk-hist-axis); display: inline-flex; align-items: center; gap: 4px; flex-wrap: wrap; }
+.risk-hist-key { font-weight: 400; letter-spacing: 0; text-transform: none; font-size: 11px; color: var(--risk-hist-legend); display: inline-flex; align-items: center; gap: 4px; flex-wrap: wrap; }
 .risk-k { display: inline-block; width: 10px; height: 10px; border-radius: 2px; margin-left: 8px; }
 .risk-k--off { background: var(--risk-hz-off); outline: 1px solid var(--risk-hline); } .risk-k--mid { background: var(--risk-hz-mid); outline: 1px solid var(--risk-hline); } .risk-k--on { background: var(--risk-hz-on); outline: 1px solid var(--risk-hline); }
 .risk-hist-box { position: relative; width: 100%; height: clamp(220px, calc((100vh - 230px) * 0.667), 507px); }
 .risk-hist-svg { display: block; width: 100%; height: 100%; }
 .risk-hist-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 10px; flex-wrap: wrap; margin-bottom: 6px; }
 .risk-hist-head .risk-hist-title { margin-bottom: 0; }
-.risk-hist-note { font-weight: 400; letter-spacing: 0; text-transform: none; font-size: 11px; color: var(--risk-hist-axis); }
+.risk-hist-note { font-weight: 400; letter-spacing: 0; text-transform: none; font-size: 11px; color: var(--risk-hist-note); }
+.risk-haxis--x { fill: var(--risk-hist-xaxis); }
 .risk-tfs { display: flex; gap: 6px; flex-wrap: wrap; margin-left: auto; }
 /* boutons de période : même design que .session-badge */
 .risk-tf { flex: 0 0 auto; display: inline-flex; align-items: center; padding: 6px 10px; border-radius: var(--radius-sm); font-family: var(--mono); font-size: 11px; letter-spacing: 1px; text-transform: uppercase; white-space: nowrap; cursor: pointer; border: 1px solid; }
@@ -4724,21 +4728,22 @@ button.sq-btn.is-on { border-color: var(--blue-light); color: var(--blue-light);
 .risk-tf--m { background: var(--risk-tf-m-bg); color: var(--risk-tf-m-text); border-color: var(--risk-tf-m-border); }
 .risk-tf--q { background: var(--risk-tf-q-bg); color: var(--risk-tf-q-text); border-color: var(--risk-tf-q-border); }
 .risk-tf--y { background: var(--risk-tf-y-bg); color: var(--risk-tf-y-text); border-color: var(--risk-tf-y-border); }
+.risk-tf:hover { background: var(--risk-tf-hover-bg); color: var(--risk-tf-hover-text); border-color: var(--risk-tf-hover-border); }
 .risk-tf.is-on { background: var(--risk-tf-on-bg); color: var(--risk-tf-on-text); border-color: var(--risk-tf-on-border); }
 .risk-tf-menu { position: absolute; z-index: 20; display: flex; flex-direction: column; gap: 3px; padding: 4px; background: var(--risk-tfm-bg); border: 1px solid var(--risk-tfm-border); border-radius: var(--radius-sm); box-shadow: 0 6px 18px rgba(0,0,0,.5); }
 .risk-tf-item { padding: 6px 14px; text-align: left; font-family: var(--mono); font-size: 11px; letter-spacing: 1px; text-transform: uppercase; white-space: nowrap; cursor: pointer; background: var(--risk-tfm-item-bg); color: var(--risk-tfm-item-text); border: 1px solid var(--risk-tfm-item-border); border-radius: var(--radius-sm); }
 .risk-tf-item:hover { background: var(--risk-tfm-hover-bg); color: var(--risk-tfm-hover-text); }
 .risk-tf-item.is-on { background: var(--risk-tfm-on-bg); color: var(--risk-tfm-on-text); border-color: var(--risk-tfm-on-border); }
-.risk-hist-empty { margin: 0; padding: 20px; text-align: center; font-family: var(--mono, monospace); font-size: 12px; color: var(--risk-hist-axis); }
+.risk-hist-empty { margin: 0; padding: 20px; text-align: center; font-family: var(--mono, monospace); font-size: 12px; color: var(--risk-hist-empty); }
 .risk-hz--off { fill: var(--risk-hz-off); } .risk-hz--mid { fill: var(--risk-hz-mid); } .risk-hz--on { fill: var(--risk-hz-on); }
-.risk-hline { stroke: var(--risk-hline); stroke-width: 1; stroke-dasharray: 4 4; } .risk-hline--mid { opacity: .5; }
-.risk-hvline { stroke: var(--risk-hline); stroke-width: 1; opacity: .25; }
+.risk-hline { stroke: var(--risk-hline); stroke-width: 1; stroke-dasharray: 4 4; } .risk-hline--mid { opacity: 1; stroke: var(--risk-hline-mid); }
+.risk-hvline { stroke: var(--risk-hgrid); stroke-width: 1; opacity: .35; }
 .risk-haxis { font-family: var(--mono, monospace); font-size: 11px; fill: var(--risk-hist-axis); }
 .risk-hline-data { fill: none; stroke: var(--risk-hist-line); stroke-width: 2; stroke-linejoin: round; stroke-linecap: round; }
-.risk-hlast { fill: var(--risk-hist-last); stroke: var(--risk-hist-bg); stroke-width: 2; }
+.risk-hlast { fill: var(--risk-hist-last); stroke: var(--risk-hlast-ring); stroke-width: 2; }
 .risk-hlast-txt { font-family: var(--mono, monospace); font-size: 13px; font-weight: 700; fill: var(--risk-hist-last); }
 .risk-hdot { stroke: var(--risk-hist-bg); stroke-width: 2; } .risk-hdot--1d { fill: var(--risk-mark-1d); } .risk-hdot--1w { fill: var(--risk-mark-1w); } .risk-hdot--1m { fill: var(--risk-mark-1m); }
 .risk-hdot-txt { font-family: var(--mono, monospace); font-size: 11px; font-weight: 700; } .risk-hdot-txt--1d { fill: var(--risk-mark-1d); } .risk-hdot-txt--1w { fill: var(--risk-mark-1w); } .risk-hdot-txt--1m { fill: var(--risk-mark-1m); }
-.risk-hcross { stroke: var(--risk-hist-axis); stroke-width: 1; stroke-dasharray: 3 3; }
-.risk-htip { position: absolute; top: 4px; padding: 4px 8px; background: #2a2e39; color: #fff; border-radius: 4px; font: 11px var(--mono, monospace); pointer-events: none; white-space: nowrap; }
+.risk-hcross { stroke: var(--risk-hcross); stroke-width: 1; stroke-dasharray: 3 3; }
+.risk-htip { position: absolute; top: 4px; padding: 4px 8px; background: var(--risk-htip-bg); color: var(--risk-htip-text); border-radius: 4px; font: 11px var(--mono, monospace); pointer-events: none; white-space: nowrap; }
 .risk-htip[hidden] { display: none; }
