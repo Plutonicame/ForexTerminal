@@ -404,7 +404,9 @@ const THEME_FIELDS = {
     { v: '--pcal-btn-active-bd', l: 'Bouton calendrier actif – bordure', section: 'Bouton calendrier (période du News Feed)' },
     { v: '--pcal-btn-active-ic', l: 'Bouton calendrier actif – dessin', section: 'Bouton calendrier (période du News Feed)' },
     { v: '--nf-range-text', l: 'Texte de la période (à côté du bouton)', section: 'Bouton calendrier (période du News Feed)' },
-    { v: '--nf-top-bg', l: 'Fond des news passées dans Nouveau (lues par le Squawk)', section: 'News Feed : news importantes' },
+    { v: '--nf-top-tint', l: 'Teinte du filtre rouge (news lues par le Squawk)', section: 'News Feed : news importantes' },
+    { v: '--nf-top-alpha', l: 'Intensité du filtre', type: 'alpha', section: 'News Feed : news importantes' },
+    { v: '--nf-top-bar', l: 'Liseré à gauche', section: 'News Feed : news importantes' },
   ],
   seasonality: [
     { v: '--seas-line-season', l: 'Courbe de saisonnalité', section: 'Graphique' },

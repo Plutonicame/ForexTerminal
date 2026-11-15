@@ -4617,13 +4617,13 @@ button.sq-btn.is-on { border-color: var(--blue-light); color: var(--blue-light);
   --pcal-bg: #161616; --pcal-bd: #2a2a2a; --pcal-title: #fafafa; --pcal-nav: #9a9a9a; --pcal-nav-hover: #4d94ff;
   --pcal-wd: #9a9a9a; --pcal-day-tx: #fafafa; --pcal-day-hover-bg: #2a2a2a; --pcal-today-bd: #4d94ff;
   --pcal-sel-bg: #4d94ff; --pcal-sel-tx: #0a0a0a; --pcal-range-bg: #1d3557; --pcal-range-tx: #fafafa;
-  --nf-range-text: #9a9a9a; --nf-top-bg: #2e1517;
+  --nf-range-text: #9a9a9a; --nf-top-tint: #ff1a1a; --nf-top-alpha: 14; --nf-top-bar: #ff3b3b;
   --pcal-hint-tx: #9a9a9a; --pcal-clear-bg: #161616; --pcal-clear-bd: #2a2a2a; --pcal-clear-tx: #fafafa;
 }
 .nf-toolbar { position: relative; }
 .nf-range-label { font-family: var(--mono); font-size: 12px; color: var(--nf-range-text); }
 
-.nf-row--top { background: var(--nf-top-bg); padding-left: 8px; padding-right: 8px; border-radius: 4px; }
+.nf-row--top { background: color-mix(in srgb, var(--nf-top-tint) calc(var(--nf-top-alpha) * 1%), transparent); box-shadow: inset 3px 0 0 var(--nf-top-bar); padding-left: 10px; padding-right: 8px; border-radius: 4px; }
 
 .sq-vol{position:fixed;z-index:1000;display:flex;align-items:center;gap:8px;padding:8px 12px;background:var(--sq-off-bg,#161616);border:1px solid var(--sq-off-border,#2a2a2a);border-radius:8px;box-shadow:0 6px 20px rgba(0,0,0,.5)}
 .sq-vol[hidden]{display:none}
