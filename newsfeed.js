@@ -152,6 +152,48 @@
     return sec;
   }
 
+  /* ---------- pop-up d'une news : infos + résumé en français (quand la page d'origine est lisible) ---------- */
+  let popEl = null; let popToken = 0;
+  function closePop() { if (popEl) { popEl.remove(); popEl = null; } popToken += 1; }
+  async function openPop(a) {
+    closePop();
+    const tok = popToken;
+    const id = a.dataset.nid; const href = a.getAttribute('href');
+    popEl = document.createElement('div');
+    popEl.className = 'nf-pop';
+    const when = new Date(a.dataset.at); const whenTxt = isNaN(when) ? '' : `${fmtDay(a.dataset.at)} · ${fmtTime(a.dataset.at)}`;
+    popEl.innerHTML = `<div class="nf-pop-card" role="dialog" aria-modal="true">
+      <button type="button" class="nf-pop-x" aria-label="Fermer">×</button>
+      <p class="nf-pop-meta">${esc(a.dataset.src)}${a.dataset.feed ? ' · ' + esc(a.dataset.feed) : ''}${whenTxt ? ' · ' + esc(whenTxt) : ''}</p>
+      <h3 class="nf-pop-title">${esc(a.dataset.ttl)}</h3>
+      ${a.dataset.orig ? `<p class="nf-pop-orig">${esc(a.dataset.orig)}</p>` : ''}
+      <div class="nf-pop-body"><p class="nf-pop-wait">Lecture de l'article et résumé en français…</p></div>
+      <div class="nf-pop-foot"><a class="nf-pop-link" href="${esc(href)}" target="_blank" rel="noopener noreferrer">Ouvrir l'article d'origine ↗</a></div></div>`;
+    document.body.appendChild(popEl);
+    popEl.addEventListener('click', (ev) => { if (ev.target === popEl || ev.target.closest('.nf-pop-x')) closePop(); });
+    const body = popEl.querySelector('.nf-pop-body');
+    try {
+      const c = await client();
+      const { data, error } = await c.functions.invoke('article-summary', { body: { id } });
+      if (tok !== popToken) return;
+      if (error) throw error;
+      if (data && data.status === 'ok') {
+        body.innerHTML = String(data.summary).split(/\n+/).filter(Boolean).map((t) => `<p>${esc(t)}</p>`).join('') + '<p class="nf-pop-note">Résumé automatique en français (l\'article n\'est pas recopié).</p>';
+      } else {
+        body.innerHTML = `<p class="nf-pop-wait">Pas de résumé pour cette news : ${esc((data && data.reason) || 'article indisponible')} Utilisez le lien ci-dessous pour la lire sur le site d'origine.</p>`;
+      }
+    } catch (e) {
+      if (tok === popToken) body.innerHTML = '<p class="nf-pop-wait">Résumé indisponible pour le moment. Utilisez le lien ci-dessous pour lire l\'article d\'origine.</p>';
+    }
+  }
+  document.addEventListener('click', (ev) => {
+    if (ev.button !== 0 || ev.ctrlKey || ev.metaKey || ev.shiftKey) return;
+    const a = ev.target.closest && ev.target.closest('a.nf-title[data-nid]');
+    if (!a) return;
+    ev.preventDefault(); openPop(a);
+  });
+  document.addEventListener('keydown', (ev) => { if (ev.key === 'Escape') closePop(); });
+
   function renderRows(rows, kind) {
     if (!rows.length) return '<p class="nf-empty">Rien pour le moment.</p>';
     let html = '';
@@ -165,7 +207,7 @@
         : kind === 'fj' ? '<span class="nf-tag nf-tag--red">Rouge</span>' : (r.feed ? `<span class="nf-tag">${esc(r.feed)}</span>` : '');
       const orig = kind !== 'investinglive' && r.title_fr && r.title_fr !== r.title ? `<span class="nf-orig">${esc(r.title)}</span>` : '';
       const body = url
-        ? `<a class="nf-title" href="${esc(url)}" target="_blank" rel="noopener noreferrer">${esc(title)}</a>`
+        ? `<a class="nf-title" href="${esc(url)}" target="_blank" rel="noopener noreferrer" data-nid="${esc(r.id)}" data-src="${esc(SRC_LABEL[r.source] || r.source || '')}" data-feed="${esc(r.feed || '')}" data-at="${esc(r.published_at)}" data-orig="${esc(r.title_fr && r.title_fr !== r.title ? r.title : '')}" data-ttl="${esc(title)}">${esc(title)}</a>`
         : `<span class="nf-title">${esc(title)}</span>`;
       html += `<div class="nf-row${r.top ? ' nf-row--top' : ''}"${r.top ? ' title="Dans l\'onglet Nouveau et lue par le Squawk"' : ''}><span class="nf-time">${esc(fmtTime(r.published_at))}</span><div class="nf-body">${tag}${body}${orig}</div></div>`;
     });
