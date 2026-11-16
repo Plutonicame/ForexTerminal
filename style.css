@@ -4618,7 +4618,7 @@ button.sq-btn.is-on { border-color: var(--blue-light); color: var(--blue-light);
   --pcal-wd: #9a9a9a; --pcal-day-tx: #fafafa; --pcal-day-hover-bg: #2a2a2a; --pcal-today-bd: #4d94ff;
   --pcal-sel-bg: #4d94ff; --pcal-sel-tx: #0a0a0a; --pcal-range-bg: #1d3557; --pcal-range-tx: #fafafa;
   --nf-range-text: #9a9a9a; --nf-pop-overlay: #000000; --nf-pop-bg: #161616; --nf-pop-border: #2a2a2a; --nf-pop-title: #fafafa; --nf-pop-text: #d8d8d8; --nf-pop-meta: #9a9a9a; --nf-pop-link: #4d94ff; --nf-pop-x: #fafafa; --nf-pop-note: #8a8a8a;
-  --macro-sep: #4a4a4a; --macro-bg: #161616; --macro-border: #2a2a2a; --macro-head-bg: #1d1d1d; --macro-head-text: #fafafa; --macro-sub-text: #9a9a9a;
+  --macro-sep: #4a4a4a; --macro-none: #6a6a6a; --macro-tag: #9a9a9a; --macro-group-bg: #1d1d1d; --macro-group-text: #fafafa; --macro-toolbar-bg: #161616; --macro-toolbar-border: #2a2a2a; --macro-toolbar-title: #fafafa; --macro-bg: #161616; --macro-border: #2a2a2a; --macro-head-bg: #1d1d1d; --macro-head-text: #fafafa; --macro-sub-text: #9a9a9a;
   --macro-ccy: #fafafa; --macro-country: #9a9a9a; --macro-value: #fafafa; --macro-up: #4d94ff; --macro-down: #ff6b6b; --macro-flat: #9a9a9a;
   --macro-prev: #9a9a9a; --macro-date: #9a9a9a; --macro-row-hover: #202020; --macro-foot: #8a8a8a;
   --nf-top-tint: #ff1a1a; --nf-top-alpha: 14; --nf-top-bar: #ff3b3b;
@@ -4773,7 +4773,7 @@ button.sq-btn.is-on { border-color: var(--blue-light); color: var(--blue-light);
 .macro-table th { padding: 9px 10px; text-align: center; font-weight: 700; letter-spacing: .5px; background: var(--macro-head-bg); color: var(--macro-head-text); border-bottom: 1px solid var(--macro-border); border-left: 1px solid var(--macro-border); }
 .macro-table th.mt-gstart, .macro-table td.mt-gstart { border-left: 3px solid var(--macro-sep); }
 .macro-table th.mt-ccy + th.mt-gstart { border-left: 3px solid var(--macro-sep); }
-.mc-none { color: var(--macro-prev); font-weight: 400; }
+.mc-none { color: var(--macro-none) !important; font-weight: 400; }
 .macro-table .mt-sub th { font-weight: 400; font-size: 11px; color: var(--macro-sub-text); text-transform: uppercase; }
 .macro-table th.mt-ccy { text-align: left; border-left: 0; }
 .macro-table td { padding: 10px; text-align: center; border-bottom: 1px solid var(--macro-border); border-left: 1px solid var(--macro-border); }
@@ -4783,7 +4783,11 @@ button.sq-btn.is-on { border-color: var(--blue-light); color: var(--blue-light);
 .macro-table td.mt-ccy b { display: inline-block; width: 38px; }
 .macro-table td.mt-ccy span { font-size: 11px; color: var(--macro-country); }
 .mc-v { color: var(--macro-value); font-weight: 700; }
-.mc-up { color: var(--macro-up) !important; } .mc-down { color: var(--macro-down) !important; } .mc-flat { color: var(--macro-flat) !important; }
+.mc-good { color: var(--macro-up) !important; } .mc-bad { color: var(--macro-down) !important; } .mc-flat { color: var(--macro-flat) !important; }
+.mc-tag { margin-left: 5px; font-size: 10px; font-weight: 400; color: var(--macro-tag); }
+.macro-wrap .calendar-toolbar { background: var(--macro-toolbar-bg); border-color: var(--macro-toolbar-border); }
+.macro-wrap .calendar-toolbar-title { color: var(--macro-toolbar-title); }
+.macro-table .mt-groups th.mt-gstart { background: var(--macro-group-bg); color: var(--macro-group-text); }
 .mc-arrow { font-size: 9px; margin-right: 6px; }
 .mc-p { color: var(--macro-prev); } .mc-d { color: var(--macro-date); font-size: 12px; }
 .mc-empty { padding: 24px !important; color: var(--macro-sub-text); }
