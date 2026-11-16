@@ -464,10 +464,11 @@ const THEME_FIELDS = {
   ],
   macro: [
     { v: '--macro-bg', l: 'Fond du tableau', section: 'Tableau' },
+    { v: '--macro-sep', l: 'Gros traits entre Croissance / Emploi / Inflation', section: 'Tableau' },
     { v: '--macro-border', l: 'Bordures et traits', section: 'Tableau' },
     { v: '--macro-head-bg', l: 'Fond des titres de colonnes', section: 'Tableau' },
     { v: '--macro-head-text', l: 'Texte des titres de colonnes', section: 'Tableau' },
-    { v: '--macro-sub-text', l: 'Texte Actuel / Précédent / Période', section: 'Tableau' },
+    { v: '--macro-sub-text', l: 'Texte des noms de colonnes (PIB, PMI…)', section: 'Tableau' },
     { v: '--macro-row-hover', l: 'Fond de la ligne survolée', section: 'Tableau' },
     { v: '--macro-ccy', l: 'Code de la devise', section: 'Lignes' },
     { v: '--macro-country', l: 'Nom du pays', section: 'Lignes' },
