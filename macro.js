@@ -207,6 +207,12 @@
       panel.appendChild(wrap);
       wrap.addEventListener('click', (ev) => {
         const cellEl = ev.target.closest('td.mc-click');
+        if (cellEl && cellEl.dataset.i === 'rate') {
+          const btn = document.querySelector('.menu-tab[data-tab="tab-rates"]');
+          if (btn) btn.click();
+          if (window.FXWindows) window.FXWindows.select('rates', cellEl.dataset.k);
+          return;
+        }
         if (cellEl) { openPop(cellEl); return; }
         const b = ev.target.closest('.mt-toggle'); if (!b) return;
         openG[b.dataset.g] = !openG[b.dataset.g];
