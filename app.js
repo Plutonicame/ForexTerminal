@@ -916,6 +916,15 @@ function teCloseChart() {
   teState = null;
 }
 
+// Exposé pour la fenêtre « Données macro » : même graphique Trading Economics que le calendrier.
+window.TEChart = {
+  has: (cur, kind) => !!(TE_SYMBOLS[cur] && TE_SYMBOLS[cur][kind]),
+  ranges: TE_RANGES, periods: TE_PERIODS, types: TE_TYPES, columnKinds: TE_COLUMN_KINDS, national: TE_NATIONAL_TITLE,
+  url: teChartUrl,
+  prefs: () => { teLoadPrefs(); return { period: tePrefs.period, type: tePrefs.type }; },
+  savePrefs: (p) => { if (p.period) tePrefs.period = p.period; if (p.type) tePrefs.type = p.type; teSavePrefs(); },
+};
+
 // Un clic sur « Graphique » ouvre la fenêtre (écouteur global : les lignes sont recréées à chaque affichage).
 document.addEventListener('click', (e) => {
   const btn = e.target.closest ? e.target.closest('.calendar-chart-btn') : null;

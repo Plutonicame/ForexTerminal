@@ -107,27 +107,64 @@
   let popEl = null;
   function closePop() { if (popEl) { popEl.remove(); popEl = null; } }
   const LABELS = {}; GROUPS.forEach((g) => g.main.concat(g.extra).forEach(([i, l]) => { LABELS[i] = l; }));
-  function chartSvg(series, unit, ind) {
-    const pts = (series || []).filter((p) => Number.isFinite(p[1])).slice(-36);
-    if (pts.length < 3) return '';
-    const W = 560; const H = 170; const m = { l: 10, r: 46, t: 12, b: 24 };
-    const vs = pts.map((p) => p[1]); let lo = Math.min(...vs); let hi = Math.max(...vs); if (hi - lo < 1e-9) { lo -= 1; hi += 1; }
-    const pad = (hi - lo) * 0.12; lo -= pad; hi += pad;
-    const X = (i) => m.l + (i / (pts.length - 1)) * (W - m.l - m.r);
-    const Y = (v) => m.t + (1 - (v - lo) / (hi - lo)) * (H - m.t - m.b);
-    const grid = [0, 0.5, 1].map((f) => { const v = lo + (hi - lo) * f; const y = Y(v); return `<line x1="${m.l}" x2="${W - m.r}" y1="${y}" y2="${y}" class="mp-grid"/><text x="${W - m.r + 6}" y="${y + 3}" class="mp-axis">${num(v)}</text>`; }).join('');
-    const d0 = pts[0][0]; const d1 = pts[pts.length - 1][0];
-    const fd = (d) => (/^\d{4}-\d{2}-\d{2}/.test(d) ? new Date(d).toLocaleDateString('fr-FR', { timeZone: 'Europe/Paris', month: 'short', year: '2-digit' }) : d);
-    const last = pts[pts.length - 1];
-    return `<svg viewBox="0 0 ${W} ${H}" class="mp-chart" role="img" aria-label="Historique">${grid}
-      <polyline class="mp-line" points="${pts.map((p, i) => `${X(i).toFixed(1)},${Y(p[1]).toFixed(1)}`).join(' ')}"/>
-      <circle class="mp-dot" cx="${X(pts.length - 1)}" cy="${Y(last[1])}" r="4"/>
-      <text x="${m.l}" y="${H - 6}" class="mp-axis">${esc(fd(d0))}</text><text x="${W - m.r}" y="${H - 6}" class="mp-axis" text-anchor="end">${esc(fd(d1))}</text></svg>`;
+  // Graphique Trading Economics (mêmes codes et même image que le calendrier économique)
+  function teKind(k, i, row) {
+    const T = window.TEChart; if (!T) return null;
+    const name = String(row.name || '');
+    if (T.national.test(name)) return null;
+    const yoy = /y\/y|3m\/y|annual/i.test(name); const mom = /m\/m/i.test(name); const qoq = /q\/q/i.test(name);
+    let kind = null;
+    if (i === 'gdp') kind = yoy ? 'gdp_yoy' : 'gdp_qoq';
+    else if (i === 'pmi') kind = k === 'USD' ? 'ism_mfg' : 'mfg_pmi';
+    else if (i === 'pmi_svc') kind = k === 'USD' ? 'ism_svc' : 'svc_pmi';
+    else if (i === 'unemp') kind = 'unemployment';
+    else if (i === 'nfp') kind = k === 'USD' ? 'nfp' : 'employment';
+    else if (i === 'adp') kind = k === 'USD' ? 'adp' : null;
+    else if (i === 'cpi') kind = mom && !yoy ? 'cpi_mom' : 'cpi_yoy';
+    else if (i === 'core_cpi') kind = mom && !yoy ? 'core_cpi_mom' : 'core_cpi_yoy';
+    else if (i === 'ppi') kind = mom && !yoy ? 'ppi_mom' : 'ppi_yoy';
+    else if (i === 'retail') kind = yoy ? 'retail_yoy' : 'retail_mom';
+    else if (i === 'indprod') kind = 'ind_mom';
+    else if (i === 'sentiment') kind = 'conf';
+    if (!kind || !T.has(k, kind)) return null;
+    if (qoq && i !== 'gdp') return null;
+    const rg = T.ranges[kind];
+    if (rg && [row.value, row.previous].some((v) => Number.isFinite(v) && (v < rg[0] || v > rg[1]))) return null;
+    return kind;
+  }
+  function teBox(k, kind) {
+    const T = window.TEChart;
+    const pr = T.prefs();
+    const st = { period: pr.period || (/^gdp/.test(kind) ? '10y' : '5y'), type: pr.type || (T.columnKinds.has(kind) ? 'column' : 'line') };
+    const box = document.createElement('div');
+    box.className = 'mp-chartbox';
+    box.innerHTML = `<div class="te-modal-controls"><div class="te-chips" role="group" aria-label="Période">${T.periods.map((p) => `<button type="button" class="te-chip" data-p="${p.id}">${p.label}</button>`).join('')}</div>
+      <div class="te-chips" role="group" aria-label="Style">${T.types.map((t) => `<button type="button" class="te-chip" data-t="${t.id}">${t.label}</button>`).join('')}</div></div>
+      <div class="te-modal-image"><span class="te-modal-status" role="status"></span><img class="te-modal-img" alt="Graphique Trading Economics" hidden></div>
+      <p class="te-modal-note"><a class="te-modal-link" target="_blank" rel="noopener noreferrer">Voir sur Trading Economics</a></p>`;
+    const img = box.querySelector('img'); const status = box.querySelector('.te-modal-status');
+    img.addEventListener('load', () => { status.textContent = ''; img.hidden = false; });
+    img.addEventListener('error', () => { img.hidden = true; status.textContent = 'Graphique indisponible pour le moment.'; });
+    const draw = () => {
+      const narrow = window.innerWidth < 720;
+      const u = T.url(k, kind, st.period, st.type, narrow ? 560 : 800, narrow ? 340 : 400);
+      box.querySelectorAll('[data-p]').forEach((b) => b.classList.toggle('is-active', b.dataset.p === st.period));
+      box.querySelectorAll('[data-t]').forEach((b) => b.classList.toggle('is-active', b.dataset.t === st.type));
+      box.querySelector('.te-modal-link').href = u.page;
+      status.textContent = 'Chargement du graphique…'; img.hidden = true; img.src = u.img;
+    };
+    box.addEventListener('click', (ev) => {
+      const p = ev.target.closest('[data-p]'); const t = ev.target.closest('[data-t]');
+      if (p) { st.period = p.dataset.p; T.savePrefs({ period: st.period }); draw(); }
+      if (t) { st.type = t.dataset.t; T.savePrefs({ type: st.type }); draw(); }
+    });
+    draw();
+    return box;
   }
   function openPop(td) {
     if (!model) return;
     const k = td.dataset.k; const i = td.dataset.i;
-    let title; let head; let body; let chart = '';
+    let title; let head; let body; let chartKind = null; let rowRef = null;
     if (i === 'rate') {
       const r = model.rates[k]; if (!r) return;
       const c = r.current || {};
@@ -140,7 +177,7 @@
       title = `${k} · ${LABELS[i]}`;
       head = ['Sorti', 'Attendu', 'Précédent'];
       body = [fmtVal(row.value, row.unit, i), row.forecast == null ? '–' : fmtVal(row.forecast, row.unit, i), row.previous == null ? '–' : fmtVal(row.previous, row.unit, i)];
-      chart = chartSvg(row.series, row.unit, i);
+      chartKind = teKind(k, i, row); rowRef = row;
       title += `<span class="mp-sub">${esc(row.name)}${row.when ? ' · ' + esc(row.when) : ''}${row.tag ? ' · ' + esc(row.tag) : ''}</span>`;
     }
     closePop();
@@ -149,7 +186,9 @@
     popEl.innerHTML = `<div class="macro-pop-card" role="dialog" aria-modal="true"><button type="button" class="macro-pop-x" aria-label="Fermer">×</button>
       <h3 class="mp-title">${title}</h3>
       <table class="mp-table"><thead><tr>${head.map((h) => `<th>${h}</th>`).join('')}</tr></thead><tbody><tr>${body.map((b) => `<td>${esc(b)}</td>`).join('')}</tr></tbody></table>
-      ${chart ? `<div class="mp-chartbox">${chart}</div>` : (i === 'rate' ? '' : '<p class="mp-nochart">Pas encore assez d\'historique pour tracer un graphique (il se construit au fil des publications).</p>')}</div>`;
+      </div>`;
+    if (i === 'rate' && window.TEChart && window.TEChart.has(k, 'rate')) chartKind = 'rate';
+    if (chartKind) popEl.querySelector('.macro-pop-card').appendChild(teBox(k, chartKind));
     document.body.appendChild(popEl);
     popEl.addEventListener('click', (ev) => { if (ev.target === popEl || ev.target.closest('.macro-pop-x')) closePop(); });
   }

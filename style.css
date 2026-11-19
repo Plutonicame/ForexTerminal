@@ -4618,7 +4618,7 @@ button.sq-btn.is-on { border-color: var(--blue-light); color: var(--blue-light);
   --pcal-wd: #9a9a9a; --pcal-day-tx: #fafafa; --pcal-day-hover-bg: #2a2a2a; --pcal-today-bd: #4d94ff;
   --pcal-sel-bg: #4d94ff; --pcal-sel-tx: #0a0a0a; --pcal-range-bg: #1d3557; --pcal-range-tx: #fafafa;
   --nf-range-text: #9a9a9a; --nf-pop-overlay: #000000; --nf-pop-bg: #161616; --nf-pop-border: #2a2a2a; --nf-pop-title: #fafafa; --nf-pop-text: #d8d8d8; --nf-pop-meta: #9a9a9a; --nf-pop-link: #4d94ff; --nf-pop-x: #fafafa; --nf-pop-note: #8a8a8a;
-  --macro-pop-bg: #161616; --macro-pop-border: #2a2a2a; --macro-pop-title: #fafafa; --macro-pop-sub: #9a9a9a; --macro-pop-head-bg: #1d1d1d; --macro-pop-head-text: #9a9a9a; --macro-pop-text: #fafafa; --macro-pop-overlay: #000000; --macro-pop-line: #4d94ff; --macro-pop-grid: #333333; --macro-pop-axis: #8a8a8a; --macro-pop-x: #fafafa;
+  --macro-pop-bg: #161616; --macro-pop-border: #2a2a2a; --macro-pop-title: #fafafa; --macro-pop-sub: #9a9a9a; --macro-pop-head-bg: #1d1d1d; --macro-pop-head-text: #9a9a9a; --macro-pop-text: #fafafa; --macro-pop-overlay: #000000; --macro-pop-x: #fafafa;
   --macro-sep: #4a4a4a; --macro-toggle: #9a9a9a; --macro-toggle-hover: #ffffff; --macro-toggle-hover-bg: #2a2a2a; --macro-extra-bg: #1a1a1a; --macro-extra-head: #cfcfcf; --macro-rate-up: #4d94ff; --macro-rate-down: #ff6b6b; --macro-rate-flat: #9a9a9a; --macro-prob: #9a9a9a; --macro-none: #6a6a6a; --macro-tag: #9a9a9a; --macro-group-bg: #1d1d1d; --macro-group-text: #fafafa; --macro-toolbar-bg: #161616; --macro-toolbar-border: #2a2a2a; --macro-toolbar-title: #fafafa; --macro-bg: #161616; --macro-border: #2a2a2a; --macro-head-bg: #1d1d1d; --macro-head-text: #fafafa; --macro-sub-text: #9a9a9a;
   --macro-ccy: #fafafa; --macro-country: #9a9a9a; --macro-value: #fafafa; --macro-up: #4d94ff; --macro-down: #ff6b6b; --macro-flat: #9a9a9a;
   --macro-prev: #9a9a9a; --macro-date: #9a9a9a; --macro-row-hover: #202020; --macro-foot: #8a8a8a;
@@ -4823,9 +4823,4 @@ button.sq-btn.is-on { border-color: var(--blue-light); color: var(--blue-light);
 .mp-table td { padding: 12px 8px; font-size: 18px; font-weight: 700; color: var(--macro-pop-text); }
 .mp-table th + th, .mp-table td + td { border-left: 1px solid var(--macro-pop-border); }
 .mp-chartbox { margin-top: 14px; }
-.mp-chart { display: block; width: 100%; height: auto; }
-.mp-grid { stroke: var(--macro-pop-grid); stroke-width: 1; }
-.mp-axis { fill: var(--macro-pop-axis); font-size: 10px; font-family: var(--mono); }
-.mp-line { fill: none; stroke: var(--macro-pop-line); stroke-width: 2; stroke-linejoin: round; }
-.mp-dot { fill: var(--macro-pop-line); }
-.mp-nochart { margin: 14px 0 0; font-size: 12px; color: var(--macro-pop-sub); }
+.mp-chartbox .te-modal-image { min-height: 120px; }
