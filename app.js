@@ -158,7 +158,7 @@ async function initAuth() {
 
   if (!window.Auth || !window.Auth.isConfigured()) {
     if (loginNote) {
-      loginNote.hidden = false;
+      loginNote.hidden = false; loginNote.style.display = 'block';
       loginNote.textContent = 'Supabase non configuré — renseigne supabase-config.js.';
     }
     googleBtn.disabled = true;

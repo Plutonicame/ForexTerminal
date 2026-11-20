@@ -1,92 +1,118 @@
-/* Connexion email + PIN (comme le TJP) : Google sert à créer le compte, ensuite email + PIN à 4 chiffres. */
+/* Connexion Google + email/PIN — même fonctionnement et même écrans que le TJP. */
 (function () {
   'use strict';
   const $ = (id) => document.getElementById(id);
   const LAST = 'fxt_last_email';
-  let pad = null;
+  let keyHandler = null;
 
-  function step(name) {
-    ['Google', 'Email', 'Pin'].forEach((s) => { const el = $('loginStep' + s); if (el) el.hidden = s !== name; });
-    const note = $('loginNote'); if (note) note.hidden = true;
+  function showOverlay(id) {
+    document.querySelectorAll('.auth-overlay').forEach((el) => el.classList.remove('active'));
+    if (id) $(id).classList.add('active');
   }
-  function err(msg) { const n = $('loginNote'); if (n) { n.hidden = !msg; n.textContent = msg || ''; } }
+  function showErr(id, msg) { const e = $(id); if (!e) return; e.textContent = msg; e.style.display = 'block'; }
 
-  // Pavé à 4 chiffres. onDone(code, reset)
-  function buildPad(onDone) {
-    const padEl = $('loginPad'); const dots = $('loginDots').querySelectorAll('i');
-    let entry = ''; let busy = false;
-    padEl.innerHTML = '';
-    const paint = () => dots.forEach((d, i) => d.classList.toggle('is-on', i < entry.length));
-    const reset = () => { entry = ''; busy = false; paint(); };
-    const add = (k) => {
-      if (busy || entry.length >= 4) return;
-      entry += k; paint();
-      if (entry.length === 4) { busy = true; setTimeout(() => onDone(entry, reset), 120); }
-    };
-    const del = () => { if (!busy) { entry = entry.slice(0, -1); paint(); } };
-    ['1', '2', '3', '4', '5', '6', '7', '8', '9', '', '0', '⌫'].forEach((k) => {
-      const b = document.createElement('button'); b.type = 'button'; b.className = 'login-key'; b.textContent = k;
-      if (!k) b.disabled = true; else b.addEventListener('click', () => (k === '⌫' ? del() : add(k)));
-      padEl.appendChild(b);
+  // Pavé PIN identique au TJP (touches, points, clavier physique)
+  function buildPad(padId, dotsId, onComplete, errId) {
+    const pad = $(padId); pad.innerHTML = '';
+    let entry = '';
+    const dots = $(dotsId).querySelectorAll('.pin-dot');
+    function update() {
+      dots.forEach((d, i) => d.classList.toggle('filled', i < entry.length));
+      if (entry.length === 4) setTimeout(() => onComplete(entry, reset), 150);
+    }
+    function reset(shake) {
+      entry = '';
+      dots.forEach((d) => { d.classList.remove('filled'); });
+      const err = $(errId);
+      if (!shake && err) err.style.display = 'none';
+    }
+    function typeDigit(k) { if (entry.length < 4) { entry += k; update(); } }
+    function backspace() { if (entry.length > 0) { entry = entry.slice(0, -1); update(); } }
+    ['1', '2', '3', '4', '5', '6', '7', '8', '9', 'empty', '0', 'del'].forEach((k) => {
+      const btn = document.createElement('button');
+      btn.className = 'pin-btn' + (k === 'del' ? ' del' : k === 'empty' ? ' empty' : '');
+      btn.textContent = k === 'del' ? '⌫' : k === 'empty' ? '' : k;
+      if (k !== 'empty') btn.onclick = () => (k === 'del' ? backspace() : typeDigit(k));
+      pad.appendChild(btn);
     });
-    pad = { add, del };
-  }
-  document.addEventListener('keydown', (e) => {
-    if (!pad || $('loginStepPin').hidden || $('loginScreen').hidden) return;
-    if (/^\d$/.test(e.key)) pad.add(e.key); else if (e.key === 'Backspace') pad.del();
-  });
-
-  // Création du PIN (après une connexion Google, ou si le compte n'en a pas encore)
-  function createPin(session, done) {
-    step('Pin');
-    $('loginPinBack').hidden = true;
-    let first = '';
-    const ask = () => {
-      $('loginPinText').textContent = first ? 'Confirme ton PIN' : 'Crée ton PIN (4 chiffres)';
-      buildPad(async (code, reset) => {
-        if (!first) { first = code; reset(); ask(); return; }
-        if (code !== first) { first = ''; err('Les deux PIN sont différents. Recommence.'); reset(); ask(); return; }
-        try { await window.Auth.setPin(session, code); err(''); done(); }
-        catch (e) { err(e.message); first = ''; reset(); ask(); }
-      });
+    if (keyHandler) document.removeEventListener('keydown', keyHandler);
+    keyHandler = (e) => {
+      if (pad.offsetParent === null) return;
+      const tag = document.activeElement && document.activeElement.tagName;
+      if (tag === 'INPUT' || tag === 'TEXTAREA') return;
+      if (e.key >= '0' && e.key <= '9') { e.preventDefault(); typeDigit(e.key); }
+      else if (e.key === 'Backspace' || e.key === 'Delete') { e.preventDefault(); backspace(); }
     };
-    ask();
+    document.addEventListener('keydown', keyHandler);
   }
 
   function init(showApp, showLogin) {
-    const emailInp = $('loginEmail'); let email = '';
-    const toPin = () => {
-      step('Pin'); $('loginPinBack').hidden = false;
-      $('loginPinText').textContent = email;
-      buildPad(async (code, reset) => {
+    let returnEmail = '';
+    let pinAttempts = 0;
+
+    function setupEnterPinRemote() {
+      pinAttempts = 0;
+      buildPad('enterPad', 'enterDots', async (val, reset) => {
         try {
-          await window.Auth.signInWithPin(email, code);
-          try { localStorage.setItem(LAST, email); } catch (e) { /* ignoré */ }
-          err('');
-        } catch (e) { err(e.message); reset(); }
-      });
-    };
-    const next = () => {
-      const v = emailInp.value.trim().toLowerCase();
-      if (!/^\S+@\S+\.\S+$/.test(v)) { err('Email invalide.'); return; }
-      email = v; toPin();
-    };
-    $('loginEmailNext').addEventListener('click', next);
-    emailInp.addEventListener('keydown', (e) => { if (e.key === 'Enter') next(); });
-    $('loginToEmail').addEventListener('click', () => step('Email'));
-    $('loginToGoogle').addEventListener('click', () => step('Google'));
-    $('loginPinBack').addEventListener('click', () => step('Email'));
-    let last = ''; try { last = localStorage.getItem(LAST) || ''; } catch (e) { /* ignoré */ }
-    if (last) emailInp.value = last;
+          await window.Auth.signInWithPin(returnEmail, val);
+          try { localStorage.setItem(LAST, returnEmail); } catch (e) { /* ignoré */ }
+          pinAttempts = 0;
+        } catch (e) {
+          pinAttempts++;
+          if (pinAttempts >= 5) {
+            showErr('enterErr', 'Trop de tentatives. Réessaie plus tard.');
+            setTimeout(() => showOverlay('overlayGoogle'), 2000);
+          } else { showErr('enterErr', e.message || 'Code PIN incorrect.'); reset(true); }
+        }
+      }, 'enterErr');
+    }
+
+    function submitReturnEmail() {
+      const email = $('returnEmail').value.trim().toLowerCase();
+      const err = $('returnEmailErr'); err.style.display = 'none';
+      if (!email || !email.includes('@')) { showErr('returnEmailErr', 'Email invalide.'); return; }
+      returnEmail = email;
+      $('enterPinSub').textContent = email;
+      $('enterErr').style.display = 'none';
+      showOverlay('overlayEnterPin');
+      setupEnterPinRemote();
+    }
+
+    let first = '';
+    function setupCreatePin(session, done) {
+      first = '';
+      buildPad('createPad', 'createDots', (val) => {
+        first = val; showOverlay('overlayConfirmPin'); setupConfirmPin(session, done);
+      }, 'createErr');
+    }
+    function setupConfirmPin(session, done) {
+      buildPad('confirmPad', 'confirmDots', async (val, reset) => {
+        if (val === first) {
+          try { await window.Auth.setPin(session, val); done(); }
+          catch (e) { showErr('confirmErr', e.message || 'Enregistrement impossible.'); reset(true); first = ''; setTimeout(() => { showOverlay('overlayCreatePin'); setupCreatePin(session, done); }, 1200); }
+        } else {
+          showErr('confirmErr', 'PIN non identique. Recommence.');
+          reset(true); first = '';
+          setTimeout(() => { showOverlay('overlayCreatePin'); setupCreatePin(session, done); }, 800);
+        }
+      }, 'confirmErr');
+    }
+
+    $('returnEmailBtn').addEventListener('click', submitReturnEmail);
+    $('returnEmail').addEventListener('keydown', (e) => { if (e.key === 'Enter') submitReturnEmail(); });
+    $('emailToGoogle').addEventListener('click', () => showOverlay('overlayGoogle'));
+    $('googleToEmail').addEventListener('click', () => showOverlay('overlayEmailPin'));
+    $('enterPinChangeEmailBtn').addEventListener('click', () => showOverlay('overlayEmailPin'));
+    try { const l = localStorage.getItem(LAST); if (l) $('returnEmail').value = l; } catch (e) { /* ignoré */ }
+
     return {
-      // écran quand il n'y a pas de session : email+PIN si déjà venu, sinon Google
-      showEntry() { showLogin(); step(last ? 'Email' : 'Google'); },
-      // session valide : exige que le compte ait un PIN, sinon le fait créer
+      showEntry() { showLogin(); showOverlay('overlayEmailPin'); },
       async gate(session) {
         let has = true;
         try { has = await window.Auth.pinStatus(session); } catch (e) { has = true; }
-        if (has) { try { localStorage.setItem(LAST, session.user.email.toLowerCase()); } catch (e) { /* ignoré */ } showApp(); return; }
-        showLogin(); createPin(session, () => { try { localStorage.setItem(LAST, session.user.email.toLowerCase()); } catch (e) { /* ignoré */ } showApp(); });
+        const ok = () => { try { localStorage.setItem(LAST, session.user.email.toLowerCase()); } catch (e) { /* ignoré */ } showOverlay(null); showApp(); };
+        if (has) { ok(); return; }
+        showLogin(); showOverlay('overlayCreatePin'); setupCreatePin(session, ok);
       },
     };
   }
