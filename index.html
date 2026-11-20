@@ -23,6 +23,7 @@
 <!-- ===== Écran de connexion (affiché tant qu'il n'y a pas de session) ===== -->
 <div class="login-screen" id="loginScreen">
   <div class="login-card">
+    <div class="login-step" id="loginStepGoogle">
     <p class="login-text">Connecte-toi avec ton compte Google pour accéder à l'application.</p>
     <button type="button" class="btn-google" id="googleSignInBtn">
       <svg class="btn-google-icon" viewBox="0 0 18 18" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
@@ -33,6 +34,20 @@
       </svg>
       <span>Continuer avec Google</span>
     </button>
+      <button type="button" class="login-link" id="loginToEmail">J'ai déjà un compte : email + PIN</button>
+    </div>
+    <div class="login-step" id="loginStepEmail" hidden>
+      <p class="login-text">Saisis ton adresse email.</p>
+      <input class="login-input" id="loginEmail" type="email" inputmode="email" autocomplete="email" placeholder="ton@email.com">
+      <button type="button" class="login-btn" id="loginEmailNext">Continuer →</button>
+      <button type="button" class="login-link" id="loginToGoogle">Première connexion : continuer avec Google</button>
+    </div>
+    <div class="login-step" id="loginStepPin" hidden>
+      <p class="login-text" id="loginPinText">Saisis ton PIN</p>
+      <div class="login-dots" id="loginDots"><i></i><i></i><i></i><i></i></div>
+      <div class="login-pad" id="loginPad"></div>
+      <button type="button" class="login-link" id="loginPinBack">← Changer d'email</button>
+    </div>
     <p class="login-note" id="loginNote" hidden></p>
   </div>
 </div>
@@ -290,6 +305,7 @@
 
 <script src="./supabase-config.js" defer></script>
 <script src="./auth.js" defer></script>
+<script src="./pinlogin.js" defer></script>
 <script src="./theme-colors.js" defer></script>
 <script src="./windows.js" defer></script>
 <script src="./speeches.js" defer></script>

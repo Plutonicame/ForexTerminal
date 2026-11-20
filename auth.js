@@ -94,7 +94,35 @@ function onAuthStateChange(callback) {
   });
 }
 
+const PIN_ENDPOINT_PATH = '/functions/v1/pin-auth';
+async function callPinAuth(payload, accessToken) {
+  const cfg = window.APP_CONFIG || {};
+  const res = await fetch(cfg.SUPABASE_URL + PIN_ENDPOINT_PATH, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', apikey: cfg.SUPABASE_ANON_KEY, Authorization: 'Bearer ' + (accessToken || cfg.SUPABASE_ANON_KEY) },
+    body: JSON.stringify(payload),
+  });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok || data.error) throw new Error(data.error || 'Erreur serveur (' + res.status + ')');
+  return data;
+}
+
+// Connexion par email + PIN : le serveur vérifie le PIN et renvoie un jeton qui s'échange contre une vraie session.
+async function signInWithPin(email, pin) {
+  const client = getClient();
+  if (!client) throw new Error('Supabase non configuré.');
+  const r = await callPinAuth({ action: 'verify', email, pin });
+  const { data, error } = await client.auth.verifyOtp({ token_hash: r.token_hash, type: 'magiclink' });
+  if (error || !data || !data.session) throw new Error('Connexion impossible. Réessaie.');
+  return data.session;
+}
+async function pinStatus(session) { return (await callPinAuth({ action: 'status' }, session.access_token)).has_pin; }
+async function setPin(session, pin) { await callPinAuth({ action: 'set', pin }, session.access_token); }
+
 window.Auth = {
+  signInWithPin,
+  pinStatus,
+  setPin,
   isConfigured,
   getClient,
   getSession,

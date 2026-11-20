@@ -8,7 +8,7 @@
  * ce sera ajouté plus tard si besoin (ex. cache des réponses API).
  */
 
-const CACHE_VERSION = 'fx-terminal-shell-v148';
+const CACHE_VERSION = 'fx-terminal-shell-v149';
 
 const APP_SHELL = [
   './',
@@ -17,6 +17,7 @@ const APP_SHELL = [
   './style.css',
   './app.js',
   './auth.js',
+  './pinlogin.js',
   './windows.js',
   './supabase-config.js',
   './theme-colors.js',

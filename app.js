@@ -179,17 +179,17 @@ async function initAuth() {
   // initiale. Si on faisait l'inverse, l'événement de connexion déclenché
   // par le retour de redirection Google pourrait arriver pendant qu'on
   // attend getSession(), et on le raterait complètement.
-  window.Auth.onAuthStateChange((newSession) => {
-    if (newSession) showApp();
-    else showLogin();
-  });
-
-  const session = await window.Auth.getSession();
-  if (session) {
-    showApp();
-  } else {
-    showLogin();
+  const pl = window.PinLogin ? window.PinLogin.init(showApp, showLogin) : null;
+  let gatedUser = null;
+  function onSession(s) {
+    if (!s) { gatedUser = null; if (pl) pl.showEntry(); else showLogin(); return; }
+    if (gatedUser === s.user.id) return;
+    gatedUser = s.user.id;
+    if (pl) pl.gate(s); else showApp();
   }
+  window.Auth.onAuthStateChange(onSession);
+
+  onSession(await window.Auth.getSession());
 
   googleBtn.addEventListener('click', () => {
     window.Auth.signInWithGoogle();
