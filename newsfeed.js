@@ -119,6 +119,73 @@
     loadFeed();
   }
 
+  /* ---------------- Casque : lecture à voix haute de toutes les news d'une colonne ---------------- */
+  const feedRows = {};
+  const reader = { key: null, token: 0 };
+  function spokenTime(iso) {
+    const d = new Date(iso);
+    if (Number.isNaN(d.getTime())) return '';
+    const h = d.getHours(); const m = d.getMinutes();
+    const hs = h === 0 ? 'minuit' : h === 12 ? 'midi' : `${h} heure${h > 1 ? 's' : ''}`;
+    return m ? `${hs} ${m}` : hs;
+  }
+  function syncListenUi() {
+    document.querySelectorAll('[data-nf-listen]').forEach((b) => {
+      const on = reader.key === b.dataset.nfListen;
+      b.classList.toggle('is-on', on);
+      b.setAttribute('aria-pressed', String(on));
+    });
+  }
+  function stopReading() {
+    reader.token++; reader.key = null;
+    if (canSpeak()) window.speechSynthesis.cancel();
+    syncListenUi();
+  }
+  function startReading(key) {
+    if (!canSpeak()) { alert('Ce navigateur ne sait pas lire à voix haute.'); return; }
+    const src = SOURCES.find((s) => s.key === key);
+    const rows = feedRows[key] || [];
+    window.speechSynthesis.cancel();
+    const token = ++reader.token; reader.key = key;
+    syncListenUi();
+    if (!squawk.voice) pickVoice();
+    const items = [];
+    const say = (text, lang) => { if (text) items.push({ text, lang: lang || 'fr-FR' }); };
+    if (!rows.length) say(`Aucune news de ${src.title} pour le moment.`);
+    let lastDay = '';
+    rows.forEach((r, i) => {
+      const dk = dayKey(r.published_at);
+      if (i === 0) say(`News de ${src.title} du ${fmtDay(r.published_at)}.`);
+      else if (dk !== lastDay) say(`Le ${fmtDay(r.published_at)}.`);
+      lastDay = dk;
+      const en = key === 'investinglive';
+      const title = en ? r.title : (r.title_fr || r.title);
+      if (en) { say(spokenTime(r.published_at) + '.'); say(title, 'en-US'); }
+      else say(`${spokenTime(r.published_at)}. ${title}`);
+    });
+    let idx = 0;
+    const next = () => {
+      if (token !== reader.token) return;
+      if (idx >= items.length) { reader.key = null; syncListenUi(); return; }
+      const it = items[idx++];
+      try {
+        const u = new SpeechSynthesisUtterance(it.text);
+        u.lang = it.lang; u.rate = 1.05; u.volume = squawk.vol;
+        const voices = window.speechSynthesis.getVoices() || [];
+        const v = it.lang === 'fr-FR' ? squawk.voice : voices.find((x) => /^en[-_]US/i.test(x.lang)) || voices.find((x) => /^en/i.test(x.lang));
+        if (v) u.voice = v;
+        u.onend = next; u.onerror = next;
+        window.speechSynthesis.speak(u);
+      } catch (e) { next(); }
+    };
+    next();
+  }
+  document.addEventListener('click', (ev) => {
+    const b = ev.target.closest && ev.target.closest('[data-nf-listen]');
+    if (!b) return;
+    if (reader.key === b.dataset.nfListen) stopReading(); else startReading(b.dataset.nfListen);
+  });
+
   /* ---------------- News Feed ---------------- */
   function ensureFeedLayout() {
     const sec = document.getElementById(FEED_WINDOW);
@@ -136,7 +203,7 @@
         </div>
         <div class="nf-grid">${SOURCES.map((x) => `
           <section class="nf-col" aria-label="${esc(x.title)}">
-            <header class="nf-col-head"><span class="nf-col-title">${esc(x.title)}</span><span class="nf-col-sub">${esc(x.sub)}</span></header>
+            <header class="nf-col-head"><div class="nf-col-text"><span class="nf-col-title">${esc(x.title)}</span><span class="nf-col-sub">${esc(x.sub)}</span></div><button type="button" class="nf-listen" data-nf-listen="${x.key}" aria-pressed="false" title="Écouter toutes les news de ${esc(x.title)}" aria-label="Écouter toutes les news de ${esc(x.title)}"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 14v-2a9 9 0 0 1 18 0v2"/><path d="M3 14h3a1 1 0 0 1 1 1v4a1 1 0 0 1-1 1H5a2 2 0 0 1-2-2z"/><path d="M21 14h-3a1 1 0 0 0-1 1v4a1 1 0 0 0 1 1h1a2 2 0 0 0 2-2z"/></svg></button></header>
             <div class="nf-list" data-nf="${x.key}"><p class="nf-empty">Chargement…</p></div>
           </section>`).join('')}
         </div>`;
@@ -227,6 +294,7 @@
       }));
       const bad = res.find((r) => r.error);
       if (bad) throw bad.error;
+      SOURCES.forEach((x, i) => { feedRows[x.key] = res[i].data || []; });
       const sig = res.map((r) => (r.data || []).map((d) => d.id + (d.title_fr ? 1 : 0)).join('|')).join('#') + '@' + since;
       if (!changed('feed', sig)) return;
       SOURCES.forEach((x, i) => {
