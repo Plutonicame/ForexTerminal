@@ -365,7 +365,38 @@
     }).catch(() => { /* message déjà affiché */ });
   }
 
-  window.Globe = { setActive, reload: loadShips };
+  /* Mini-globe (fenêtre Overwatch) : vue globale, sans bouton, déplaçable / zoomable à la souris ou au doigt */
+  let mini = null; let miniEl = null; let miniOn = false; let miniInit = null;
+  function mountMini(host) {
+    if (!host || miniEl === host) return;
+    miniEl = host;
+    host.classList.add('ow-globe-host');
+  }
+  function setMiniActive(on) {
+    miniOn = !!on;
+    if (!miniOn) { if (mini) mini.useDefaultRenderLoop = false; return; }
+    if (!miniEl) return;
+    if (mini) { mini.useDefaultRenderLoop = true; mini.resize(); return; }
+    if (miniInit) return;
+    miniInit = loadCesium().then(() => {
+      if (!miniEl) return;
+      const C = window.Cesium;
+      const v = new C.Viewer(miniEl, {
+        baseLayer: false,
+        baseLayerPicker: false, geocoder: false, homeButton: false, sceneModePicker: false, navigationHelpButton: false,
+        animation: false, timeline: false, fullscreenButton: false, infoBox: false, selectionIndicator: false, vrButton: false,
+        skyAtmosphere: new C.SkyAtmosphere(),
+      });
+      v.scene.globe.showGroundAtmosphere = true;
+      v.imageryLayers.addImageryProvider(new C.UrlTemplateImageryProvider({ url: ESRI_URL, maximumLevel: 18, credit: 'Esri' }));
+      v.camera.setView({ destination: C.Cartesian3.fromDegrees(SPACE_VIEW.lon, SPACE_VIEW.lat, SPACE_VIEW.h) });
+      mini = v;
+      v.useDefaultRenderLoop = miniOn;
+      v.resize();
+    }).catch((e) => { console.warn('globe.js mini', e); miniInit = null; });
+  }
+
+  window.Globe = { setActive, reload: loadShips, mountMini, setMiniActive };
 
   document.addEventListener('DOMContentLoaded', () => {
     window.addEventListener('fx-theme-changed', () => { if (viewer && shipRows.length) drawShips(); renderBar(); });

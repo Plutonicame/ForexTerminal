@@ -1349,6 +1349,7 @@ function initCalendarToolbar() {
       try { localStorage.setItem(CALENDAR_IMPACT_STORAGE_KEY, value); } catch (e) { /* tant pis */ }
       if (currentCalendarCurrency) loadCalendar(currentCalendarCurrency);
       if (isNewsTabActive()) loadNews();
+      if (isOverwatchActive()) loadOwCalendar();
     });
   }
 
@@ -1382,6 +1383,7 @@ function initCalendarToolbar() {
           if (calendarAutoTranslate) autoTranslateMissingTitles(currentCalendarCurrency, events);
         }
       }
+      if (owCalEvents) renderOwCalendar();
       if (newsLastEvents) {
         renderNewsCalendar(newsLastEvents);
         if (calendarAutoTranslate) newsTranslateMissing(newsLastEvents);
@@ -1621,6 +1623,43 @@ function newsIsReleased(ev) {
   return hasActual || new Date(ev.event_time).getTime() <= Date.now();
 }
 
+function newsTableHtml(events, multi) {
+  // Un seul tableau continu, du plus ancien au plus récent, sans séparation
+  // entre les jours. Sur plusieurs jours, la colonne affiche « date + heure ».
+  const rows = applyEventPresentation(events).map((ev) => {
+    const d = new Date(ev.event_time);
+    const impact = ev.impact === 'high' ? 'high' : 'medium';
+    const clock = d.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
+    const time = multi ? `${newsShortDate(d)} ${clock}` : clock;
+
+    return `<tr>
+      <td class="calendar-col-date news-col-time">${escapeHtml(time)}</td>
+      <td class="calendar-col-name">
+        <button type="button" class="calendar-date-btn" data-event-time="${escapeHtml(ev.event_time)}" aria-label="Voir la date et l'heure">${CALENDAR_DATE_ICON}</button>
+        <span class="calendar-impact calendar-impact--${impact}"></span><span class="news-cur">${escapeHtml(ev.currency)}</span><span class="calendar-name" title="${escapeHtml(ev.title)}">${escapeHtml(ev.shown ? ev.shown.label : resolveEventTitle(ev.title))}</span>${teChartButton(ev)}${eventCountryTag(ev)}
+      </td>
+      ${calendarCell(ev.actual, 'calendar-value--actual' + (actualDirection(ev) ? ' calendar-value--' + actualDirection(ev) : ''))}
+      ${calendarCell(ev.forecast_mid)}
+      ${calendarCell(ev.previous)}
+    </tr>`;
+  }).join('');
+
+  return `<div class="calendar-scroll">
+    <table class="calendar-table">
+      <thead>
+        <tr>
+          <th scope="col" class="calendar-col-date">${multi ? 'Date' : 'Heure'}</th>
+          <th scope="col" class="calendar-col-name">Événement</th>
+          <th scope="col">Sortie</th>
+          <th scope="col">Prévision</th>
+          <th scope="col">Avant</th>
+        </tr>
+      </thead>
+      <tbody>${rows}</tbody>
+    </table>
+  </div>`;
+}
+
 function renderNewsCalendar(events, errorNote) {
   const container = document.getElementById('newsCalendar');
   const info = document.getElementById('newsInfo');
@@ -1657,42 +1696,52 @@ function renderNewsCalendar(events, errorNote) {
     return;
   }
 
-  // Un seul tableau continu, du plus ancien au plus récent, sans séparation
-  // entre les jours. Sur plusieurs jours, la colonne affiche « date + heure ».
-  const rows = applyEventPresentation(events).map((ev) => {
-    const d = new Date(ev.event_time);
-    const impact = ev.impact === 'high' ? 'high' : 'medium';
-    const clock = d.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
-    const time = multi ? `${newsShortDate(d)} ${clock}` : clock;
-
-    return `<tr>
-      <td class="calendar-col-date news-col-time">${escapeHtml(time)}</td>
-      <td class="calendar-col-name">
-        <button type="button" class="calendar-date-btn" data-event-time="${escapeHtml(ev.event_time)}" aria-label="Voir la date et l'heure">${CALENDAR_DATE_ICON}</button>
-        <span class="calendar-impact calendar-impact--${impact}"></span><span class="news-cur">${escapeHtml(ev.currency)}</span><span class="calendar-name" title="${escapeHtml(ev.title)}">${escapeHtml(ev.shown ? ev.shown.label : resolveEventTitle(ev.title))}</span>${teChartButton(ev)}${eventCountryTag(ev)}
-      </td>
-      ${calendarCell(ev.actual, 'calendar-value--actual' + (actualDirection(ev) ? ' calendar-value--' + actualDirection(ev) : ''))}
-      ${calendarCell(ev.forecast_mid)}
-      ${calendarCell(ev.previous)}
-    </tr>`;
-  }).join('');
-
-  html += `<div class="calendar-scroll">
-    <table class="calendar-table">
-      <thead>
-        <tr>
-          <th scope="col" class="calendar-col-date">${multi ? 'Date' : 'Heure'}</th>
-          <th scope="col" class="calendar-col-name">Événement</th>
-          <th scope="col">Sortie</th>
-          <th scope="col">Prévision</th>
-          <th scope="col">Avant</th>
-        </tr>
-      </thead>
-      <tbody>${rows}</tbody>
-    </table>
-  </div>`;
+  html += newsTableHtml(events, multi);
   container.innerHTML = html;
 }
+
+// Overwatch : petit calendrier des annonces déjà sorties aujourd'hui (toutes devises, filtre d'impact partagé)
+let owCalEvents = null;
+let owCalBusy = false;
+function renderOwCalendar() {
+  const box = document.getElementById('owCalendar');
+  if (!box) return;
+  if (owCalEvents === null) { box.innerHTML = '<div class="calendar-scroll"><p class="calendar-empty">Chargement…</p></div>'; return; }
+  box.innerHTML = owCalEvents.length ? newsTableHtml(owCalEvents, false) : '<div class="calendar-scroll"><p class="calendar-empty">Rien de sorti pour le moment aujourd\'hui</p></div>';
+}
+async function loadOwCalendar() {
+  if (owCalBusy) return;
+  owCalBusy = true;
+  try {
+    const client = window.Auth && window.Auth.getClient ? window.Auth.getClient() : null;
+    if (!client) return;
+    const start = newsStartOfDay(new Date());
+    const { data, error } = await client
+      .from('calendar_events')
+      .select('currency, title, impact, previous, forecast_mid, actual, event_time')
+      .in('currency', NEWS_CURRENCIES)
+      .in('impact', getCalendarImpacts())
+      .gte('event_time', start.toISOString())
+      .lt('event_time', newsAddDays(start, 1).toISOString())
+      .order('event_time', { ascending: true });
+    if (error) throw error;
+    owCalEvents = hideSpeechEvents(data || []).filter(newsIsReleased);
+    renderOwCalendar();
+    if (calendarAutoTranslate) {
+      const missing = [...new Set(owCalEvents.map((ev) => ev.title).filter((t) => !CALENDAR_TRANSLATIONS[t] && !calendarTranslateCache.has(t)))];
+      if (missing.length) {
+        await Promise.all(missing.map(async (t) => { try { calendarTranslateCache.set(t, await translateToFrench(t)); } catch (e) { /* ignoré */ } }));
+        saveCalendarTranslateCache();
+        renderOwCalendar();
+      }
+    }
+  } catch (e) { console.warn('Overwatch : calendrier', e); } finally { owCalBusy = false; }
+}
+function isOverwatchActive() {
+  const p = document.getElementById('tab-overwatch');
+  return !!p && p.classList.contains('is-active');
+}
+window.OverwatchCalendar = { refresh: loadOwCalendar };
 
 // Traduction automatique (si activée dans la barre d'outils) des titres
 // absents du dictionnaire, comme pour le calendrier des devises.
@@ -1992,6 +2041,8 @@ document.addEventListener('DOMContentLoaded', () => {
     const filterbar = document.getElementById('newsFilterbar');
     if (filterbar) filterbar.hidden = tabId !== 'tab-4';
     closeNewsPopups();
+    if (tabId === 'tab-overwatch') loadOwCalendar();
+    if (window.Overwatch) window.Overwatch.setActive(tabId === 'tab-overwatch');
     if (tabId === 'tab-4') loadNews(); // onglet Nouveau : données fraîches à chaque ouverture
     // Les lectures de chaque fenêtre sont suspendues en dehors d'elle : on rafraîchit à l'ouverture.
     if (tabId === 'tab-calendar' && currentCalendarCurrency) loadCalendar(currentCalendarCurrency);

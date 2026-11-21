@@ -214,6 +214,38 @@
     <div id="newsSpeeches"></div>
   </section>
 
+  <section class="tab-panel" id="tab-overwatch" role="tabpanel" aria-label="Overwatch" hidden>
+    <div class="calendar-toolbar"><span class="calendar-toolbar-title">Overwatch</span></div>
+    <div class="ow-grid">
+      <div class="ow-tile ow-fx" id="owFx"></div>
+      <div class="ow-right">
+        <div class="ow-tile ow-risk" id="owRisk"></div>
+        <div class="ow-tile ow-globe" id="owGlobe"></div>
+        <div class="ow-tile ow-seas" id="owSeas"></div>
+      </div>
+      <div class="ow-tile ow-rates" id="owRates"></div>
+      <div class="ow-tile ow-news" id="owNews"></div>
+      <div class="ow-tile ow-cal">
+        <div class="calendar-toolbar">
+          <span class="calendar-toolbar-title">Calendrier · sorti aujourd'hui</span>
+          <div class="calendar-toolbar-tools">
+            <div class="calendar-impact-toggle" role="radiogroup" aria-label="Filtrer par impact">
+              <button type="button" class="calendar-impact-toggle-btn" data-value="medium" role="radio" aria-label="Impact orange uniquement"><span class="calendar-impact-toggle-dot calendar-impact-toggle-dot--medium"></span></button>
+              <button type="button" class="calendar-impact-toggle-btn" data-value="both" role="radio" aria-label="Impact orange et rouge"><span class="calendar-impact-toggle-dot calendar-impact-toggle-dot--medium"></span><span class="calendar-impact-toggle-dot calendar-impact-toggle-dot--high"></span></button>
+              <button type="button" class="calendar-impact-toggle-btn" data-value="high" role="radio" aria-label="Impact rouge uniquement"><span class="calendar-impact-toggle-dot calendar-impact-toggle-dot--high"></span></button>
+              <span class="calendar-impact-toggle-knob" aria-hidden="true"></span>
+            </div>
+            <button type="button" class="calendar-translate-btn" aria-pressed="false" aria-label="Traduire automatiquement les annonces en anglais">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2.5" y="2.5" width="10" height="10" rx="2.5"/><text x="7.5" y="10.3" font-family="var(--sans)" font-size="6.5" font-weight="700" text-anchor="middle" stroke="none" fill="currentColor">文</text><circle cx="17" cy="17" r="5.5" fill="none"/><text x="17" y="19.7" font-family="var(--sans)" font-size="7" font-weight="700" text-anchor="middle" stroke="none" fill="currentColor">A</text></svg>
+            </button>
+          </div>
+        </div>
+        <div id="owCalendar" aria-live="polite"></div>
+      </div>
+    </div>
+  </section>
+
+
   <section class="tab-panel" id="tab-3" role="tabpanel" aria-label="Paramètres" hidden>
     <div class="settings-row">
       <span class="settings-label">Thème</span>
@@ -333,6 +365,7 @@
 <script src="./period-calendar.js" defer></script>
 <script src="./newsfeed.js" defer></script>
 <script src="./indicator.js" defer></script>
+<script src="./overwatch.js" defer></script>
 <script src="./rates.js" defer></script>
 <script src="./cot.js" defer></script>
 <script src="./retail.js" defer></script>

@@ -567,22 +567,15 @@
     if (!seen[key] || m > seen[key]) { seen[key] = m; lsSet(LS_SEEN, JSON.stringify(seen)); }
   }
 
-  function ensureHome() {
-    let box = document.getElementById('newsExtras');
-    if (!box) {
-      const anchor = document.getElementById('newsCalendar');
-      if (!anchor) return null;
-      box = document.createElement('div');
-      box.id = 'newsExtras';
-      anchor.parentNode.insertBefore(box, anchor);
-      box.addEventListener('click', (event) => {
+  function wireHome(box) {
+    box.addEventListener('click', (event) => {
         if (event.target.closest('[data-nx-all]')) { showAll = !showAll; signatures.home = null; loadHome(); return; }
         const sec = event.target.closest('[data-nx-sec]');
         if (sec) {
           const key = sec.dataset.nxSec;
           const body = box.querySelector(`[data-nx-body="${key}"]`);
           const open = !openSections.has(key);
-          if (open) { openSections.add(key); markSeen(key); } else openSections.delete(key);
+          if (open) { openSections.add(key); if (box.id === 'newsExtras') markSeen(key); } else openSections.delete(key);
           sec.setAttribute('aria-expanded', String(open));
           sec.classList.toggle('is-open', open);
           if (body) body.hidden = !open;
@@ -596,8 +589,53 @@
         btn.setAttribute('aria-expanded', String(open));
         btn.textContent = open ? 'Masquer' : 'Lire';
       });
+  }
+
+  function ensureHome() {
+    let box = document.getElementById('newsExtras');
+    if (!box) {
+      const anchor = document.getElementById('newsCalendar');
+      if (!anchor) return null;
+      box = document.createElement('div');
+      box.id = 'newsExtras';
+      anchor.parentNode.insertBefore(box, anchor);
+      wireHome(box);
     }
     return box;
+  }
+
+  // Fenêtre Overwatch : Trump à gauche, boutons des autres sources à droite
+  const owHosts = [];
+  function mountOverwatchNews(host) {
+    if (!host || owHosts.includes(host)) return;
+    owHosts.push(host);
+    wireHome(host);
+    host.innerHTML = '<p class="speeches-empty">Chargement…</p>';
+    loadHome(owFilter());
+  }
+  function owFilter() {
+    const d = new Date(); d.setHours(0, 0, 0, 0);
+    return { startMs: d.getTime(), endMs: d.getTime() + 86400000, currencies: null, label: 'Aujourd\'hui' };
+  }
+  function renderOverwatch(lists) {
+    owHosts.forEach((host) => {
+      if (!host.isConnected) return;
+      const btns = SECTIONS.filter((s) => lists[s.key].length).map((s) => {
+        const open = openSections.has(s.key);
+        return `<button type="button" class="nx-sec-btn${open ? ' is-open' : ''}" data-nx-sec="${s.key}" aria-expanded="${open}">${esc(s.label)}<span class="nx-count">${lists[s.key].length}</span></button>`;
+      }).join('');
+      const bodies = SECTIONS.filter((s) => lists[s.key].length).map((s) =>
+        `<div class="nx-list" data-nx-body="${s.key}"${openSections.has(s.key) ? '' : ' hidden'}>${lists[s.key].map(homeItem).join('')}</div>`).join('');
+      host.innerHTML = `
+        <div class="ow-news-col ow-news-left">
+          <div class="speeches-toolbar"><span class="speeches-toolbar-title">Trump</span></div>
+          <div class="nx-list">${lists.trump.length ? lists.trump.map(homeItem).join('') : '<p class="speeches-empty">Rien aujourd\'hui.</p>'}</div>
+        </div>
+        <div class="ow-news-col ow-news-right">
+          <div class="speeches-toolbar"><span class="speeches-toolbar-title">News</span></div>
+          ${btns ? `<div class="nx-sec-bar">${btns}</div>${bodies}` : '<p class="speeches-empty">Rien aujourd\'hui.</p>'}
+        </div>`;
+    });
   }
 
   function homeItem(it) {
@@ -622,7 +660,8 @@
       const box = ensureHome();
       const c = await client();
       const f = homeFilter;
-      if (!box || !c || !f) return;
+      if (!c || !f) return;
+      if (!box && !owHosts.length) return;
       const startIso = new Date(f.startMs).toISOString();
       const endIso = new Date(f.endMs).toISOString();
       const wantUsd = !f.currencies || !f.currencies.size || f.currencies.has('USD');
@@ -660,8 +699,10 @@
         hiddenCount += lists[s.key].length - shown[s.key].length;
       });
 
+      const owSig = owHosts.length ? SECTIONS.map((s) => lists[s.key].length + (maxAtByKey[s.key] || '')).join('|') + lists.trump.map((i) => i.at).join(',') + [...openSections].join(',') : '';
+      if (owHosts.length && changed('ow', owSig + startIso)) renderOverwatch(lists);
       const sig = SECTIONS.map((s) => shown[s.key].map((i) => i.at + i.title).join('|')).join('#') + '|' + lists.trump.map((i) => i.at + i.title).join('|') + '@' + startIso + endIso + showAll;
-      if (!changed('home', sig)) return;
+      if (!box || !changed('home', sig)) return;
       const visible = SECTIONS.filter((s) => shown[s.key].length);
       const buttons = visible.map((s) => {
         const open = openSections.has(s.key);
@@ -688,6 +729,7 @@
     if (tabId === FEED_WINDOW) { ensureFeedLayout(); loadFeed(); }
     else if (tabId === BANK_WINDOW) loadBank();
     else if (tabId === SQUAWK_WINDOW) { buildSquawk(); loadSquawkHistory(); }
+    else if (tabId === 'tab-overwatch') { loadHome(owFilter()); }
     else if (tabId === HOME_WINDOW) {
       // on (re)vient dans Nouveau : ce qui a été lu (bouton déroulé) la fois d'avant a disparu, seul le nouveau reste
       baseline = readSeen();
@@ -698,7 +740,7 @@
     }
   }
 
-  window.NewsWindows = { refresh, renderHome: loadHome };
+  window.NewsWindows = { refresh, renderHome: loadHome, mountOverwatchNews };
 
   document.addEventListener('DOMContentLoaded', () => {
     ensureFeedLayout();
@@ -716,6 +758,7 @@
       if (isVisible(SQUAWK_WINDOW)) loadSquawkHistory();
       if (isVisible(BANK_WINDOW)) loadBank();
       if (isVisible(HOME_WINDOW)) loadHome();
+      else if (isVisible('tab-overwatch')) loadHome(owFilter());
     }, POLL_MS);
   });
 })();

@@ -201,7 +201,7 @@
   window.addEventListener('resize', () => { const p = document.getElementById(GAUGE_PANEL_ID); if (p && !p.hidden && histRow) renderHistory(); });
 
   let g = null;
-  function setScore(row) {
+  function paintGauge(g, row) {
     const v = Math.round(Number(row.score));
     g.needle.setAttribute('transform', `rotate(${angleFor(v)} ${CX} ${CY})`);
     g.segs.forEach(([s, mid]) => s.classList.toggle('is-lit', mid <= v));
@@ -222,6 +222,10 @@
       const [tx, ty] = pt(a, R_IN - 22); // étiquette à l'intérieur de l'anneau
       mk.t.setAttribute('x', tx); mk.t.setAttribute('y', ty);
     });
+    return v;
+  }
+  function setScore(row) {
+    const v = paintGauge(g, row);
     renderHistory(row, v);
     const head = wrap.querySelector('.speeches-toolbar-info');
     if (head && row.source) head.textContent = `${row.source} · ${row.rating || ''} · 0–100`;
@@ -375,7 +379,7 @@
   }
 
   async function load() {
-    if (!ensureGauge()) return;
+    if (!ensureGauge() && !miniGauges.length) return;
     if (loading || !window.Auth || !window.Auth.isConfigured()) return;
     const client = window.Auth.getClient();
     if (!client) return;
@@ -385,7 +389,7 @@
       const { data, error } = await client.from('risk_sentiment')
         .select('score, score_1d, score_1w, score_1m, components, rating, source, history').eq('id', 'composite').maybeSingle();
       if (error) throw error;
-      if (data) { if (histRow && histRow.history_long) data.history_long = histRow.history_long; setScore(data); if (rangeDays() > 95) ensureLong(); }
+      if (data) { lastRow = data; miniGauges.forEach((m) => paintGauge(m, data)); if (histRow && histRow.history_long) data.history_long = histRow.history_long; setScore(data); if (rangeDays() > 95) ensureLong(); }
     } catch (e) {
       console.warn('risk.js', e);
     } finally {
@@ -393,7 +397,21 @@
     }
   }
 
-  window.Risk = { refresh: load, showChart };
+  /* Instance réduite (fenêtre Overwatch) : jauge seule, sans historique */
+  const miniGauges = [];
+  let lastRow = null;
+  function mountGauge(host) {
+    if (!host || host.querySelector('.risk-gauge-svg')) return;
+    host.innerHTML = '<div class="speeches-toolbar"><span class="speeches-toolbar-title">Appétit pour le risque</span></div><div class="risk-gauge risk-gauge--mini"></div>';
+    const mg = buildGauge();
+    mg.val.textContent = '–';
+    host.querySelector('.risk-gauge').appendChild(mg.svg);
+    miniGauges.push(mg);
+    if (lastRow) paintGauge(mg, lastRow);
+    load();
+  }
+
+  window.Risk = { refresh: load, showChart, mountGauge };
 
   document.addEventListener('DOMContentLoaded', () => {
     ensureGauge();

@@ -22,6 +22,7 @@
   let ycData = null;
   const hidden = new Set();
   let wrapFx = null;
+  const fxInsts = [];
   let wrapYc = null;
   let busyFx = false;
   let busyYc = false;
@@ -84,8 +85,19 @@
     panel.insertBefore(wrapYc, panel.firstChild);
     panel.insertBefore(wrapFx, panel.firstChild);
 
-    wrapFx.querySelector('[data-fxs-legend]').addEventListener('click', (event) => {
-      if (event.target.closest('[data-fxs-reset]')) { fxView = null; renderFx(); return; }
+    const inst = newFxInst(wrapFx, false);
+    if (window.ResizeObserver) {
+      let t = null;
+      new ResizeObserver(() => { clearTimeout(t); t = setTimeout(() => { if (!panel.hidden) { renderFx(inst); renderYc(); } }, 120); }).observe(panel);
+    }
+  }
+
+  /* ---------------- Force des devises ---------------- */
+  function newFxInst(wrap, compact) {
+    const inst = { wrap, view: null, compact };
+    fxInsts.push(inst);
+    wrap.querySelector('[data-fxs-legend]').addEventListener('click', (event) => {
+      if (event.target.closest('[data-fxs-reset]')) { inst.view = null; renderFx(inst); return; }
       const b = event.target.closest('[data-cur]');
       if (!b) return;
       const c = b.dataset.cur;
@@ -93,14 +105,26 @@
       saveHidden();
       renderFx();
     });
-    if (window.ResizeObserver) {
-      let t = null;
-      new ResizeObserver(() => { clearTimeout(t); t = setTimeout(() => { if (!panel.hidden) { renderFx(); renderYc(); } }, 120); }).observe(panel);
-    }
+    return inst;
   }
 
-  /* ---------------- Force des devises ---------------- */
-  function renderLegend() {
+  /* Instance réduite (fenêtre Overwatch) */
+  function mountFx(host) {
+    if (!host || host.querySelector('.fxs-wrap')) return;
+    const w = el('div', 'fxs-wrap fxs-wrap--mini');
+    w.innerHTML = `
+      <div class="speeches-toolbar"><span class="speeches-toolbar-title">Force des devises</span></div>
+      <div class="fxs-legend" data-fxs-legend></div>
+      <div class="fxs-chart" data-fxs-chart><p class="ind-empty">Chargement…</p></div>`;
+    host.appendChild(w);
+    const inst = newFxInst(w, true);
+    if (window.ResizeObserver) { let t = null; new ResizeObserver(() => { clearTimeout(t); t = setTimeout(() => renderFx(inst), 150); }).observe(host); }
+    if (fxData) renderFx(inst);
+    loadFx();
+  }
+
+  function renderLegend(inst) {
+    const wrapFx = inst.wrap;
     const box = wrapFx.querySelector('[data-fxs-legend]');
     const s = fxData && fxData.series;
     const n = s && s.t ? s.t.length : 0;
@@ -111,23 +135,24 @@
     }).join('') + '<button type="button" class="fxs-reset" data-fxs-reset title="Replacer le graphique (tout afficher)" aria-label="Replacer le graphique"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><path d="M7 15l4-5 3 3 5-7"/></svg></button>';
   }
 
-  let fxView = null;
-  function renderFx() {
-    if (!wrapFx) return;
-    renderLegend();
+  function renderFx(inst) {
+    if (!inst) { fxInsts.forEach(renderFx); return; }
+    const wrapFx = inst.wrap;
+    if (!wrapFx || !wrapFx.isConnected) return;
+    renderLegend(inst);
     const host = wrapFx.querySelector('[data-fxs-chart]');
     const s = fxData && fxData.series;
     if (!s || !s.t || s.t.length < 2) {
       host.innerHTML = '<p class="ind-empty">Pas encore de données cette semaine (le marché ouvre dimanche à 23 h, heure de Paris).</p>';
       return;
     }
-    const W = Math.max(320, host.clientWidth || 800);
-    const H = W < 560 ? 300 : 380;
+    const W = Math.max(inst.compact ? 200 : 320, host.clientWidth || 800);
+    const H = inst.compact ? 300 : (W < 560 ? 300 : 380);
     const m = { l: 52, r: 14, t: 14, b: 28 };
     const ws = Math.floor(new Date(fxData.week_start).getTime() / 1000);
     const fx0 = ws; const fx1 = ws + 5 * DAY;
-    if (fxView && (fxView.ws !== ws || fxView.b - fxView.a >= fx1 - fx0 - 60)) fxView = null;
-    const x0 = fxView ? fxView.a : fx0; const x1 = fxView ? fxView.b : fx1;
+    if (inst.view && (inst.view.ws !== ws || inst.view.b - inst.view.a >= fx1 - fx0 - 60)) inst.view = null;
+    const x0 = inst.view ? inst.view.a : fx0; const x1 = inst.view ? inst.view.b : fx1;
     // courbes rebasées : chaque devise part de 0 au bord gauche de la zone visible
     const T = s.t;
     const valAt = (arr, t) => {
@@ -141,17 +166,17 @@
     const vis = {};
     let nvis = 0;
     shown.forEach((c) => {
-      const base = fxView ? valAt(s[c], x0) : 0;
+      const base = inst.view ? valAt(s[c], x0) : 0;
       const pts = [];
-      if (fxView && x0 >= T[0] && x0 <= T[T.length - 1]) pts.push([x0, 0]);
+      if (inst.view && x0 >= T[0] && x0 <= T[T.length - 1]) pts.push([x0, 0]);
       for (let i = 0; i < T.length; i++) if (T[i] >= x0 && T[i] <= x1) pts.push([T[i], s[c][i] - base]);
       vis[c] = pts; nvis = Math.max(nvis, pts.length);
     });
-    if (fxView) wrapFx.querySelectorAll('.fxs-chip').forEach((chip) => {
+    if (inst.view) wrapFx.querySelectorAll('.fxs-chip').forEach((chip) => {
       const pts = vis[chip.dataset.cur]; const v = chip.querySelector('.fxs-val');
       if (pts && pts.length && v) v.textContent = fmt(pts[pts.length - 1][1], 2) + '%';
     });
-    if (nvis < 2) { fxView = null; host.innerHTML = '<p class="ind-empty">Aucune donnée dans cette zone (double-clique pour tout afficher).</p>'; return; }
+    if (nvis < 2) { inst.view = null; host.innerHTML = '<p class="ind-empty">Aucune donnée dans cette zone (double-clique pour tout afficher).</p>'; return; }
     let lo = 0; let hi = 0;
     shown.forEach((c) => vis[c].forEach((p) => { if (p[1] < lo) lo = p[1]; if (p[1] > hi) hi = p[1]; }));
     if (hi - lo < 0.2) { hi = Math.max(hi, 0.1); lo = Math.min(lo, -0.1); }
@@ -180,7 +205,7 @@
       const lab = svg('text', { x: x + 4, y: H - 9, fill: txt, 'font-size': 11, 'font-family': 'var(--mono)' }, root);
       lab.textContent = parisTime(t + 3600, { weekday: 'short' }).replace('.', '');
     }
-    if (fxView) {
+    if (inst.view) {
       const lab = svg('text', { x: W - m.r, y: m.t + 10, 'text-anchor': 'end', fill: txt, 'font-size': 10, 'font-family': 'var(--mono)' }, root);
       lab.textContent = 'Zoom · double-clic pour réinitialiser · base 0 = ' + parisTime(x0, { weekday: 'short', hour: '2-digit', minute: '2-digit' });
     }
@@ -224,8 +249,8 @@
       if (a < fx0) { b += fx0 - a; a = fx0; }
       if (b > fx1) { a -= b - fx1; b = fx1; }
       a = Math.max(fx0, a);
-      fxView = (b - a >= fx1 - fx0 - 60) ? null : { ws, a, b };
-      renderFx();
+      inst.view = (b - a >= fx1 - fx0 - 60) ? null : { ws, a, b };
+      renderFx(inst);
     };
     let drag = null;
     const sel = svg('rect', { y: m.t, height: H - m.t - m.b, fill: txt, opacity: 0, 'pointer-events': 'none' }, root);
@@ -236,7 +261,7 @@
       const k = ev.deltaY < 0 ? 0.8 : 1.25;
       setView(t - (t - x0) * k, t + (x1 - t) * k);
     }, { passive: false });
-    overlay.addEventListener('dblclick', () => { fxView = null; renderFx(); });
+    overlay.addEventListener('dblclick', () => { inst.view = null; renderFx(inst); });
     overlay.addEventListener('pointerdown', (ev) => {
       if (ev.button > 0) return;
       drag = { px: ev.clientX, t: tAt(ev), moved: false };
@@ -270,7 +295,7 @@
     busyFx = true;
     try {
       const c = await client();
-      if (!c || !wrapFx) return;
+      if (!c || !fxInsts.length) return;
       const { data, error } = await c.from('fx_strength').select('week_start,series,updated_at').eq('id', 'current').limit(1);
       if (error) throw error;
       const row = data && data[0];
@@ -352,7 +377,7 @@
     loadFx(); loadYc();
     setTimeout(() => { renderFx(); renderYc(); }, 60);
   }
-  window.Indicator = { refresh };
+  window.Indicator = { refresh, mountFx, reloadFx: loadFx };
 
   document.addEventListener('DOMContentLoaded', () => {
     build();

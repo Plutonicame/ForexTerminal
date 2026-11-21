@@ -374,6 +374,18 @@ const THEME_FIELDS = {
     { v: '--trump-tweet-title', l: 'Titre', section: 'Donald Trump — texte du tweet' },
     { v: '--trump-tweet-link', l: 'Lien vers le post original', section: 'Donald Trump — texte du tweet' },
   ],
+  overwatch: [
+    { v: '--ow-tile-bg', l: 'Fond', section: 'Briques (cases de la fenêtre)' },
+    { v: '--ow-tile-border', l: 'Bordure', section: 'Briques (cases de la fenêtre)' },
+    { v: '--ow-rate-bg', l: 'Fond', section: 'Taux d\'intérêt — case d\'une devise' },
+    { v: '--ow-rate-border', l: 'Bordure', section: 'Taux d\'intérêt — case d\'une devise' },
+    { v: '--ow-rate-label', l: 'Devise', section: 'Taux d\'intérêt — case d\'une devise' },
+    { v: '--ow-rate-value', l: 'Issue la plus probable', section: 'Taux d\'intérêt — case d\'une devise' },
+    { v: '--ow-rate-sub', l: 'Variation sur 24 h', section: 'Taux d\'intérêt — case d\'une devise' },
+    { v: '--ow-rate-hover-bg', l: 'Fond', section: 'Taux d\'intérêt — case survolée' },
+    { v: '--ow-rate-hover-border', l: 'Bordure', section: 'Taux d\'intérêt — case survolée' },
+    { v: '--ow-news-divider', l: 'Séparation Trump / autres news', section: 'News' },
+  ],
   squawk: [
     { v: '--sq-off-bg', l: 'Fond', section: 'Bouton Squawk (barre du haut) — désactivé' },
     { v: '--sq-off-border', l: 'Bordure', section: 'Bouton Squawk (barre du haut) — désactivé' },

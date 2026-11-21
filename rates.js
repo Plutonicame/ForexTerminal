@@ -205,6 +205,50 @@
 
   function renderAll() {
     Object.keys(BANKS).forEach(renderCode);
+    miniHosts.forEach(renderMini);
+  }
+
+  // Grille réduite (fenêtre Overwatch) : par devise, l'issue la plus probable + variation sur 24 h
+  const miniHosts = [];
+  const MINI_ORDER = ['USD', 'EUR', 'JPY', 'GBP', 'CHF', 'CAD', 'AUD', 'NZD'];
+  function renderMini(host) {
+    if (!host.isConnected) return;
+    const body = host.querySelector('[data-rates-grid]');
+    if (!body) return;
+    body.innerHTML = MINI_ORDER.map((code) => {
+      const row = (rows[code] || [])[0];
+      const cur = row && row.current;
+      let main = '';
+      if (!loaded) main = failed ? 'Indisponible' : 'Chargement…';
+      else if (!row || !cur) main = 'Pas de marché';
+      let css = 'none'; let sub = '';
+      if (!main) {
+        const best = OUTCOMES.reduce((b, o) => (Number(cur[o.key]) > Number(cur[b.key]) ? o : b), OUTCOMES[0]);
+        css = best.css;
+        main = `${best.label} <b>${pct(Number(cur[best.key]))}</b>`;
+        const series = (Array.isArray(row.series) ? row.series : []).filter(validPoint);
+        sub = series.length > 1 ? deltaText(delta24(series, best.key)) : '';
+      }
+      return `<button type="button" class="ow-rate rates-kpi rates-kpi--${css}" data-ow-rate="${code}" title="Ouvrir Taux d'intérêt ${code}">
+        <span class="rates-kpi-label">${code}</span>
+        <span class="ow-rate-main">${main}</span>
+        <span class="rates-kpi-sub">${esc(sub)}</span>
+      </button>`;
+    }).join('');
+  }
+  function mountGrid(host) {
+    if (!host || host.querySelector('[data-rates-grid]')) return;
+    host.innerHTML = '<div class="speeches-toolbar"><span class="speeches-toolbar-title">Taux d\'intérêt</span></div><div class="ow-rates-grid" data-rates-grid></div>';
+    miniHosts.push(host);
+    host.addEventListener('click', (ev) => {
+      const b = ev.target.closest('[data-ow-rate]');
+      if (!b) return;
+      const t = document.querySelector('.menu-tab[data-tab="tab-rates"]');
+      if (t) t.click();
+      if (window.FXWindows) window.FXWindows.select('rates', b.dataset.owRate);
+    });
+    renderMini(host);
+    loadRates();
   }
 
   // -------------------------------------------------------------------------
@@ -368,5 +412,5 @@
     setInterval(() => { if (!document.hidden && analyseActive()) loadRates(); }, REFRESH_MS);
   });
 
-  window.Rates = { reload: loadRates };
+  window.Rates = { reload: loadRates, mountGrid };
 })();

@@ -35,7 +35,7 @@
     {
       title: 'News',
       items: [
-        { id: 'tab-overwatch', label: 'Overwatch', soon: true },
+        { id: 'tab-overwatch', label: 'Overwatch', exists: true },
         { id: 'tab-4', label: 'Nouveau', exists: true, menuClass: 'menu-tab--nouveau' },
         { id: 'tab-calendar', label: 'Calendar', exists: true, currency: { win: 'calendar', all: 'own', calendar: true } },
         { id: 'tab-newsfeed', label: 'News Feed' },

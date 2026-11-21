@@ -209,8 +209,8 @@
     return `<svg viewBox="0 0 ${W} ${H}" width="${W}" height="${H}" role="img" aria-label="Écart entre l'année en cours et la saisonnalité">${s}</svg>`;
   }
 
-  function barsChart(items, W, label) {
-    const H = 230;
+  function barsChart(items, W, label, Hopt) {
+    const H = Hopt || 230;
     const m = { l: 48, r: 10, t: 18, b: 26 };
     const pw = W - m.l - m.r; const ph = H - m.t - m.b;
     let hi = 0; let lo = 0;
@@ -326,8 +326,35 @@
     hit.addEventListener('pointerleave', () => { cross.setAttribute('opacity', 0); tip.hidden = true; });
   }
 
+  /* Instance réduite (fenêtre Overwatch) : toutes les devises, mois en cours */
+  const miniHosts = [];
+  const MONTH_NAMES = ['janvier', 'février', 'mars', 'avril', 'mai', 'juin', 'juillet', 'août', 'septembre', 'octobre', 'novembre', 'décembre'];
+  const MINI_ORDER = ['USD', 'EUR', 'JPY', 'GBP', 'CHF', 'CAD', 'AUD', 'NZD'];
+  function renderMini(host) {
+    if (!host.isConnected) return;
+    const m = new Date().getMonth();
+    const title = `Saisonnalité du mois de ${MONTH_NAMES[m]}`;
+    const body = host.querySelector('[data-seas-body]');
+    if (!body) return;
+    host.querySelector('[data-seas-title]').textContent = title;
+    const items = [];
+    MINI_ORDER.forEach((c) => { const r = compute(c); if (r) items.push({ name: c, label: c, avg: r.months[m].avg, pos: r.months[m].pos, n: r.months[m].n }); });
+    if (!items.length) { body.innerHTML = `<p class="ind-empty">${failed ? 'Données indisponibles' : 'Chargement…'}</p>`; return; }
+    const W = Math.max(220, body.clientWidth || 360);
+    body.innerHTML = barsChart(items, W, title, 190);
+  }
+  function mountMonth(host) {
+    if (!host || host.querySelector('[data-seas-body]')) return;
+    host.innerHTML = '<div class="speeches-toolbar"><span class="speeches-toolbar-title" data-seas-title>Saisonnalité du mois</span></div><div class="seas-mini-body" data-seas-body><p class="ind-empty">Chargement…</p></div>';
+    miniHosts.push(host);
+    if (window.ResizeObserver) { let t = null; new ResizeObserver(() => { clearTimeout(t); t = setTimeout(() => renderMini(host), 150); }).observe(host); }
+    load(false).then(() => renderMini(host));
+    renderMini(host);
+  }
+
   function renderAll() {
     document.querySelectorAll(`.currency-panel[data-win="${WIN}"]`).forEach((p) => { if (!p.hidden) renderPanel(p); });
+    miniHosts.forEach(renderMini);
   }
 
   /* ---------------- Barre d'outils (période + spread) ---------------- */
@@ -410,6 +437,7 @@
   }
 
   window.Seasonality = {
+    mountMonth,
     refresh() { ensureToolbar(); load(false).then(renderAll); renderAll(); },
   };
 
