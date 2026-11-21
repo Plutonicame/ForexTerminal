@@ -138,6 +138,7 @@
   }
   function stopReading() {
     reader.token++; reader.key = null;
+    if (reader.clear) reader.clear();
     if (canSpeak()) window.speechSynthesis.cancel();
     syncListenUi();
   }
@@ -145,29 +146,46 @@
     if (!canSpeak()) { alert('Ce navigateur ne sait pas lire à voix haute.'); return; }
     const src = SOURCES.find((s) => s.key === key);
     const rows = feedRows[key] || [];
+    if (reader.clear) reader.clear();
     window.speechSynthesis.cancel();
     const token = ++reader.token; reader.key = key;
     syncListenUi();
     if (!squawk.voice) pickVoice();
+    const box = document.querySelector(`[data-nf="${key}"]`);
+    const rowEls = box ? Array.from(box.querySelectorAll('.nf-row')) : [];
     const items = [];
-    const say = (text, lang) => { if (text) items.push({ text, lang: lang || 'fr-FR' }); };
+    const say = (text, lang, el) => { if (text) items.push({ text, lang: lang || 'fr-FR', el: el || null }); };
     if (!rows.length) say(`Aucune news de ${src.title} pour le moment.`);
+    // Du plus ancien au plus récent (l'affichage, lui, va du plus récent au plus ancien)
     let lastDay = '';
-    rows.forEach((r, i) => {
+    let first = true;
+    for (let i = rows.length - 1; i >= 0; i--) {
+      const r = rows[i];
       const dk = dayKey(r.published_at);
-      if (i === 0) say(`News de ${src.title} du ${fmtDay(r.published_at)}.`);
+      if (first) say(`News de ${src.title} du ${fmtDay(r.published_at)}.`);
       else if (dk !== lastDay) say(`Le ${fmtDay(r.published_at)}.`);
+      first = false;
       lastDay = dk;
+      const el = rowEls[i] || null;
       const en = key === 'investinglive';
       const title = en ? r.title : (r.title_fr || r.title);
-      if (en) { say(spokenTime(r.published_at) + '.'); say(title, 'en-US'); }
-      else say(`${spokenTime(r.published_at)}. ${title}`);
-    });
+      if (en) { say(spokenTime(r.published_at) + '.', 'fr-FR', el); say(title, 'en-US', el); }
+      else say(`${spokenTime(r.published_at)}. ${title}`, 'fr-FR', el);
+    }
     let idx = 0;
+    let current = null;
+    const mark = (el) => {
+      if (current === el) return;
+      if (current) current.classList.remove('nf-row--reading');
+      current = el;
+      if (el) { el.classList.add('nf-row--reading'); try { el.scrollIntoView({ block: 'center', behavior: 'smooth' }); } catch (e) { /* ignoré */ } }
+    };
+    reader.clear = () => mark(null);
     const next = () => {
-      if (token !== reader.token) return;
-      if (idx >= items.length) { reader.key = null; syncListenUi(); return; }
+      if (token !== reader.token) { mark(null); return; }
+      if (idx >= items.length) { mark(null); reader.key = null; syncListenUi(); return; }
       const it = items[idx++];
+      mark(it.el);
       try {
         const u = new SpeechSynthesisUtterance(it.text);
         u.lang = it.lang; u.rate = 1.05; u.volume = squawk.vol;
