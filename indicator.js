@@ -180,16 +180,17 @@
     let lo = 0; let hi = 0;
     shown.forEach((c) => vis[c].forEach((p) => { if (p[1] < lo) lo = p[1]; if (p[1] > hi) hi = p[1]; }));
     if (hi - lo < 0.2) { hi = Math.max(hi, 0.1); lo = Math.min(lo, -0.1); }
-    const pad = (hi - lo) * 0.08; lo -= pad; hi += pad;
+    const pad = (hi - lo) * (inst.compact ? 0.03 : 0.08); lo -= pad; hi += pad;
     const step = niceStep(hi - lo, 6);
-    const y0 = Math.floor(lo / step) * step; const y1 = Math.ceil(hi / step) * step;
+    // Overwatch : l'axe colle aux données (pas d'arrondi au repère suivant)
+    const y0 = inst.compact ? lo : Math.floor(lo / step) * step; const y1 = inst.compact ? hi : Math.ceil(hi / step) * step;
     const X = (t) => m.l + ((t - x0) / (x1 - x0)) * (W - m.l - m.r);
     const Y = (v) => m.t + (1 - (v - y0) / (y1 - y0)) * (H - m.t - m.b);
 
     host.innerHTML = '';
     const root = svg('svg', { viewBox: `0 0 ${W} ${H}`, width: W, height: H, role: 'img', 'aria-label': 'Force des devises depuis l\'ouverture de la semaine' }, host);
     const grid = cssVar('--fxs-grid', '#2a2a2a'); const txt = cssVar('--fxs-text', '#9a9a9a'); const zero = cssVar('--fxs-zero', '#e6e6e6');
-    for (let v = y0; v <= y1 + step / 2; v += step) {
+    for (let v = inst.compact ? Math.ceil(y0 / step - 1e-9) * step : y0; v <= (inst.compact ? y1 + 1e-9 : y1 + step / 2); v += step) {
       const y = Y(v);
       svg('line', { x1: m.l, x2: W - m.r, y1: y, y2: y, stroke: grid, 'stroke-width': 1 }, root);
       const t = svg('text', { x: m.l - 8, y: y + 4, 'text-anchor': 'end', fill: txt, 'font-size': 11, 'font-family': 'var(--mono)' }, root);
