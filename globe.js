@@ -371,6 +371,15 @@
     if (!host || miniEl === host) return;
     miniEl = host;
     host.classList.add('ow-globe-host');
+    const rb = document.createElement('button');
+    rb.type = 'button'; rb.className = 'ow-globe-reset'; rb.title = 'Replacer le globe'; rb.setAttribute('aria-label', 'Replacer le globe');
+    rb.innerHTML = '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 3-6.7"/><path d="M3 4v5h5"/></svg>';
+    rb.addEventListener('click', () => {
+      if (!mini) return;
+      const C = window.Cesium;
+      mini.camera.flyTo({ destination: C.Cartesian3.fromDegrees(SPACE_VIEW.lon, SPACE_VIEW.lat, SPACE_VIEW.h), duration: 1.2 });
+    });
+    host.appendChild(rb);
   }
   function setMiniActive(on) {
     miniOn = !!on;
@@ -388,6 +397,8 @@
         skyAtmosphere: new C.SkyAtmosphere(),
       });
       v.scene.globe.showGroundAtmosphere = true;
+      const ctl = v.scene.screenSpaceCameraController; // zoom progressif (défaut Cesium : 5, trop brusque)
+      ctl.zoomFactor = 1.4; ctl.inertiaZoom = 0.5; ctl.minimumZoomDistance = 30;
       v.imageryLayers.addImageryProvider(new C.UrlTemplateImageryProvider({ url: ESRI_URL, maximumLevel: 18, credit: 'Esri' }));
       v.camera.setView({ destination: C.Cartesian3.fromDegrees(SPACE_VIEW.lon, SPACE_VIEW.lat, SPACE_VIEW.h) });
       mini = v;

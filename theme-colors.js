@@ -384,7 +384,6 @@ const THEME_FIELDS = {
     { v: '--ow-rate-sub', l: 'Variation sur 24 h', section: 'Taux d\'intérêt — case d\'une devise' },
     { v: '--ow-rate-hover-bg', l: 'Fond', section: 'Taux d\'intérêt — case survolée' },
     { v: '--ow-rate-hover-border', l: 'Bordure', section: 'Taux d\'intérêt — case survolée' },
-    { v: '--ow-news-divider', l: 'Séparation Trump / autres news', section: 'News' },
   ],
   squawk: [
     { v: '--sq-off-bg', l: 'Fond', section: 'Bouton Squawk (barre du haut) — désactivé' },

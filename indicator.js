@@ -147,7 +147,7 @@
       return;
     }
     const W = Math.max(inst.compact ? 200 : 320, host.clientWidth || 800);
-    const H = inst.compact ? 300 : (W < 560 ? 300 : 380);
+    const H = inst.compact ? Math.max(260, host.clientHeight || 300) : (W < 560 ? 300 : 380);
     const m = { l: 52, r: 14, t: 14, b: 28 };
     const ws = Math.floor(new Date(fxData.week_start).getTime() / 1000);
     const fx0 = ws; const fx1 = ws + 5 * DAY;
