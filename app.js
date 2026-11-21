@@ -1618,6 +1618,8 @@ async function fetchNewsCalendarEvents() {
   return { events: data || [] };
 }
 
+window.FXT_Calendar = { impacts: getCalendarImpacts, title: resolveEventTitle, keep: (evs) => hideSpeechEvents(evs) };
+
 function newsIsReleased(ev) {
   const hasActual = ev.actual !== null && ev.actual !== undefined && String(ev.actual).trim() !== '';
   return hasActual || new Date(ev.event_time).getTime() <= Date.now();

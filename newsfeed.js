@@ -429,22 +429,92 @@
     const btn = document.querySelector('[data-sq-toggle]');
     if (btn) { btn.textContent = squawk.on ? 'Couper la voix' : 'Activer la voix'; btn.classList.toggle('is-on', squawk.on); }
     const st = document.querySelector('[data-sq-status]');
-    if (st) st.textContent = squawk.status || (squawk.on ? 'Voix activée : les nouvelles news importantes sont lues en français.' : 'Voix coupée.');
+    if (st) st.textContent = squawk.status || (squawk.on ? 'Voix activée : news importantes, données éco publiées et posts de Trump sont lus en français.' : 'Voix coupée.');
   }
 
+  const CUR_FR = { USD: 'dollar américain', EUR: 'euro', JPY: 'yen', GBP: 'livre sterling', CHF: 'franc suisse', CAD: 'dollar canadien', AUD: 'dollar australien', NZD: 'dollar néo-zélandais' };
+  const spokenText = (v) => (v === null || v === undefined || String(v).trim() === '' ? 'non communiqué' : String(v).trim());
+
+  function eventSentence(ev) {
+    const cal = window.FXT_Calendar;
+    const title = cal ? cal.title(ev.title) : ev.title;
+    return `${CUR_FR[ev.currency] || ev.currency} : ${title}. Sortie ${spokenText(ev.actual)}. Prévision ${spokenText(ev.forecast_mid)}. Précédent ${spokenText(ev.previous)}.`;
+  }
+
+  // Squawk : news importantes + données éco publiées + posts de Trump. Rattrape aussi ce qui est tombé pendant que l'app dormait en arrière-plan.
   async function squawkPoll(first) {
     const c = await client();
     if (!c) return;
-    const since = new Date(Date.now() - 10 * 60 * 1000).toISOString();
-    const { data, error } = await c.from('news_items').select('id,title,title_fr,published_at').eq('top', true).gte('published_at', since).order('published_at', { ascending: true }).limit(40);
-    if (error || !data) return;
-    const fresh = data.filter((r) => !squawk.spoken.has(r.id));
-    fresh.forEach((r) => squawk.spoken.add(r.id));
+    const now = Date.now();
     const wasPrimed = squawk.primed;
+    const since = new Date(Math.min(now - 10 * 60 * 1000, wasPrimed && squawk.lastPoll ? squawk.lastPoll - 60 * 1000 : now)).toISOString();
+    const cal = window.FXT_Calendar;
+    const [nRes, tRes, eRes] = await Promise.all([
+      c.from('news_items').select('id,title,title_fr,published_at').eq('top', true).gte('published_at', since).order('published_at', { ascending: true }).limit(40),
+      c.from('trump_posts').select('id,posted_at,text_en,text_fr,title_fr,stars').gte('posted_at', since).gte('stars', 2).order('posted_at', { ascending: true }).limit(20),
+      c.from('calendar_events').select('currency,title,impact,previous,forecast_mid,actual,event_time').in('impact', cal ? cal.impacts() : ['high', 'medium']).gte('event_time', new Date(now - 6 * 3600 * 1000).toISOString()).lte('event_time', new Date(now + 3600 * 1000).toISOString()).order('event_time', { ascending: true }).limit(60),
+    ]);
+    squawk.lastPoll = now;
+    const queue = [];
+    (nRes.data || []).forEach((r) => {
+      const k = 'n' + r.id;
+      if (squawk.spoken.has(k) || squawk.spoken.has(r.id)) return;
+      squawk.spoken.add(k);
+      queue.push({ at: Date.parse(r.published_at), text: r.title_fr || r.title });
+    });
+    (tRes.data || []).forEach((r) => {
+      const k = 't' + r.id;
+      if (squawk.spoken.has(k)) return;
+      squawk.spoken.add(k);
+      const body = String(r.title_fr || r.text_fr || r.text_en || '').replace(/https?:\/\/\S+/g, '').trim().slice(0, 300);
+      if (body) queue.push({ at: Date.parse(r.posted_at), text: 'Trump : ' + body });
+    });
+    let evs = eRes.data || [];
+    if (cal && cal.keep) evs = cal.keep(evs);
+    evs.filter((ev) => ev.actual !== null && ev.actual !== undefined && String(ev.actual).trim() !== '').forEach((ev) => {
+      const k = `e${ev.currency}|${ev.title}|${ev.event_time}|${ev.actual}`;
+      if (squawk.spoken.has(k)) return;
+      squawk.spoken.add(k);
+      queue.push({ at: Date.parse(ev.event_time), text: eventSentence(ev) });
+    });
+    if (first || !wasPrimed) { squawk.primed = true; return; } // à l'activation : on ne relit pas ce qui est déjà tombé
     squawk.primed = true;
-    if (first || !wasPrimed) return; // à l'activation : on ne relit pas ce qui est déjà tombé
-    fresh.slice(-5).forEach((r) => speak(r.title_fr || r.title));
+    queue.sort((x, y) => x.at - y.at).slice(-8).forEach((q) => speak(q.text));
   }
+
+  /* Arrière-plan : un son silencieux en boucle + session média gardent la lecture active quand l'app n'est plus au premier plan. */
+  let keepAudio = null;
+  function silentWavUrl() {
+    const n = 8000; const buf = new ArrayBuffer(44 + n * 2); const dv = new DataView(buf);
+    const w = (o, str) => { for (let i = 0; i < str.length; i += 1) dv.setUint8(o + i, str.charCodeAt(i)); };
+    w(0, 'RIFF'); dv.setUint32(4, 36 + n * 2, true); w(8, 'WAVE'); w(12, 'fmt '); dv.setUint32(16, 16, true); dv.setUint16(20, 1, true); dv.setUint16(22, 1, true);
+    dv.setUint32(24, 8000, true); dv.setUint32(28, 16000, true); dv.setUint16(32, 2, true); dv.setUint16(34, 16, true); w(36, 'data'); dv.setUint32(40, n * 2, true);
+    return URL.createObjectURL(new Blob([buf], { type: 'audio/wav' }));
+  }
+  function startKeepAlive() {
+    try {
+      if (!keepAudio) { keepAudio = new Audio(silentWavUrl()); keepAudio.loop = true; keepAudio.volume = 0.01; keepAudio.setAttribute('playsinline', ''); }
+      const p = keepAudio.play(); if (p && p.catch) p.catch(() => {});
+      if ('mediaSession' in navigator) {
+        navigator.mediaSession.metadata = new MediaMetadata({ title: 'Squawk FXT', artist: 'Forex Terminal', album: 'News, données éco et Trump' });
+        navigator.mediaSession.playbackState = 'playing';
+        navigator.mediaSession.setActionHandler('pause', () => setSquawk(false, false));
+        navigator.mediaSession.setActionHandler('stop', () => setSquawk(false, false));
+        navigator.mediaSession.setActionHandler('play', () => setSquawk(true, false));
+      }
+    } catch (e) { console.warn('squawk keepalive', e); }
+  }
+  function stopKeepAlive() {
+    try { if (keepAudio) keepAudio.pause(); if ('mediaSession' in navigator) navigator.mediaSession.playbackState = 'none'; } catch (e) { /* ignoré */ }
+  }
+  document.addEventListener('visibilitychange', () => {
+    if (!squawk.on) return;
+    startKeepAlive();
+    if (canSpeak()) window.speechSynthesis.resume();
+    squawkPoll(false);
+  });
+  // Chrome met parfois la synthèse en pause au bout d'un moment : on la relance
+  setInterval(() => { if (squawk.on && canSpeak() && window.speechSynthesis.speaking) window.speechSynthesis.resume(); }, 10000);
 
   function setSquawk(on, byUser) {
     if (on && !canSpeak()) { squawk.status = 'Ce navigateur ne sait pas lire à voix haute.'; squawk.on = false; syncSquawkUi(); return; }
@@ -457,10 +527,12 @@
     if (on) {
       pickVoice();
       if (byUser) speak('Squawk activé.'); // ce premier son, déclenché par un clic, débloque la voix du navigateur
+      startKeepAlive();
       squawkPoll(true);
       squawk.timer = setInterval(() => squawkPoll(false), 15 * 1000);
-    } else if (canSpeak()) {
-      window.speechSynthesis.cancel();
+    } else {
+      stopKeepAlive();
+      if (canSpeak()) window.speechSynthesis.cancel();
     }
     syncSquawkUi();
   }
