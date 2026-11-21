@@ -37,8 +37,10 @@
 <div id="overlayEmailPin" class="auth-overlay">
   <div class="auth-title">FOREX TERMINAL</div>
   <div class="auth-sub">Saisis ton adresse email pour accéder</div>
-  <input id="returnEmail" type="email" placeholder="ton@email.com" style="background:var(--auth-input-bg);border:1px solid var(--auth-input-bd);border-radius:8px;color:#e2e8f0;font-family:'DM Sans',sans-serif;font-size:15px;padding:12px 16px;width:260px;outline:none;">
-  <button id="returnEmailBtn" type="button" style="background:var(--auth-btn-bg);color:var(--auth-btn-tx);border:none;border-radius:8px;padding:12px 24px;font-size:15px;font-weight:600;cursor:pointer;font-family:'DM Sans',sans-serif;width:260px;">Continuer →</button>
+  <form id="returnEmailForm" style="display:contents" novalidate>
+  <input id="returnEmail" name="email" autocomplete="email" enterkeyhint="go" type="email" placeholder="ton@email.com" style="background:var(--auth-input-bg);border:1px solid var(--auth-input-bd);border-radius:8px;color:#e2e8f0;font-family:'DM Sans',sans-serif;font-size:15px;padding:12px 16px;width:260px;outline:none;">
+  <button id="returnEmailBtn" type="submit" style="background:var(--auth-btn-bg);color:var(--auth-btn-tx);border:none;border-radius:8px;padding:12px 24px;font-size:15px;font-weight:600;cursor:pointer;font-family:'DM Sans',sans-serif;width:260px;">Continuer →</button>
+  </form>
   <div class="auth-err" id="returnEmailErr"></div>
   <button class="change-pin-btn" id="emailToGoogle" type="button">Nouvelle connexion Google</button>
 </div>

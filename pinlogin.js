@@ -108,8 +108,8 @@
       }, 'confirmErr');
     }
 
-    $('returnEmailBtn').addEventListener('click', submitReturnEmail);
-    $('returnEmail').addEventListener('keydown', (e) => { if (e.key === 'Enter') submitReturnEmail(); });
+    // Formulaire : Entrée (clavier PC ou touche « OK » du téléphone) = clic sur Continuer
+    $('returnEmailForm').addEventListener('submit', (e) => { e.preventDefault(); submitReturnEmail(); });
     $('emailToGoogle').addEventListener('click', () => showOverlay('overlayGoogle'));
     $('enterPinChangeEmailBtn').addEventListener('click', () => showOverlay('overlayEmailPin'));
     try { const l = localStorage.getItem(LAST); if (l) $('returnEmail').value = l; } catch (e) { /* ignoré */ }
