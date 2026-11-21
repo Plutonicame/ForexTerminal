@@ -46,7 +46,7 @@
     document.addEventListener('keydown', keyHandler);
   }
 
-  function init(showApp, showLogin) {
+  function init(showApp, showLogin, onUnlock) {
     let returnEmail = '';
     let pinAttempts = 0;
 
@@ -57,6 +57,7 @@
           await window.Auth.signInWithPin(returnEmail, val);
           try { localStorage.setItem(LAST, returnEmail); } catch (e) { /* ignoré */ }
           pinAttempts = 0;
+          onUnlock(); showOverlay(null); showApp();
         } catch (e) {
           pinAttempts++;
           if (pinAttempts >= 5) {
@@ -67,11 +68,20 @@
       }, 'enterErr');
     }
 
-    function submitReturnEmail() {
+    let busy = false;
+    async function submitReturnEmail() {
+      if (busy) return;
       const email = $('returnEmail').value.trim().toLowerCase();
       const err = $('returnEmailErr'); err.style.display = 'none';
       if (!email || !email.includes('@')) { showErr('returnEmailErr', 'Email invalide.'); return; }
       returnEmail = email;
+      busy = true;
+      let known = false;
+      try { known = await window.Auth.pinExists(email); }
+      catch (e) { busy = false; showErr('returnEmailErr', 'Connexion impossible. Réessaie.'); return; }
+      busy = false;
+      // Email sans compte : direction « Continuer avec Google » (comme le TJP)
+      if (!known) { showOverlay('overlayGoogle'); return; }
       $('enterPinSub').textContent = email;
       $('enterErr').style.display = 'none';
       showOverlay('overlayEnterPin');
@@ -101,7 +111,6 @@
     $('returnEmailBtn').addEventListener('click', submitReturnEmail);
     $('returnEmail').addEventListener('keydown', (e) => { if (e.key === 'Enter') submitReturnEmail(); });
     $('emailToGoogle').addEventListener('click', () => showOverlay('overlayGoogle'));
-    $('googleToEmail').addEventListener('click', () => showOverlay('overlayEmailPin'));
     $('enterPinChangeEmailBtn').addEventListener('click', () => showOverlay('overlayEmailPin'));
     try { const l = localStorage.getItem(LAST); if (l) $('returnEmail').value = l; } catch (e) { /* ignoré */ }
 

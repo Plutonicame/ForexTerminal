@@ -179,19 +179,29 @@ async function initAuth() {
   // initiale. Si on faisait l'inverse, l'événement de connexion déclenché
   // par le retour de redirection Google pourrait arriver pendant qu'on
   // attend getSession(), et on le raterait complètement.
-  const pl = window.PinLogin ? window.PinLogin.init(showApp, showLogin) : null;
-  let gatedUser = null;
+  // Comme le TJP : à CHAQUE ouverture on redemande l'email (puis le PIN), même si une session existe.
+  let unlocked = false;
+  let entryShown = false;
+  const pl = window.PinLogin ? window.PinLogin.init(showApp, showLogin, () => { unlocked = true; }) : null;
   function onSession(s) {
-    if (!s) { gatedUser = null; if (pl) pl.showEntry(); else showLogin(); return; }
-    if (gatedUser === s.user.id) return;
-    gatedUser = s.user.id;
-    if (pl) pl.gate(s); else showApp();
+    if (!s) { unlocked = false; entryShown = true; if (pl) pl.showEntry(); else showLogin(); return; }
+    if (unlocked) return;
+    let google = false;
+    try { google = sessionStorage.getItem('fxt_google') === '1'; } catch (e) { /* ignoré */ }
+    if (google) {
+      try { sessionStorage.removeItem('fxt_google'); } catch (e) { /* ignoré */ }
+      unlocked = true;
+      if (pl) pl.gate(s); else showApp();
+      return;
+    }
+    if (!entryShown) { entryShown = true; if (pl) pl.showEntry(); else showLogin(); }
   }
   window.Auth.onAuthStateChange(onSession);
 
   onSession(await window.Auth.getSession());
 
   googleBtn.addEventListener('click', () => {
+    try { sessionStorage.setItem('fxt_google', '1'); } catch (e) { /* ignoré */ }
     window.Auth.signInWithGoogle();
   });
 

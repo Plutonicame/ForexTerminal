@@ -116,12 +116,14 @@ async function signInWithPin(email, pin) {
   if (error || !data || !data.session) throw new Error('Connexion impossible. Réessaie.');
   return data.session;
 }
+async function pinExists(email) { return (await callPinAuth({ action: 'exists', email })).has_pin; }
 async function pinStatus(session) { return (await callPinAuth({ action: 'status' }, session.access_token)).has_pin; }
 async function setPin(session, pin) { await callPinAuth({ action: 'set', pin }, session.access_token); }
 
 window.Auth = {
   signInWithPin,
   pinStatus,
+  pinExists,
   setPin,
   isConfigured,
   getClient,
