@@ -683,6 +683,28 @@
   const readSeen = () => { try { return JSON.parse(lsGet(LS_SEEN) || '{}') || {}; } catch (e) { return {}; } };
   let baseline = readSeen();   // « dernière visite » : figé pendant la visite pour que la liste ne disparaisse pas sous les yeux
   let hiddenAt = 0;
+  let owRendered = false;
+  let owLeft = false;
+  const isOwOpen = () => { const p = document.getElementById('tab-overwatch'); return !!p && !p.hidden; };
+  function leaveOverwatch() { markOwSeen(); owLeft = true; }
+
+  // Overwatch : ce qui a été vu (Trump affiché, boutons de sources déroulés) disparaît à la visite suivante
+  const LS_OW_SEEN = 'fxt-ow-seen';
+  const readOwSeen = () => { try { return JSON.parse(lsGet(LS_OW_SEEN) || '{}') || {}; } catch (e) { return {}; } };
+  let owBase = readOwSeen();   // figé pendant la visite : la liste ne bouge pas sous les yeux
+  let owShowAll = false;
+  let owMax = {};
+  function markOwSeen() {
+    if (!owRendered) return;
+    const seen = readOwSeen();
+    let dirty = false;
+    ['trump', ...SECTIONS.filter((x) => openSections.has(x.key)).map((x) => x.key)].forEach((k) => {
+      const m = owMax[k];
+      if (m && (!seen[k] || m > seen[k])) { seen[k] = m; dirty = true; }
+    });
+    if (dirty) lsSet(LS_OW_SEEN, JSON.stringify(seen));
+  }
+  function owNewVisit() { owBase = readOwSeen(); owShowAll = false; signatures.ow = null; }
 
   function markSeen(key) {
     const m = maxAtByKey[key];
@@ -693,6 +715,7 @@
 
   function wireHome(box) {
     box.addEventListener('click', (event) => {
+        if (event.target.closest('[data-ow-all]')) { owShowAll = !owShowAll; signatures.ow = null; loadHome(owFilter()); return; }
         if (event.target.closest('[data-nx-all]')) { showAll = !showAll; signatures.home = null; loadHome(); return; }
         const sec = event.target.closest('[data-nx-sec]');
         if (sec) {
@@ -742,26 +765,37 @@
     return { startMs: d.getTime(), endMs: d.getTime() + 86400000, currencies: null, label: 'Aujourd\'hui' };
   }
   function renderOverwatch(lists) {
+    owRendered = true;
+    const keys = [...SECTIONS.map((x) => x.key), 'trump'];
+    const shown = {}; let hidden = 0;
+    keys.forEach((k) => {
+      owMax[k] = lists[k].reduce((m, i) => (i.at > m ? i.at : m), '');
+      const base = owBase[k];
+      shown[k] = owShowAll || !base ? lists[k] : lists[k].filter((i) => i.at > base);
+      hidden += lists[k].length - shown[k].length;
+    });
+    const allBtn = (hidden > 0 || owShowAll)
+      ? `<button type="button" class="speech-btn nx-all ow-seen-btn" data-ow-all aria-expanded="${owShowAll}"><svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="${owShowAll ? 'M6 15l6-6 6 6' : 'M6 9l6 6 6-6'}"/></svg>${owShowAll ? 'Masquer les news déjà vues' : `Afficher les news déjà vues (${hidden})`}</button>`
+      : '';
     owHosts.forEach((host) => {
       if (!host.isConnected) return;
-      const btns = SECTIONS.filter((s) => lists[s.key].length).map((s) => {
+      const btns = SECTIONS.filter((s) => shown[s.key].length).map((s) => {
         const open = openSections.has(s.key);
-        return `<button type="button" class="nx-sec-btn${open ? ' is-open' : ''}" data-nx-sec="${s.key}" aria-expanded="${open}">${esc(s.label)}<span class="nx-count">${lists[s.key].length}</span></button>`;
+        return `<button type="button" class="nx-sec-btn${open ? ' is-open' : ''}" data-nx-sec="${s.key}" aria-expanded="${open}">${esc(s.label)}<span class="nx-count">${shown[s.key].length}</span></button>`;
       }).join('');
-      const bodies = SECTIONS.filter((s) => lists[s.key].length).map((s) =>
-        `<div class="nx-list" data-nx-body="${s.key}"${openSections.has(s.key) ? '' : ' hidden'}>${lists[s.key].map(homeItem).join('')}</div>`).join('');
+      const bodies = SECTIONS.filter((s) => shown[s.key].length).map((s) =>
+        `<div class="nx-list" data-nx-body="${s.key}"${openSections.has(s.key) ? '' : ' hidden'}>${shown[s.key].map(homeItem).join('')}</div>`).join('');
       host.innerHTML = `
         <div class="ow-news-col ow-news-left">
           <div class="speeches-toolbar"><span class="speeches-toolbar-title">Trump</span></div>
-          <div class="nx-list">${lists.trump.length ? lists.trump.map(homeItem).join('') : '<p class="speeches-empty">Rien aujourd\'hui.</p>'}</div>
+          <div class="nx-list">${shown.trump.length ? shown.trump.map(homeItem).join('') : `<p class="speeches-empty">${lists.trump.length ? 'Rien de nouveau.' : 'Rien aujourd\'hui.'}</p>`}</div>
         </div>
         <div class="ow-news-col ow-news-right">
-          <div class="speeches-toolbar"><span class="speeches-toolbar-title">News</span></div>
-          ${btns ? `<div class="nx-sec-bar">${btns}</div>${bodies}` : '<p class="speeches-empty">Rien aujourd\'hui.</p>'}
+          <div class="speeches-toolbar"><span class="speeches-toolbar-title">News</span>${allBtn}</div>
+          ${btns ? `<div class="nx-sec-bar">${btns}</div>${bodies}` : `<p class="speeches-empty">${hidden ? 'Rien de nouveau.' : 'Rien aujourd\'hui.'}</p>`}
         </div>`;
     });
   }
-
   function homeItem(it) {
     const url = safeUrl(it.url);
     const link = url ? `<a class="nx-link" href="${esc(url)}" target="_blank" rel="noopener noreferrer">${esc(it.linkLabel)}</a>` : '';
@@ -824,7 +858,7 @@
         hiddenCount += lists[s.key].length - shown[s.key].length;
       });
 
-      const owSig = owHosts.length ? SECTIONS.map((s) => lists[s.key].length + (maxAtByKey[s.key] || '')).join('|') + lists.trump.map((i) => i.at).join(',') + [...openSections].join(',') : '';
+      const owSig = owHosts.length ? SECTIONS.map((s) => lists[s.key].length + (maxAtByKey[s.key] || '')).join('|') + lists.trump.map((i) => i.at).join(',') + [...openSections].join(',') + '|' + owShowAll + JSON.stringify(owBase) : '';
       if (owHosts.length && changed('ow', owSig + startIso)) renderOverwatch(lists);
       const sig = SECTIONS.map((s) => shown[s.key].map((i) => i.at + i.title).join('|')).join('#') + '|' + lists.trump.map((i) => i.at + i.title).join('|') + '@' + startIso + endIso + showAll;
       if (!box || !changed('home', sig)) return;
@@ -854,7 +888,7 @@
     if (tabId === FEED_WINDOW) { ensureFeedLayout(); loadFeed(); }
     else if (tabId === BANK_WINDOW) loadBank();
     else if (tabId === SQUAWK_WINDOW) { buildSquawk(); loadSquawkHistory(); }
-    else if (tabId === 'tab-overwatch') { loadHome(owFilter()); }
+    else if (tabId === 'tab-overwatch') { if (!isVisible('tab-overwatch') || owLeft) { owNewVisit(); owLeft = false; } loadHome(owFilter()); }
     else if (tabId === HOME_WINDOW) {
       // on (re)vient dans Nouveau : ce qui a été lu (bouton déroulé) la fois d'avant a disparu, seul le nouveau reste
       baseline = readSeen();
@@ -865,7 +899,7 @@
     }
   }
 
-  window.NewsWindows = { refresh, renderHome: loadHome, mountOverwatchNews };
+  window.NewsWindows = { refresh, renderHome: loadHome, mountOverwatchNews, leaveOverwatch };
 
   document.addEventListener('DOMContentLoaded', () => {
     ensureFeedLayout();
@@ -874,8 +908,8 @@
     initSquawkNav();
     // retour dans l'appli après une absence : la « dernière visite » est mise à jour
     document.addEventListener('visibilitychange', () => {
-      if (document.hidden) { hiddenAt = Date.now(); return; }
-      if (hiddenAt && Date.now() - hiddenAt > 2 * 60 * 1000) { baseline = readSeen(); showAll = false; signatures.home = null; if (isVisible(HOME_WINDOW)) loadHome(); }
+      if (document.hidden) { hiddenAt = Date.now(); if (isOwOpen()) markOwSeen(); return; }
+      if (hiddenAt && Date.now() - hiddenAt > 2 * 60 * 1000) { baseline = readSeen(); showAll = false; signatures.home = null; if (isVisible(HOME_WINDOW)) loadHome(); if (isOwOpen()) { owNewVisit(); loadHome(owFilter()); } }
     });
     if (window.Auth) window.Auth.onAuthStateChange((s) => { if (s) { loadFeed(); loadBank(); loadHome(); } });
     setInterval(() => {

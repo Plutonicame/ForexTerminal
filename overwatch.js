@@ -27,7 +27,7 @@
   function setActive(on) {
     if (on) mount();
     if (window.Globe) window.Globe.setMiniActive(on);
-    if (!on) return;
+    if (!on) { if (window.NewsWindows && window.NewsWindows.leaveOverwatch) window.NewsWindows.leaveOverwatch(); return; }
     if (window.Indicator) window.Indicator.reloadFx();
     if (window.Rates) window.Rates.reload();
     if (window.Risk) window.Risk.refresh();

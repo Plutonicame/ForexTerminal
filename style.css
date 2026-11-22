@@ -130,6 +130,7 @@
   --calendar-actual-down: #ff4d4d;
   --calendar-impact-high: var(--red);
   --calendar-impact-medium: #ff9800;
+  --calendar-impact-low: #ffd400;
 
   /* Bouton calendrier (date/heure), mêmes couleurs par défaut que dans TJP */
   --calendar-date-btn-bg: #111827;
@@ -671,21 +672,6 @@ button {
   border-radius: 15px;
 }
 
-.calendar-impact-toggle-knob {
-  position: absolute;
-  top: 3px;
-  left: 3px;
-  width: calc((100% - 6px) / 3);
-  height: calc(100% - 6px);
-  background: var(--calendar-impact-toggle-knob-bg);
-  border-radius: 12px;
-  transition: transform 0.18s ease;
-  pointer-events: none;
-}
-
-.calendar-impact-toggle[data-value="medium"] .calendar-impact-toggle-knob { transform: translateX(0%); }
-.calendar-impact-toggle[data-value="both"] .calendar-impact-toggle-knob { transform: translateX(100%); }
-.calendar-impact-toggle[data-value="high"] .calendar-impact-toggle-knob { transform: translateX(200%); }
 
 .calendar-impact-toggle-btn {
   position: relative;
@@ -708,6 +694,8 @@ button {
   border-radius: var(--radius-round);
 }
 
+.calendar-impact-toggle-btn.is-on { background: var(--calendar-impact-toggle-knob-bg); }
+.calendar-impact-toggle-dot--low { background: var(--calendar-impact-low); }
 .calendar-impact-toggle-dot--medium { background: var(--calendar-impact-medium); }
 .calendar-impact-toggle-dot--high { background: var(--calendar-impact-high); }
 
@@ -1067,6 +1055,7 @@ button {
 
 .calendar-impact--high { background: var(--calendar-impact-high); }
 .calendar-impact--medium { background: var(--calendar-impact-medium); }
+.calendar-impact--low { background: var(--calendar-impact-low); }
 
 /* Pays à droite du nom (CPI nationaux de la zone euro : France, Allemagne...) */
 .calendar-country {
@@ -4869,6 +4858,8 @@ button.sq-btn.is-on { border-color: var(--blue-light); color: var(--blue-light);
   background: var(--back-bg); border: 1px solid var(--back-border); color: var(--back-color); border-radius: var(--radius-sm); }
 .back-btn[hidden] { display: none; }
 .back-btn:hover { border-color: var(--back-hover-border); }
+
+.ow-seen-btn { display: inline-flex; align-items: center; gap: 6px; margin-left: auto; }
 
 /* ===== « Voir la news » ===== */
 :root { --nf-see-bg: #00000000; --nf-see-bd: #2a2a2a; --nf-see-text: #9a9a9a; --nf-see-hover-bg: #00000000; --nf-see-hover-bd: #4d94ff; --nf-see-hover-text: #4d94ff; --nf-see-active-bg: #4d94ff; --nf-see-active-bd: #4d94ff; --nf-see-active-text: #111111; }

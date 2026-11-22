@@ -323,16 +323,21 @@ const CALENDAR_REFRESH_MS = 60000;
 // devise en particulier, voir index.html). Mémorisé sur l'appareil pour
 // rester d'une session à l'autre.
 const CALENDAR_IMPACT_STORAGE_KEY = 'fx-calendar-impact-filter';
-let calendarImpactFilter = 'both'; // 'medium' | 'both' | 'high'
+const CALENDAR_IMPACT_ORDER = ['low', 'medium', 'high']; // jaune, orange, rouge
+let calendarImpactFilter = new Set(['medium', 'high']); // cases cochées (plusieurs possibles)
 try {
   const stored = localStorage.getItem(CALENDAR_IMPACT_STORAGE_KEY);
-  if (stored === 'medium' || stored === 'both' || stored === 'high') calendarImpactFilter = stored;
+  if (stored === 'medium') calendarImpactFilter = new Set(['medium']);          // anciens réglages (curseur à 3 positions)
+  else if (stored === 'both') calendarImpactFilter = new Set(['medium', 'high']);
+  else if (stored === 'high') calendarImpactFilter = new Set(['high']);
+  else if (stored) {
+    const arr = JSON.parse(stored);
+    if (Array.isArray(arr) && arr.some((v) => CALENDAR_IMPACT_ORDER.includes(v))) calendarImpactFilter = new Set(arr.filter((v) => CALENDAR_IMPACT_ORDER.includes(v)));
+  }
 } catch (e) { /* stockage indisponible : on garde la valeur par défaut */ }
 
 function getCalendarImpacts() {
-  if (calendarImpactFilter === 'medium') return ['medium'];
-  if (calendarImpactFilter === 'high') return ['high'];
-  return ['high', 'medium'];
+  return CALENDAR_IMPACT_ORDER.filter((v) => calendarImpactFilter.has(v));
 }
 
 // Cases à cocher « vue » (barre Calendrier). Les cases cochées s'additionnent :
@@ -1091,7 +1096,7 @@ function renderCalendar(code, events, errorNote) {
   }
 
   const rows = visibleEvents.map((ev) => {
-    const impact = ev.impact === 'high' ? 'high' : 'medium';
+    const impact = ev.impact === 'high' ? 'high' : ev.impact === 'low' ? 'low' : 'medium';
     return `<tr>
       <td class="calendar-col-date">${escapeHtml(formatCalendarDateInline(ev.event_time))}</td>
       <td class="calendar-col-name">
@@ -1333,9 +1338,10 @@ function initCalendarToolbar() {
 
   function syncImpactToggles() {
     for (const toggle of impactToggles) {
-      toggle.dataset.value = calendarImpactFilter;
       for (const b of toggle.querySelectorAll('.calendar-impact-toggle-btn')) {
-        b.setAttribute('aria-checked', String(b.dataset.value === calendarImpactFilter));
+        const on = calendarImpactFilter.has(b.dataset.value);
+        b.setAttribute('aria-pressed', String(on));
+        b.classList.toggle('is-on', on);
       }
     }
   }
@@ -1344,10 +1350,12 @@ function initCalendarToolbar() {
   for (const btn of document.querySelectorAll('.calendar-impact-toggle-btn')) {
     btn.addEventListener('click', () => {
       const value = btn.dataset.value;
-      if (value === calendarImpactFilter) return;
-      calendarImpactFilter = value;
+      if (calendarImpactFilter.has(value)) {
+        if (calendarImpactFilter.size === 1) return; // au moins une couleur reste cochée
+        calendarImpactFilter.delete(value);
+      } else calendarImpactFilter.add(value);
       syncImpactToggles();
-      try { localStorage.setItem(CALENDAR_IMPACT_STORAGE_KEY, value); } catch (e) { /* tant pis */ }
+      try { localStorage.setItem(CALENDAR_IMPACT_STORAGE_KEY, JSON.stringify(getCalendarImpacts())); } catch (e) { /* tant pis */ }
       if (currentCalendarCurrency) loadCalendar(currentCalendarCurrency);
       if (isNewsTabActive()) loadNews();
       if (isOverwatchActive()) loadOwCalendar();
@@ -1631,7 +1639,7 @@ function newsTableHtml(events, multi) {
   // entre les jours. Sur plusieurs jours, la colonne affiche « date + heure ».
   const rows = applyEventPresentation(events).map((ev) => {
     const d = new Date(ev.event_time);
-    const impact = ev.impact === 'high' ? 'high' : 'medium';
+    const impact = ev.impact === 'high' ? 'high' : ev.impact === 'low' ? 'low' : 'medium';
     const clock = d.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
     const time = multi ? `${newsShortDate(d)} ${clock}` : clock;
 

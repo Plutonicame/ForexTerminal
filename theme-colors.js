@@ -63,7 +63,7 @@ const THEME_FIELDS = {
     { v: '--calendar-toolbar-title', l: 'Titre "Calendrier"', section: 'Calendrier — barre "Calendrier"' },
     { v: '--calendar-impact-toggle-track-bg', l: 'Fond du curseur', section: 'Calendrier — filtre impact' },
     { v: '--calendar-impact-toggle-track-border', l: 'Bordure du curseur', section: 'Calendrier — filtre impact' },
-    { v: '--calendar-impact-toggle-knob-bg', l: 'Rond du curseur', section: 'Calendrier — filtre impact' },
+    { v: '--calendar-impact-toggle-knob-bg', l: 'Case cochée (fond gris)', section: 'Calendrier — filtre impact' },
     { v: '--calendar-translate-btn-bg', l: 'Fond', section: 'Calendrier — bouton traduction' },
     { v: '--calendar-translate-btn-border', l: 'Bordure', section: 'Calendrier — bouton traduction' },
     { v: '--calendar-translate-btn-icon', l: 'Icône', section: 'Calendrier — bouton traduction' },
@@ -108,6 +108,7 @@ const THEME_FIELDS = {
     { v: '--calendar-actual-text', l: 'Égale ou non comparable', section: 'Calendrier — valeur sortie' },
     { v: '--calendar-impact-high', l: 'Rouge (impact fort)', section: 'Calendrier — impact' },
     { v: '--calendar-impact-medium', l: 'Orange (impact moyen)', section: 'Calendrier — impact' },
+    { v: '--calendar-impact-low', l: 'Jaune (impact faible)', section: 'Calendrier — impact' },
 
     { v: '--speech-toolbar-bg', l: 'Fond', section: 'Discours — bandeau' },
     { v: '--speech-toolbar-border', l: 'Bordure', section: 'Discours — bandeau' },
