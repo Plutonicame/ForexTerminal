@@ -79,6 +79,9 @@
   <button type="button" class="burger" id="burgerBtn" aria-label="Ouvrir le menu" aria-expanded="false" aria-controls="sideMenu">
     <span></span><span></span><span></span>
   </button>
+  <button type="button" class="back-btn" id="backBtn" aria-label="Revenir à Overwatch" title="Revenir à Overwatch" hidden>
+    <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 5l-7 7 7 7"/></svg>
+  </button>
 
   <div class="clocks" aria-label="Heures des sessions de trading">
     <div class="clock">
@@ -211,7 +214,6 @@
     </div>
     <div class="news-toolbar-info" id="newsInfo"></div>
     <div id="newsCalendar" aria-live="polite"></div>
-    <div id="newsSpeeches"></div>
   </section>
 
   <section class="tab-panel is-active" id="tab-overwatch" role="tabpanel" aria-label="Overwatch">
@@ -242,6 +244,7 @@
         </div>
         <div id="owCalendar" aria-live="polite"></div>
       </div>
+      <div class="ow-tile ow-speeches" id="owSpeeches"><div id="newsSpeeches"></div></div>
     </div>
   </section>
 

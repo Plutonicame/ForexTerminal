@@ -677,6 +677,10 @@ const THEME_FIELDS = {
     { v: '--session-border', l: 'Bordure', category: 'Barre de navigation', section: 'Case des sessions' },
     { v: '--burger-bg', l: 'Fond', category: 'Barre de navigation', section: 'Menu burger (bouton)' },
     { v: '--burger-border', l: 'Bordure', category: 'Barre de navigation', section: 'Menu burger (bouton)' },
+    { v: '--back-bg', l: 'Fond', category: 'Barre de navigation', section: 'Flèche de retour à Overwatch' },
+    { v: '--back-border', l: 'Bordure', category: 'Barre de navigation', section: 'Flèche de retour à Overwatch' },
+    { v: '--back-color', l: 'Flèche', category: 'Barre de navigation', section: 'Flèche de retour à Overwatch' },
+    { v: '--back-hover-border', l: 'Bordure survolée', category: 'Barre de navigation', section: 'Flèche de retour à Overwatch' },
     { v: '--burger-bars-color', l: 'Les 3 traits', category: 'Barre de navigation', section: 'Menu burger (bouton)' },
 
     { v: '--menu-overlay-color', l: 'Couleur du fond', category: 'Menu burger déplié', section: 'Fond' },

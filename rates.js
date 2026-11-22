@@ -246,6 +246,7 @@
       const t = document.querySelector('.menu-tab[data-tab="tab-rates"]');
       if (t) t.click();
       if (window.FXWindows) window.FXWindows.select('rates', b.dataset.owRate);
+      if (window.Overwatch && window.Overwatch.arm) window.Overwatch.arm();
     });
     renderMini(host);
     loadRates();

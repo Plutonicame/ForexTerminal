@@ -1767,25 +1767,7 @@ async function loadNews() {
   const requestId = ++newsRequestId;
 
   // Discours : même période et mêmes devises que le tableau.
-  const { startMs, endMs } = newsRangeBounds();
-  if (window.Speeches && window.Speeches.renderNews) {
-    window.Speeches.renderNews({
-      currencies: new Set(newsSelectedCurrencies()),
-      startMs,
-      endMs,
-      label: newsPeriodText(),
-      isToday: newsRangeIsToday(),
-    });
-  }
-  // Trump, FX Daily d'ING et annonces rouges FinancialJuice : même période et mêmes devises.
-  if (window.NewsWindows && window.NewsWindows.renderHome) {
-    window.NewsWindows.renderHome({
-      currencies: new Set(newsSelectedCurrencies()),
-      startMs,
-      endMs,
-      label: newsPeriodText(),
-    });
-  }
+  if (window.Speeches && window.Speeches.renderNews) window.Speeches.renderNews(null); // Overwatch : discours d'aujourd'hui, toutes devises
 
   const result = await fetchNewsCalendarEvents();
   if (requestId !== newsRequestId) return; // une réponse plus récente est déjà arrivée

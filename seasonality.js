@@ -209,7 +209,7 @@
     return `<svg viewBox="0 0 ${W} ${H}" width="${W}" height="${H}" role="img" aria-label="Écart entre l'année en cours et la saisonnalité">${s}</svg>`;
   }
 
-  function barsChart(items, W, label, Hopt) {
+  function barsChart(items, W, label, Hopt, hit) {
     const H = Hopt || 230;
     const m = { l: 48, r: 10, t: 18, b: 26 };
     const pw = W - m.l - m.r; const ph = H - m.t - m.b;
@@ -238,6 +238,7 @@
       const ly = it.avg >= 0 ? top - 4 : top + h + 11;
       if (slot >= 30) s += `<text x="${cx.toFixed(1)}" y="${ly.toFixed(1)}" text-anchor="middle" fill="${txt}" font-size="${slot < 40 ? 8.5 : 10}" font-family="var(--mono)">${it.avg >= 0 ? '+' : '−'}${Math.abs(it.avg).toFixed(dec)}</text>`;
       s += `<text x="${cx.toFixed(1)}" y="${H - 8}" text-anchor="middle" fill="${txt}" font-size="${slot < 34 ? 9 : 11}" font-family="var(--mono)">${esc(it.label)}</text>`;
+      if (hit) s += `<rect class="seas-hit" data-cur="${esc(it.name)}" x="${(m.l + slot * i).toFixed(1)}" y="0" width="${slot.toFixed(1)}" height="${H}" fill="transparent"><title>${esc(tip)} — clic : saisonnalité ${esc(it.name)}</title></rect>`;
     });
     return `<svg viewBox="0 0 ${W} ${H}" width="${W}" height="${H}" role="img" aria-label="${esc(label)}">${s}</svg>`;
   }
@@ -341,7 +342,7 @@
     MINI_ORDER.forEach((c) => { const r = compute(c); if (r) items.push({ name: c, label: c, avg: r.months[m].avg, pos: r.months[m].pos, n: r.months[m].n }); });
     if (!items.length) { body.innerHTML = `<p class="ind-empty">${failed ? 'Données indisponibles' : 'Chargement…'}</p>`; return; }
     const W = Math.max(220, body.clientWidth || 360);
-    body.innerHTML = barsChart(items, W, title, 290);
+    body.innerHTML = barsChart(items, W, title, 290, true);
   }
   function mountMonth(host) {
     if (!host || host.querySelector('[data-seas-body]')) return;
