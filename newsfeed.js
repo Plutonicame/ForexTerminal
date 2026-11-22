@@ -239,7 +239,7 @@
 
   /* ---------- pop-up d'une news : infos + résumé en français (quand la page d'origine est lisible) ---------- */
   let popEl = null; let popToken = 0;
-  function closePop() { if (popEl) { popEl.remove(); popEl = null; } popToken += 1; }
+  function closePop() { if (popEl) { popEl.remove(); popEl = null; } popToken += 1; document.querySelectorAll('[data-see].is-active').forEach((b) => b.classList.remove('is-active')); }
   async function openPop(a) {
     closePop();
     const tok = popToken;
@@ -275,6 +275,7 @@
   const ART_SOURCES = new Set(['nyt', 'bloomberg', 'reuters', 'investing', 'investinglive']);
   async function openArticle(d) {
     closePop();
+    if (d.btn) d.btn.classList.add('is-active'); // bouton « sélectionné » tant que la news est ouverte
     const tok = popToken;
     popEl = document.createElement('div');
     popEl.className = 'nf-pop';
@@ -320,7 +321,7 @@
     const b = ev.target.closest && ev.target.closest('[data-see]');
     if (!b) return;
     ev.preventDefault();
-    openArticle({ nid: b.dataset.see, src: b.dataset.src, feed: b.dataset.feed, at: b.dataset.at, ttl: b.dataset.ttl, href: b.dataset.href });
+    openArticle({ btn: b, nid: b.dataset.see, src: b.dataset.src, feed: b.dataset.feed, at: b.dataset.at, ttl: b.dataset.ttl, href: b.dataset.href });
   });
 
   document.addEventListener('click', (ev) => {

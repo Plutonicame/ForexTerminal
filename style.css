@@ -4847,10 +4847,11 @@ button.sq-btn.is-on { border-color: var(--blue-light); color: var(--blue-light);
 }
 
 /* ===== « Voir la news » ===== */
-:root { --nf-see-bg: #00000000; --nf-see-bd: #2a2a2a; --nf-see-text: #9a9a9a; --nf-see-hover-bg: #00000000; --nf-see-hover-bd: #4d94ff; --nf-see-hover-text: #4d94ff; }
+:root { --nf-see-bg: #00000000; --nf-see-bd: #2a2a2a; --nf-see-text: #9a9a9a; --nf-see-hover-bg: #00000000; --nf-see-hover-bd: #4d94ff; --nf-see-hover-text: #4d94ff; --nf-see-active-bg: #4d94ff; --nf-see-active-bd: #4d94ff; --nf-see-active-text: #111111; }
 .nf-see { align-self: flex-start; margin-top: 4px; padding: 3px 10px; cursor: pointer; font-family: var(--mono); font-size: 11px; letter-spacing: .5px; border-radius: 6px; background: var(--nf-see-bg); border: 1px solid var(--nf-see-bd); color: var(--nf-see-text); transition: border-color .12s, color .12s, background .12s; }
 .nf-see:hover { background: var(--nf-see-hover-bg); border-color: var(--nf-see-hover-bd); color: var(--nf-see-hover-text); }
 .nx-see { background: var(--nf-see-bg); border-color: var(--nf-see-bd); color: var(--nf-see-text); }
 .nx-see:hover { background: var(--nf-see-hover-bg); border-color: var(--nf-see-hover-bd); color: var(--nf-see-hover-text); }
 .nf-pop-img-wrap { margin: 0 0 12px; border-radius: var(--radius-sm); overflow: hidden; border: 1px solid var(--nf-pop-border); }
 .nf-pop-img { display: block; width: 100%; max-height: 300px; object-fit: cover; }
+.nf-see.is-active, .nx-see.is-active, .nf-see.is-active:hover, .nx-see.is-active:hover { background: var(--nf-see-active-bg); border-color: var(--nf-see-active-bd); color: var(--nf-see-active-text); }
