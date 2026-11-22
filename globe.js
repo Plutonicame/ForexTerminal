@@ -398,7 +398,7 @@
       });
       v.scene.globe.showGroundAtmosphere = true;
       const ctl = v.scene.screenSpaceCameraController; // zoom progressif (défaut Cesium : 5, trop brusque)
-      ctl.zoomFactor = 1.4; ctl.inertiaZoom = 0.5; ctl.minimumZoomDistance = 30;
+      ctl.zoomFactor = 1.13; ctl.inertiaZoom = 0.2; ctl.minimumZoomDistance = 30;
       v.imageryLayers.addImageryProvider(new C.UrlTemplateImageryProvider({ url: ESRI_URL, maximumLevel: 18, credit: 'Esri' }));
       v.camera.setView({ destination: C.Cartesian3.fromDegrees(SPACE_VIEW.lon, SPACE_VIEW.lat, SPACE_VIEW.h) });
       mini = v;
