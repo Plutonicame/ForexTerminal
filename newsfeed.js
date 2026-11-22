@@ -25,7 +25,7 @@
   const SRC_LABEL = { fj: 'FinancialJuice', investinglive: 'Investing Live', investing: 'Investing.com', bloomberg: 'Bloomberg', reuters: 'Reuters', nyt: 'New York Times' };
   // Colonnes du News Feed. red : on n'affiche que les lignes retenues par le tri (red = true).
   const SOURCES = [
-    { key: 'investinglive', title: 'investingLive', sub: 'News & articles · titres en anglais', red: false },
+    { key: 'investinglive', title: 'investingLive', sub: 'News & articles · traduits en français', red: false },
     { key: 'fj', title: 'FinancialJuice', sub: 'Annonces rouges uniquement · traduites', red: true },
     { key: 'investing', title: 'Investing.com', sub: 'Marchés & macro · traduit', red: true },
     { key: 'bloomberg', title: 'Bloomberg', sub: 'Marchés & macro, hors actions · traduit', red: true },
@@ -306,13 +306,11 @@
         w.querySelector('img').addEventListener('error', () => { w.hidden = true; });
       }
       if (a.title_fr) popEl.querySelector('.nf-pop-title').textContent = a.title_fr;
-      const orig = popEl.querySelector('.nf-pop-orig');
-      if (a.title && a.title !== a.title_fr) { orig.textContent = a.title; orig.hidden = false; }
       const paras = Array.isArray(a.paragraphs) ? a.paragraphs.filter(Boolean) : [];
       body.innerHTML = paras.map((t) => `<p>${esc(t)}</p>`).join('')
         + (a.note ? `<p class="nf-pop-note">${esc(a.note)}</p>` : '')
         + (!paras.length && !a.note ? '<p class="nf-pop-wait">Aucun texte disponible pour cette news.</p>' : '')
-        + (paras.length && a.translated === false ? '<p class="nf-pop-note">Traduction momentanément indisponible : texte d\'origine.</p>' : '');
+        + (paras.length && a.translated === false ? '<p class="nf-pop-note">Traduction momentanément indisponible : ferme et rouvre la news pour réessayer.</p>' : '');
     } catch (e) {
       if (tok === popToken) body.innerHTML = '<p class="nf-pop-wait">News indisponible pour le moment. Utilise « Voir sur le site ».</p>';
     }
@@ -340,10 +338,10 @@
       const dk = dayKey(r.published_at);
       if (dk !== lastDay) { lastDay = dk; html += `<p class="nf-day">${esc(fmtDay(r.published_at))}</p>`; }
       const url = safeUrl(r.url);
-      const title = kind === 'investinglive' ? r.title : (r.title_fr || r.title);
+      const title = r.title_fr || r.title;
       const tag = kind === 'mixed' ? `<span class="nf-tag">${esc(SRC_LABEL[r.source] || r.source)}</span>`
         : kind === 'fj' ? '<span class="nf-tag nf-tag--red">Rouge</span>' : (r.feed ? `<span class="nf-tag">${esc(r.feed)}</span>` : '');
-      const orig = kind !== 'investinglive' && r.title_fr && r.title_fr !== r.title ? `<span class="nf-orig">${esc(r.title)}</span>` : '';
+      const orig = r.title_fr && r.title_fr !== r.title ? `<span class="nf-orig">${esc(r.title)}</span>` : '';
       const body = url
         ? `<a class="nf-title" href="${esc(url)}" target="_blank" rel="noopener noreferrer" data-nid="${esc(r.id)}"${ART_SOURCES.has(r.source) ? ' data-art="1"' : ''} data-src="${esc(SRC_LABEL[r.source] || r.source || '')}" data-feed="${esc(r.feed || '')}" data-at="${esc(r.published_at)}" data-orig="${esc(r.title_fr && r.title_fr !== r.title ? r.title : '')}" data-ttl="${esc(title)}">${esc(title)}</a>`
         : `<span class="nf-title">${esc(title)}</span>`;
