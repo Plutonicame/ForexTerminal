@@ -330,6 +330,41 @@
   });
   document.addEventListener('keydown', (ev) => { if (ev.key === 'Escape') closePop(); });
 
+  /* Titres sans traduction en base (robot en retard, quota) : traduits ici avec Google Traduction, gardés en mémoire */
+  const LS_TR = 'fxt-tr-fr';
+  const trCache = (() => { try { return new Map(JSON.parse(localStorage.getItem(LS_TR) || '[]')); } catch (e) { return new Map(); } })();
+  function trSave() {
+    try { localStorage.setItem(LS_TR, JSON.stringify([...trCache].slice(-600))); } catch (e) { /* stockage indisponible */ }
+  }
+  async function trOne(text) {
+    if (trCache.has(text)) return trCache.get(text);
+    try {
+      const r = await fetch('https://translate.googleapis.com/translate_a/single?client=gtx&sl=auto&tl=fr&dt=t&q=' + encodeURIComponent(text));
+      if (!r.ok) return null;
+      const d = await r.json();
+      const out = d[0].map((c) => c[0]).join('').trim();
+      if (out) { trCache.set(text, out); return out; }
+    } catch (e) { /* hors ligne ou bloqué : on garde l'original */ }
+    return null;
+  }
+  async function trFill(root) {
+    const els = [...(root || document).querySelectorAll('[data-need-tr]')];
+    if (!els.length) return;
+    const texts = [...new Set(els.map((e) => e.textContent.trim()).filter(Boolean))];
+    let i = 0;
+    await Promise.all(Array.from({ length: 4 }, async () => {
+      while (i < texts.length) { const t = texts[i++]; await trOne(t); }
+    }));
+    els.forEach((e) => {
+      const fr = trCache.get(e.textContent.trim());
+      if (!fr) return;
+      e.textContent = fr;
+      if (e.dataset.ttl !== undefined) e.dataset.ttl = fr;
+      e.removeAttribute('data-need-tr');
+    });
+    trSave();
+  }
+
   function renderRows(rows, kind) {
     if (!rows.length) return '<p class="nf-empty">Rien pour le moment.</p>';
     let html = '';
@@ -343,8 +378,8 @@
         : kind === 'fj' ? '<span class="nf-tag nf-tag--red">Rouge</span>' : (r.feed ? `<span class="nf-tag">${esc(r.feed)}</span>` : '');
       const orig = r.title_fr && r.title_fr !== r.title ? `<span class="nf-orig">${esc(r.title)}</span>` : '';
       const body = url
-        ? `<a class="nf-title" href="${esc(url)}" target="_blank" rel="noopener noreferrer" data-nid="${esc(r.id)}"${ART_SOURCES.has(r.source) ? ' data-art="1"' : ''} data-src="${esc(SRC_LABEL[r.source] || r.source || '')}" data-feed="${esc(r.feed || '')}" data-at="${esc(r.published_at)}" data-orig="${esc(r.title_fr && r.title_fr !== r.title ? r.title : '')}" data-ttl="${esc(title)}">${esc(title)}</a>`
-        : `<span class="nf-title">${esc(title)}</span>`;
+        ? `<a class="nf-title"${r.title_fr ? '' : ' data-need-tr="1"'} href="${esc(url)}" target="_blank" rel="noopener noreferrer" data-nid="${esc(r.id)}"${ART_SOURCES.has(r.source) ? ' data-art="1"' : ''} data-src="${esc(SRC_LABEL[r.source] || r.source || '')}" data-feed="${esc(r.feed || '')}" data-at="${esc(r.published_at)}" data-orig="${esc(r.title_fr && r.title_fr !== r.title ? r.title : '')}" data-ttl="${esc(title)}">${esc(title)}</a>`
+        : `<span class="nf-title"${r.title_fr ? '' : ' data-need-tr="1"'}>${esc(title)}</span>`;
       const see = url && ART_SOURCES.has(r.source) ? `<button type="button" class="nf-see" data-see="${esc(r.id)}" data-src="${esc(SRC_LABEL[r.source] || r.source || '')}" data-feed="${esc(r.feed || '')}" data-at="${esc(r.published_at)}" data-ttl="${esc(title)}" data-href="${esc(url)}">Voir la news</button>` : '';
       html += `<div class="nf-row${r.top ? ' nf-row--top' : ''}"${r.top ? ' title="Dans l\'onglet Nouveau et lue par le Squawk"' : ''}><span class="nf-time">${esc(fmtTime(r.published_at))}</span><div class="nf-body">${tag}${body}${orig}${see}</div></div>`;
     });
@@ -371,34 +406,53 @@
         const box = sec.querySelector(`[data-nf="${x.key}"]`);
         if (box) box.innerHTML = renderRows(res[i].data || [], x.key);
       });
+      trFill(sec);
     });
   }
 
   /* ---------------- Bank Research ---------------- */
-  function paragraphs(text) {
-    return String(text || '').split(/\n{2,}/).map((p) => p.trim()).filter(Boolean).map((p) => {
-      if (p.startsWith('## ')) return `<h4>${esc(p.slice(3))}</h4>`;
-      if (p.startsWith('- ')) return `<p class="br-li">• ${esc(p.slice(2))}</p>`;
-      return `<p>${esc(p)}</p>`;
-    }).join('');
+  const BR_CUR = ['USD', 'EUR', 'GBP', 'JPY', 'CHF', 'CAD', 'AUD', 'NZD'];
+  // Texte du FX Daily -> introduction + un bloc par sous-titre (une devise ou un thème), bien séparés
+  function bankSections(text) {
+    const paras = String(text || '').split(/\n{2,}/).map((p) => p.trim()).filter((p) => p && !/^(Share|Partager)\b.*LinkedIn/i.test(p) && !/\.st0 \{/.test(p));
+    const body = (p) => (p.startsWith('- ') ? `<p class="br-li">• ${esc(p.slice(2))}</p>` : `<p>${esc(p)}</p>`);
+    let lede = ''; const secs = []; let cur = null;
+    paras.forEach((p) => {
+      if (p.startsWith('## ')) { cur = { head: p.slice(3).trim(), html: '' }; secs.push(cur); }
+      else if (cur) cur.html += body(p);
+      else lede += body(p);
+    });
+    const head = (h) => {
+      const m = h.match(/^([^:：]{2,16}?)\s*[:：]\s*(.+)$/);
+      const code = m ? m[1].trim() : '';
+      const isCur = BR_CUR.includes(code.toUpperCase());
+      return { code, isCur, title: m ? m[2].trim() : h };
+    };
+    return (lede ? `<div class="br-lede">${lede}</div>` : '')
+      + secs.map((x) => {
+        const h = head(x.head);
+        const badge = h.code ? `<span class="br-badge${h.isCur ? ' br-badge--cur' : ''}"${h.isCur ? ` style="--br-cur:var(--fxs-${h.code.toLowerCase()}, var(--br-badge-bg))"` : ''}>${esc(h.isCur ? h.code.toUpperCase() : h.code)}</span>` : '';
+        return `<section class="br-sec"><div class="br-sec-head">${badge}<h4 class="br-sec-title">${esc(h.title)}</h4></div>${x.html}</section>`;
+      }).join('');
   }
 
-  function bankCard(r) {
+  function bankCard(r, i) {
     const url = safeUrl(r.url);
     const done = !!r.analyzed_at;
     const bullets = Array.isArray(r.summary) ? r.summary : [];
+    const openNow = i === 0 && done && r.text_fr; // le plus récent s'affiche en entier
     return `
     <article class="br-card" data-br="${esc(r.id)}">
       <div class="br-head"><span class="br-bank">${esc(r.bank)} · FX Daily</span><span class="br-date">${esc(fmtDateTime(r.published_at))}</span></div>
       <h3 class="br-title">${esc((done && r.title_fr) || r.title)}</h3>
       ${done && r.title_fr ? `<p class="br-orig">${esc(r.title)}</p>` : ''}
-      ${bullets.length ? `<ul class="br-bullets">${bullets.map((b) => `<li>${esc(b)}</li>`).join('')}</ul>` : ''}
+      ${bullets.length ? `<div class="br-key"><p class="br-key-title">Points clés</p><ul class="br-bullets">${bullets.map((b) => `<li>${esc(b)}</li>`).join('')}</ul></div>` : ''}
       ${done ? '' : '<p class="br-pending">Traduction en cours…</p>'}
       <div class="br-actions">
-        ${done && r.text_fr ? '<button type="button" class="speech-btn" data-br-toggle aria-expanded="false">Lire en français</button>' : ''}
+        ${done && r.text_fr ? `<button type="button" class="speech-btn" data-br-toggle aria-expanded="${openNow ? 'true' : 'false'}">${openNow ? 'Masquer' : 'Lire en français'}</button>` : ''}
         ${url ? `<a class="br-link" href="${esc(url)}" target="_blank" rel="noopener noreferrer">Article original (ING Think)</a>` : ''}
       </div>
-      ${done && r.text_fr ? `<div class="br-text" hidden>${paragraphs(r.text_fr)}</div>` : ''}
+      ${done && r.text_fr ? `<div class="br-text"${openNow ? '' : ' hidden'}>${bankSections(r.text_fr)}</div>` : ''}
     </article>`;
   }
 
@@ -430,7 +484,7 @@
       // On garde ouvertes les notes que l'utilisateur est en train de lire.
       const open = new Set([...sec.querySelectorAll('.br-card')].filter((el) => el.querySelector('.br-text:not([hidden])')).map((el) => el.dataset.br));
       const list = sec.querySelector('.br-list');
-      list.innerHTML = (data || []).length ? data.map(bankCard).join('') : '<p class="nf-empty">Aucun FX Daily pour le moment. Le prochain apparaîtra ici dès sa publication le matin.</p>';
+      list.innerHTML = (data || []).length ? data.map((r, i) => bankCard(r, i)).join('') : '<p class="nf-empty">Aucun FX Daily pour le moment. Le prochain apparaîtra ici dès sa publication le matin.</p>';
       open.forEach((id) => {
         const card = [...list.querySelectorAll('.br-card')].find((el) => el.dataset.br === id);
         const box = card && card.querySelector('.br-text');
@@ -600,6 +654,7 @@
       const sig = (data || []).map((r) => r.id + (r.title_fr ? 1 : 0)).join('|');
       if (!changed('squawk', sig)) return;
       box.innerHTML = renderRows(data || [], 'mixed');
+      trFill(box);
     });
   }
 
@@ -794,6 +849,7 @@
           <div class="speeches-toolbar"><span class="speeches-toolbar-title">News</span>${allBtn}</div>
           ${btns ? `<div class="nx-sec-bar">${btns}</div>${bodies}` : `<p class="speeches-empty">${hidden ? 'Rien de nouveau.' : 'Rien aujourd\'hui.'}</p>`}
         </div>`;
+      trFill(host);
     });
   }
   function homeItem(it) {
@@ -806,7 +862,7 @@
       <span class="nx-time">${esc(fmtTime(it.at))}</span>
       <div class="nx-body">
         ${it.tag ? `<span class="nf-tag${it.kind === 'fj' ? ' nf-tag--red' : ''}">${esc(it.tag)}</span>` : ''}
-        <span class="nx-title">${esc(it.title)}</span>
+        <span class="nx-title"${it.needTr ? ' data-need-tr="1"' : ''}>${esc(it.title)}</span>
         <div class="nx-actions">${see}${more}${link}</div>
         ${it.more ? `<div class="nx-more" hidden>${it.more}</div>` : ''}
       </div>
@@ -833,10 +889,10 @@
           : Promise.resolve({ data: [], error: null }),
       ]);
       const lists = { fj: [], il: [], investing: [], bloomberg: [], reuters: [], nyt: [], bank: [], trump: [] };
-      (fj.data || []).forEach((r) => lists.fj.push({ kind: 'fj', tag: '', at: r.published_at, title: r.title_fr || r.title, url: r.url, linkLabel: 'Source' }));
-      (il.data || []).forEach((r) => lists.il.push({ kind: 'il', tag: r.feed || '', at: r.published_at, title: r.title_fr || r.title, url: r.url, linkLabel: 'Voir le site', nid: r.id, src: 'investingLive', feed: r.feed }));
+      (fj.data || []).forEach((r) => lists.fj.push({ kind: 'fj', tag: '', at: r.published_at, title: r.title_fr || r.title, needTr: !r.title_fr, url: r.url, linkLabel: 'Source' }));
+      (il.data || []).forEach((r) => lists.il.push({ kind: 'il', tag: r.feed || '', at: r.published_at, title: r.title_fr || r.title, needTr: !r.title_fr, url: r.url, linkLabel: 'Voir le site', nid: r.id, src: 'investingLive', feed: r.feed }));
       [['investing', inv], ['bloomberg', bbg], ['reuters', reu], ['nyt', nyt]].forEach(([k, res]) => {
-        (res.data || []).forEach((r) => lists[k].push({ kind: 'press', tag: r.feed || PRESS[k], at: r.published_at, title: r.title_fr || r.title, url: r.url, linkLabel: 'Voir le site', nid: r.id, src: PRESS[k], feed: r.feed }));
+        (res.data || []).forEach((r) => lists[k].push({ kind: 'press', tag: r.feed || PRESS[k], at: r.published_at, title: r.title_fr || r.title, needTr: !r.title_fr, url: r.url, linkLabel: 'Voir le site', nid: r.id, src: PRESS[k], feed: r.feed }));
       });
       (ing.data || []).forEach((r) => lists.bank.push({
         kind: 'ing', tag: 'ING · FX Daily', at: r.published_at, title: (r.analyzed_at && r.title_fr) || r.title, url: r.url, linkLabel: 'Article original',
@@ -880,6 +936,7 @@
         ${lists.trump.length ? `<div class="nx-list">${lists.trump.map(homeItem).join('')}</div>` : ''}
         ${buttons ? `<div class="nx-sec-bar">${buttons}</div>${bodies}` : ''}
         ${nothing ? `<p class="speeches-empty">${showAll ? 'Rien sur cette période.' : 'Rien de nouveau depuis ta dernière visite.'}</p>` : ''}`;
+      trFill(box);
     });
   }
 

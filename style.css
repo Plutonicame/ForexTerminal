@@ -4349,8 +4349,24 @@ a.nf-title:hover, .nx-link:hover, .br-link:hover { text-decoration: underline; }
 .br-actions, .nx-actions { display: flex; align-items: center; flex-wrap: wrap; gap: 12px; margin-top: 6px; }
 .br-link, .nx-link { font-size: 12px; color: var(--blue-light); }
 .br-text { margin-top: 10px; padding-top: 10px; border-top: 1px solid var(--border-dim); font-size: 14px; line-height: 1.55; color: var(--text); }
-.br-text h4 { margin: 14px 0 4px; font-size: 14px; }
 .br-text p { margin: 0 0 10px; }
+:root {
+  --br-key-bg: #14181f; --br-key-bd: #4d94ff; --br-key-title: #4d94ff;
+  --br-lede-text: #c9c9c9; --br-lede-bd: #2a2a2a;
+  --br-sec-bg: #121212; --br-sec-bd: #2a2a2a; --br-sec-title: #ffffff; --br-sec-line: #4d94ff;
+  --br-badge-bg: #2a3f66; --br-badge-text: #ffffff;
+}
+.br-key { margin: 10px 0; padding: 10px 14px; background: var(--br-key-bg); border-left: 3px solid var(--br-key-bd); border-radius: 6px; }
+.br-key-title { margin: 0 0 4px; font-family: var(--mono); font-size: 11px; letter-spacing: 1.5px; text-transform: uppercase; color: var(--br-key-title); }
+.br-key .br-bullets { margin: 0; }
+.br-lede { margin: 0 0 14px; padding-bottom: 12px; border-bottom: 1px solid var(--br-lede-bd); color: var(--br-lede-text); font-size: 15px; font-style: italic; }
+.br-lede p { margin: 0 0 8px; }
+.br-sec { margin: 0 0 14px; padding: 12px 16px 6px; background: var(--br-sec-bg); border: 1px solid var(--br-sec-bd); border-radius: var(--radius-card); }
+.br-sec-head { display: flex; align-items: center; gap: 10px; margin: 0 0 10px; padding-bottom: 8px; border-bottom: 2px solid var(--br-sec-line); }
+.br-sec-title { margin: 0; font-size: 17px; font-weight: 700; line-height: 1.3; color: var(--br-sec-title); }
+.br-badge { flex: 0 0 auto; padding: 3px 9px; border-radius: 6px; font-family: var(--mono); font-size: 12px; font-weight: 700; letter-spacing: 1px; background: var(--br-badge-bg); color: var(--br-badge-text); }
+.br-badge--cur { background: var(--br-cur); }
+.br-li { padding-left: 4px; }
 
 .sq-card { margin-top: 12px; padding: 18px; background: var(--bg-card); border: 1px solid var(--border-dim); border-radius: var(--radius-card); max-width: 640px; }
 .sq-title { margin: 0 0 8px; font-weight: 700; font-size: 16px; color: var(--text); }
