@@ -271,10 +271,62 @@
       if (tok === popToken) body.innerHTML = '<p class="nf-pop-wait">Résumé indisponible pour le moment. Utilisez le lien ci-dessous pour lire l\'article d\'origine.</p>';
     }
   }
+  // « Voir la news » (NYT, Bloomberg, Reuters, Investing.com, investingLive) : image, titre et texte en français (Google Traduction)
+  const ART_SOURCES = new Set(['nyt', 'bloomberg', 'reuters', 'investing', 'investinglive']);
+  async function openArticle(d) {
+    closePop();
+    const tok = popToken;
+    popEl = document.createElement('div');
+    popEl.className = 'nf-pop';
+    const when = new Date(d.at); const whenTxt = isNaN(when) ? '' : `${fmtDay(d.at)} · ${fmtTime(d.at)}`;
+    const href = safeUrl(d.href);
+    popEl.innerHTML = `<div class="nf-pop-card" role="dialog" aria-modal="true">
+      <button type="button" class="nf-pop-x" aria-label="Fermer">×</button>
+      <p class="nf-pop-meta">${esc(d.src)}${d.feed ? ' · ' + esc(d.feed) : ''}${whenTxt ? ' · ' + esc(whenTxt) : ''}</p>
+      <div class="nf-pop-img-wrap" hidden></div>
+      <h3 class="nf-pop-title">${esc(d.ttl)}</h3>
+      <p class="nf-pop-orig" hidden></p>
+      <div class="nf-pop-body"><p class="nf-pop-wait">Chargement de la news…</p></div>
+      ${href ? `<div class="nf-pop-foot"><a class="nf-pop-link" href="${esc(href)}" target="_blank" rel="noopener noreferrer">Voir sur le site ↗</a></div>` : ''}</div>`;
+    document.body.appendChild(popEl);
+    popEl.addEventListener('click', (ev) => { if (ev.target === popEl || ev.target.closest('.nf-pop-x')) closePop(); });
+    const body = popEl.querySelector('.nf-pop-body');
+    try {
+      const c = await client();
+      const { data, error } = await c.functions.invoke('article-view', { body: { id: d.nid } });
+      if (tok !== popToken) return;
+      if (error) throw error;
+      const a = data && data.article;
+      if (!a) throw new Error('vide');
+      if (a.image) {
+        const w = popEl.querySelector('.nf-pop-img-wrap');
+        w.innerHTML = `<img class="nf-pop-img" alt="" referrerpolicy="no-referrer" src="${esc(a.image)}">`;
+        w.hidden = false;
+        w.querySelector('img').addEventListener('error', () => { w.hidden = true; });
+      }
+      if (a.title_fr) popEl.querySelector('.nf-pop-title').textContent = a.title_fr;
+      const orig = popEl.querySelector('.nf-pop-orig');
+      if (a.title && a.title !== a.title_fr) { orig.textContent = a.title; orig.hidden = false; }
+      const paras = Array.isArray(a.paragraphs) ? a.paragraphs.filter(Boolean) : [];
+      body.innerHTML = paras.map((t) => `<p>${esc(t)}</p>`).join('')
+        + (a.note ? `<p class="nf-pop-note">${esc(a.note)}</p>` : '')
+        + (!paras.length && !a.note ? '<p class="nf-pop-wait">Aucun texte disponible pour cette news.</p>' : '')
+        + (paras.length && a.translated === false ? '<p class="nf-pop-note">Traduction momentanément indisponible : texte d\'origine.</p>' : '');
+    } catch (e) {
+      if (tok === popToken) body.innerHTML = '<p class="nf-pop-wait">News indisponible pour le moment. Utilise « Voir sur le site ».</p>';
+    }
+  }
+  document.addEventListener('click', (ev) => {
+    const b = ev.target.closest && ev.target.closest('[data-see]');
+    if (!b) return;
+    ev.preventDefault();
+    openArticle({ nid: b.dataset.see, src: b.dataset.src, feed: b.dataset.feed, at: b.dataset.at, ttl: b.dataset.ttl, href: b.dataset.href });
+  });
+
   document.addEventListener('click', (ev) => {
     if (ev.button !== 0 || ev.ctrlKey || ev.metaKey || ev.shiftKey) return;
     const a = ev.target.closest && ev.target.closest('a.nf-title[data-nid]');
-    if (!a) return;
+    if (!a || a.dataset.art) return;
     ev.preventDefault(); openPop(a);
   });
   document.addEventListener('keydown', (ev) => { if (ev.key === 'Escape') closePop(); });
@@ -292,9 +344,10 @@
         : kind === 'fj' ? '<span class="nf-tag nf-tag--red">Rouge</span>' : (r.feed ? `<span class="nf-tag">${esc(r.feed)}</span>` : '');
       const orig = kind !== 'investinglive' && r.title_fr && r.title_fr !== r.title ? `<span class="nf-orig">${esc(r.title)}</span>` : '';
       const body = url
-        ? `<a class="nf-title" href="${esc(url)}" target="_blank" rel="noopener noreferrer" data-nid="${esc(r.id)}" data-src="${esc(SRC_LABEL[r.source] || r.source || '')}" data-feed="${esc(r.feed || '')}" data-at="${esc(r.published_at)}" data-orig="${esc(r.title_fr && r.title_fr !== r.title ? r.title : '')}" data-ttl="${esc(title)}">${esc(title)}</a>`
+        ? `<a class="nf-title" href="${esc(url)}" target="_blank" rel="noopener noreferrer" data-nid="${esc(r.id)}"${ART_SOURCES.has(r.source) ? ' data-art="1"' : ''} data-src="${esc(SRC_LABEL[r.source] || r.source || '')}" data-feed="${esc(r.feed || '')}" data-at="${esc(r.published_at)}" data-orig="${esc(r.title_fr && r.title_fr !== r.title ? r.title : '')}" data-ttl="${esc(title)}">${esc(title)}</a>`
         : `<span class="nf-title">${esc(title)}</span>`;
-      html += `<div class="nf-row${r.top ? ' nf-row--top' : ''}"${r.top ? ' title="Dans l\'onglet Nouveau et lue par le Squawk"' : ''}><span class="nf-time">${esc(fmtTime(r.published_at))}</span><div class="nf-body">${tag}${body}${orig}</div></div>`;
+      const see = url && ART_SOURCES.has(r.source) ? `<button type="button" class="nf-see" data-see="${esc(r.id)}" data-src="${esc(SRC_LABEL[r.source] || r.source || '')}" data-feed="${esc(r.feed || '')}" data-at="${esc(r.published_at)}" data-ttl="${esc(title)}" data-href="${esc(url)}">Voir la news</button>` : '';
+      html += `<div class="nf-row${r.top ? ' nf-row--top' : ''}"${r.top ? ' title="Dans l\'onglet Nouveau et lue par le Squawk"' : ''}><span class="nf-time">${esc(fmtTime(r.published_at))}</span><div class="nf-body">${tag}${body}${orig}${see}</div></div>`;
     });
     return html;
   }
@@ -306,7 +359,7 @@
       if (!sec || !c) return;
       const { since, until } = rangeBounds();
       const res = await Promise.all(SOURCES.map((x) => {
-        let q = c.from('news_items').select('id,feed,title,title_fr,url,published_at,top').eq('source', x.key).gte('published_at', since).lt('published_at', until);
+        let q = c.from('news_items').select('id,source,feed,title,title_fr,url,published_at,top').eq('source', x.key).gte('published_at', since).lt('published_at', until);
         if (x.red) q = q.eq('red', true);
         return q.order('published_at', { ascending: false }).limit(500);
       }));
@@ -713,6 +766,7 @@
   function homeItem(it) {
     const url = safeUrl(it.url);
     const link = url ? `<a class="nx-link" href="${esc(url)}" target="_blank" rel="noopener noreferrer">${esc(it.linkLabel)}</a>` : '';
+    const see = it.nid ? `<button type="button" class="speech-btn nx-btn nx-see" data-see="${esc(it.nid)}" data-src="${esc(it.src || '')}" data-feed="${esc(it.feed || '')}" data-at="${esc(it.at)}" data-ttl="${esc(it.title)}" data-href="${esc(url || '')}">Voir la news</button>` : '';
     const more = it.more ? `<button type="button" class="speech-btn nx-btn" data-nx-toggle aria-expanded="false">Lire</button>` : '';
     return `
     <div class="nx-item nx-item--${esc(it.kind)}">
@@ -720,7 +774,7 @@
       <div class="nx-body">
         ${it.tag ? `<span class="nf-tag${it.kind === 'fj' ? ' nf-tag--red' : ''}">${esc(it.tag)}</span>` : ''}
         <span class="nx-title">${esc(it.title)}</span>
-        <div class="nx-actions">${more}${link}</div>
+        <div class="nx-actions">${see}${more}${link}</div>
         ${it.more ? `<div class="nx-more" hidden>${it.more}</div>` : ''}
       </div>
     </div>`;
@@ -747,9 +801,9 @@
       ]);
       const lists = { fj: [], il: [], investing: [], bloomberg: [], reuters: [], nyt: [], bank: [], trump: [] };
       (fj.data || []).forEach((r) => lists.fj.push({ kind: 'fj', tag: '', at: r.published_at, title: r.title_fr || r.title, url: r.url, linkLabel: 'Source' }));
-      (il.data || []).forEach((r) => lists.il.push({ kind: 'il', tag: r.feed || '', at: r.published_at, title: r.title_fr || r.title, url: r.url, linkLabel: 'Article' }));
+      (il.data || []).forEach((r) => lists.il.push({ kind: 'il', tag: r.feed || '', at: r.published_at, title: r.title_fr || r.title, url: r.url, linkLabel: 'Voir le site', nid: r.id, src: 'investingLive', feed: r.feed }));
       [['investing', inv], ['bloomberg', bbg], ['reuters', reu], ['nyt', nyt]].forEach(([k, res]) => {
-        (res.data || []).forEach((r) => lists[k].push({ kind: 'press', tag: r.feed || PRESS[k], at: r.published_at, title: r.title_fr || r.title, url: r.url, linkLabel: 'Article' }));
+        (res.data || []).forEach((r) => lists[k].push({ kind: 'press', tag: r.feed || PRESS[k], at: r.published_at, title: r.title_fr || r.title, url: r.url, linkLabel: 'Voir le site', nid: r.id, src: PRESS[k], feed: r.feed }));
       });
       (ing.data || []).forEach((r) => lists.bank.push({
         kind: 'ing', tag: 'ING · FX Daily', at: r.published_at, title: (r.analyzed_at && r.title_fr) || r.title, url: r.url, linkLabel: 'Article original',
