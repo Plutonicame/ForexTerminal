@@ -402,7 +402,7 @@
   let lastRow = null;
   function mountGauge(host) {
     if (!host || host.querySelector('.risk-gauge-svg')) return;
-    host.innerHTML = '<div class="speeches-toolbar"><span class="speeches-toolbar-title">Appétit pour le risque</span></div><div class="risk-gauge risk-gauge--mini"></div>';
+    host.innerHTML = '<div class="risk-gauge risk-gauge--mini"></div>';
     const mg = buildGauge();
     mg.val.textContent = '–';
     host.querySelector('.risk-gauge').appendChild(mg.svg);

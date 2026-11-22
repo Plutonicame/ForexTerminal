@@ -168,6 +168,7 @@ async function initAuth() {
   function showApp() {
     loginScreen.hidden = true;
     appShell.hidden = false;
+    document.dispatchEvent(new Event('fxt-app-shown'));
   }
 
   function showLogin() {

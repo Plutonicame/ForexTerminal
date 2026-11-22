@@ -4797,8 +4797,7 @@ button.sq-btn.is-on { border-color: var(--blue-light); color: var(--blue-light);
 /* ===== Overwatch : briques imbriquées ===== */
 :root {
   --ow-tile-bg: #161616; --ow-tile-border: #2a2a2a; --ow-gap: 8px;
-  --ow-rate-bg: #161616; --ow-rate-border: #2a2a2a; --ow-rate-hover-bg: #1f1f1f; --ow-rate-hover-border: #4d94ff;
-  --ow-rate-label: #9a9a9a; --ow-rate-value: #e6e6e6; --ow-rate-sub: #9a9a9a;
+  --ow-rate-hover-bg: #1f1f1f; --ow-rate-hover-border: #4d94ff;
 }
 .ow-grid { display: grid; grid-template-columns: repeat(12, minmax(0, 1fr)); gap: var(--ow-gap); padding: var(--ow-gap) 0 24px; align-items: stretch; }
 .ow-tile { background: var(--ow-tile-bg); border: 1px solid var(--ow-tile-border); border-radius: var(--radius-card); min-width: 0; overflow: hidden; }
@@ -4807,9 +4806,9 @@ button.sq-btn.is-on { border-color: var(--blue-light); color: var(--blue-light);
 .ow-right { grid-column: span 6; display: grid; grid-template-columns: 1fr 1fr; grid-template-rows: auto auto; gap: var(--ow-gap); }
 .ow-risk { grid-column: 1; }
 .ow-globe { grid-column: 2; position: relative; }
-.ow-risk, .ow-globe { aspect-ratio: 2 / 1; }
+.ow-risk, .ow-globe { aspect-ratio: 4 / 3; }
 .ow-risk { display: flex; flex-direction: column; }
-.ow-risk .risk-gauge { flex: 1; display: flex; align-items: center; justify-content: center; width: 100%; }
+.ow-risk .risk-gauge { flex: 1; display: flex; align-items: center; justify-content: center; width: 100%; padding: 0; }
 .ow-globe-reset { position: absolute; top: 8px; right: 8px; z-index: 5; width: 28px; height: 28px; padding: 0; display: inline-flex; align-items: center; justify-content: center; cursor: pointer; border-radius: 6px; background: var(--nf-listen-bg, #00000099); border: 1px solid var(--ow-tile-border); color: var(--text-dim, #9a9a9a); }
 .ow-globe-reset:hover { border-color: var(--ow-rate-hover-border); color: var(--ow-rate-hover-border); }
 .ow-seas { grid-column: 1 / -1; }
@@ -4821,19 +4820,16 @@ button.sq-btn.is-on { border-color: var(--blue-light); color: var(--blue-light);
 .ow-fx .fxs-chart { flex: 1; position: relative; min-height: 260px; }
 .ow-fx .fxs-chart svg { position: absolute; inset: 0; width: 100%; height: 100%; }
 .ow-fx .fxs-legend { align-items: center; }
-.ow-risk .risk-gauge { max-width: none; padding: 2px 8px 6px; }
 .ow-risk .risk-gauge { min-height: 0; overflow: hidden; }
-.ow-risk .risk-gauge-svg { height: 100%; width: auto; max-width: 100%; }
+.ow-risk .risk-gauge-svg { height: 100%; width: 100%; }
 .ow-globe .cesium-viewer, .ow-globe .cesium-viewer-cesiumWidgetContainer, .ow-globe .cesium-widget { position: absolute; inset: 0; width: 100%; height: 100%; }
 .ow-globe .cesium-viewer-bottom, .ow-globe .cesium-widget-credits { display: none !important; }
 .ow-globe canvas { touch-action: none; cursor: grab; }
 .ow-rates-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: var(--ow-gap); padding: var(--ow-gap); }
-.ow-rate { text-align: left; cursor: pointer; font: inherit; padding: 8px 10px; gap: 2px; background: var(--ow-rate-bg); border-color: var(--ow-rate-border); }
+.ow-rate { text-align: left; cursor: pointer; font: inherit; padding: 8px 10px; gap: 2px; }
 .ow-rate:hover { background: var(--ow-rate-hover-bg); border-color: var(--ow-rate-hover-border); border-left-color: var(--kpi); }
-.ow-rate .rates-kpi-label { color: var(--ow-rate-label); }
-.ow-rate-main { font-family: var(--mono); font-size: 13px; color: var(--ow-rate-value); line-height: 1.25; }
+.ow-rate-main { font-family: var(--mono); font-size: 13px; color: var(--rates-kpi-value); line-height: 1.25; }
 .ow-rate-main b { font-size: 15px; }
-.ow-rate .rates-kpi-sub { color: var(--ow-rate-sub); }
 .ow-news { display: grid; grid-template-columns: 1fr 1fr; gap: var(--ow-gap); background: none; border: 0; overflow: visible; }
 .ow-news-col { min-width: 0; max-height: 360px; overflow: auto; background: var(--ow-tile-bg); border: 1px solid var(--ow-tile-border); border-radius: var(--radius-card); }
 .ow-news > .speeches-empty { grid-column: 1 / -1; }
@@ -4846,6 +4842,21 @@ button.sq-btn.is-on { border-color: var(--blue-light); color: var(--blue-light);
   .ow-news { grid-template-columns: 1fr; }
 }
 
+
+/* Overwatch : listes Trump / autres news */
+:root {
+  --ow-news-title: #e6e6e6; --ow-news-time: #9a9a9a; --ow-news-line: #2a2a2a; --ow-news-link: #4d94ff;
+  --ow-secbtn-bg: #161616; --ow-secbtn-bd: #2a2a2a; --ow-secbtn-text: #e6e6e6;
+  --ow-secbtn-hover-bd: #4d94ff; --ow-secbtn-hover-text: #4d94ff; --ow-secbtn-count-bd: #2a2a2a; --ow-secbtn-count-text: #9a9a9a;
+}
+.ow-news .nx-item { border-bottom-color: var(--ow-news-line); }
+.ow-news .nx-title { color: var(--ow-news-title); }
+.ow-news .nx-time { color: var(--ow-news-time); }
+.ow-news .nx-link { color: var(--ow-news-link); }
+.ow-news .nx-list { background: none; border: 0; }
+.ow-news .nx-sec-btn { background: var(--ow-secbtn-bg); border-color: var(--ow-secbtn-bd); color: var(--ow-secbtn-text); }
+.ow-news .nx-sec-btn:hover, .ow-news .nx-sec-btn.is-open { border-color: var(--ow-secbtn-hover-bd); color: var(--ow-secbtn-hover-text); }
+.ow-news .nx-count { border-color: var(--ow-secbtn-count-bd); color: var(--ow-secbtn-count-text); }
 /* ===== « Voir la news » ===== */
 :root { --nf-see-bg: #00000000; --nf-see-bd: #2a2a2a; --nf-see-text: #9a9a9a; --nf-see-hover-bg: #00000000; --nf-see-hover-bd: #4d94ff; --nf-see-hover-text: #4d94ff; --nf-see-active-bg: #4d94ff; --nf-see-active-bd: #4d94ff; --nf-see-active-text: #111111; }
 .nf-see { align-self: flex-start; margin-top: 4px; padding: 3px 10px; cursor: pointer; font-family: var(--mono); font-size: 11px; letter-spacing: .5px; border-radius: 6px; background: var(--nf-see-bg); border: 1px solid var(--nf-see-bd); color: var(--nf-see-text); transition: border-color .12s, color .12s, background .12s; }

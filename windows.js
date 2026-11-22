@@ -36,7 +36,6 @@
       title: 'News',
       items: [
         { id: 'tab-overwatch', label: 'Overwatch', exists: true },
-        { id: 'tab-4', label: 'Nouveau', exists: true, menuClass: 'menu-tab--nouveau' },
         { id: 'tab-calendar', label: 'Calendar', exists: true, currency: { win: 'calendar', all: 'own', calendar: true } },
         { id: 'tab-newsfeed', label: 'News Feed' },
         { id: 'tab-bankresearch', label: 'Bank Research' },
@@ -184,7 +183,7 @@
     if (!menuList) return;
     menuList.innerHTML = MENU.map((group) => {
       const buttons = group.items.map((item) => {
-        const home = item.id === 'tab-4';
+        const home = item.id === 'tab-overwatch';
         const cls = `menu-tab ${item.menuClass || 'menu-tab--win'}${home ? ' is-active' : ''}`;
         return `<button type="button" class="${cls}" data-tab="${item.id}"${home ? ' aria-current="true"' : ''}>${item.label}</button>`;
       }).join('');

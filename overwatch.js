@@ -36,6 +36,12 @@
 
   window.Overwatch = { setActive };
 
+  // Overwatch est la page d'accueil : on la charge dès que l'appli s'affiche (après connexion)
+  document.addEventListener('fxt-app-shown', () => {
+    const p = document.getElementById(PANEL_ID);
+    if (p && !p.hidden) { setActive(true); if (window.OverwatchCalendar) window.OverwatchCalendar.refresh(); }
+  });
+
   // rafraîchissement périodique tant que la fenêtre est affichée
   document.addEventListener('DOMContentLoaded', () => {
     setInterval(() => {

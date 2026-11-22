@@ -341,7 +341,7 @@
     MINI_ORDER.forEach((c) => { const r = compute(c); if (r) items.push({ name: c, label: c, avg: r.months[m].avg, pos: r.months[m].pos, n: r.months[m].n }); });
     if (!items.length) { body.innerHTML = `<p class="ind-empty">${failed ? 'Données indisponibles' : 'Chargement…'}</p>`; return; }
     const W = Math.max(220, body.clientWidth || 360);
-    body.innerHTML = barsChart(items, W, title, 380);
+    body.innerHTML = barsChart(items, W, title, 290);
   }
   function mountMonth(host) {
     if (!host || host.querySelector('[data-seas-body]')) return;
