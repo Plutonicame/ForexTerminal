@@ -239,6 +239,24 @@
       <span class="settings-label">Thème</span>
       <button type="button" class="settings-btn" id="themeBtn">Thème</button>
     </div>
+    <div class="settings-card" id="mwSettings">
+      <p class="settings-card-title">Paramètres Market Watch</p>
+      <div class="settings-row">
+        <span class="settings-label">Unité de temps des bougies au « Replacer »</span>
+        <select class="settings-input" id="mwSetTf">
+          <option value="1">1 min</option><option value="5">5 min</option><option value="15">15 min</option>
+          <option value="60">1 h</option><option value="240">4 h</option><option value="D">1 jour</option><option value="W">1 semaine</option>
+        </select>
+      </div>
+      <div class="settings-row">
+        <span class="settings-label">Nombre de bougies affichées (0 = automatique)</span>
+        <input type="number" class="settings-input" id="mwSetBars" min="0" max="2000" step="1" value="0">
+      </div>
+      <div class="settings-row">
+        <span class="settings-label">Espace libre à droite, « à l'avance » (en bougies)</span>
+        <input type="number" class="settings-input" id="mwSetAhead" min="0" max="200" step="1" value="8">
+      </div>
+    </div>
   </section>
 
 </main>

@@ -236,6 +236,7 @@ const THEME_FIELDS = {
     { v: '--risk-mark-1m', l: 'Repère 1M (trait et texte)', section: 'Cadran du risque — repères 1J / 1S / 1M' },
     { v: '--risk-hist-bg', l: 'Fond du cadre', section: 'Historique du risque (graphique)' },
     { v: '--risk-hist-border', l: 'Bordure du cadre', section: 'Historique du risque (graphique)' },
+    { v: '--risk-box-border', l: 'Bordure arrondie autour du graphique', section: 'Historique du risque (graphique)' },
     { v: '--risk-hist-title', l: 'Titre', section: 'Historique du risque (graphique)' },
     { v: '--risk-hz-off', l: 'Zone rouge (sous 30)', section: 'Historique du risque (graphique)' },
     { v: '--risk-hz-mid', l: 'Zone grise (30 à 70)', section: 'Historique du risque (graphique)' },
@@ -333,6 +334,10 @@ const THEME_FIELDS = {
     { v: '--trump-tweet-link', l: 'Lien vers le post original', section: 'Donald Trump — texte du tweet' },
   ],
   overwatch: [
+    { v: '--ow-vix-bg', l: 'Fond', section: 'Petite zone VIX (case Risk)' },
+    { v: '--ow-vix-bd', l: 'Bordure', section: 'Petite zone VIX (case Risk)' },
+    { v: '--ow-vix-text', l: 'Texte', section: 'Petite zone VIX (case Risk)' },
+    { v: '--ow-vix-hover-bd', l: 'Bordure survolée', section: 'Petite zone VIX (case Risk)' },
     { v: '--ow-news-title', l: 'Titre d\'une news', section: 'Trump et autres news' },
     { v: '--ow-news-time', l: 'Heure', section: 'Trump et autres news' },
     { v: '--ow-news-line', l: 'Trait entre deux news', section: 'Trump et autres news' },
@@ -340,16 +345,27 @@ const THEME_FIELDS = {
     { v: '--ow-secbtn-bg', l: 'Fond', section: 'Boutons des sources (FinancialJuice, Bloomberg…)' },
     { v: '--ow-secbtn-bd', l: 'Bordure', section: 'Boutons des sources (FinancialJuice, Bloomberg…)' },
     { v: '--ow-secbtn-text', l: 'Texte', section: 'Boutons des sources (FinancialJuice, Bloomberg…)' },
+    { v: '--ow-secbtn-hover-bg', l: 'Fond survolé / ouvert', section: 'Boutons des sources (FinancialJuice, Bloomberg…)' },
     { v: '--ow-secbtn-hover-bd', l: 'Bordure survolé / ouvert', section: 'Boutons des sources (FinancialJuice, Bloomberg…)' },
     { v: '--ow-secbtn-hover-text', l: 'Texte survolé / ouvert', section: 'Boutons des sources (FinancialJuice, Bloomberg…)' },
+    { v: '--ow-secbtn-count-bg', l: 'Fond du compteur (petit numéro)', section: 'Boutons des sources (FinancialJuice, Bloomberg…)' },
     { v: '--ow-secbtn-count-bd', l: 'Bordure du compteur', section: 'Boutons des sources (FinancialJuice, Bloomberg…)' },
     { v: '--ow-secbtn-count-text', l: 'Texte du compteur', section: 'Boutons des sources (FinancialJuice, Bloomberg…)' },
-    { v: '--ow-tile-bg', l: 'Fond', section: 'Briques (cases de la fenêtre)' },
-    { v: '--ow-tile-border', l: 'Bordure', section: 'Briques (cases de la fenêtre)' },
+    { v: '--ow-tile-bg', l: 'Fond', section: 'Cases de contenu (graphiques, listes, jauge, globe)' },
+    { v: '--ow-tile-border', l: 'Bordure', section: 'Cases de contenu (graphiques, listes, jauge, globe)' },
     { v: '--ow-rate-hover-bg', l: 'Fond', section: 'Taux d\'intérêt — case survolée' },
     { v: '--ow-rate-hover-border', l: 'Bordure', section: 'Taux d\'intérêt — case survolée' },
   ],
   squawk: [
+    { v: '--sqb-bg', l: 'Fond', section: 'Boutons « Activer la voix », « Tester la voix », « Squawk FinancialJuice d\'origine » — Non sélectionné' },
+    { v: '--sqb-bd', l: 'Bordure', section: 'Boutons « Activer la voix », « Tester la voix », « Squawk FinancialJuice d\'origine » — Non sélectionné' },
+    { v: '--sqb-text', l: 'Texte', section: 'Boutons « Activer la voix », « Tester la voix », « Squawk FinancialJuice d\'origine » — Non sélectionné' },
+    { v: '--sqb-hover-bg', l: 'Fond', section: 'Boutons « Activer la voix », « Tester la voix », « Squawk FinancialJuice d\'origine » — Survolé' },
+    { v: '--sqb-hover-bd', l: 'Bordure', section: 'Boutons « Activer la voix », « Tester la voix », « Squawk FinancialJuice d\'origine » — Survolé' },
+    { v: '--sqb-hover-text', l: 'Texte', section: 'Boutons « Activer la voix », « Tester la voix », « Squawk FinancialJuice d\'origine » — Survolé' },
+    { v: '--sqb-on-bg', l: 'Fond', section: 'Boutons « Activer la voix », « Tester la voix », « Squawk FinancialJuice d\'origine » — Sélectionné (voix activée)' },
+    { v: '--sqb-on-bd', l: 'Bordure', section: 'Boutons « Activer la voix », « Tester la voix », « Squawk FinancialJuice d\'origine » — Sélectionné (voix activée)' },
+    { v: '--sqb-on-text', l: 'Texte', section: 'Boutons « Activer la voix », « Tester la voix », « Squawk FinancialJuice d\'origine » — Sélectionné (voix activée)' },
     { v: '--sq-off-bg', l: 'Fond', section: 'Bouton Squawk (barre du haut) — désactivé' },
     { v: '--sq-off-border', l: 'Bordure', section: 'Bouton Squawk (barre du haut) — désactivé' },
     { v: '--sq-off-icon', l: 'Icône', section: 'Bouton Squawk (barre du haut) — désactivé' },
@@ -371,6 +387,14 @@ const THEME_FIELDS = {
     { v: '--nf-reading-outline', l: 'Couleur du contour', section: 'Contour de la news en cours de lecture' },
   ],
   newsfeed: [
+    { v: '--br-card-bg', l: 'Carte – fond', section: 'Bank Research : cartes' },
+    { v: '--br-card-bd', l: 'Carte – bordure', section: 'Bank Research : cartes' },
+    { v: '--br-head-text', l: 'Ligne source/date – texte', section: 'Bank Research : cartes' },
+    { v: '--br-title', l: 'Titre – texte', section: 'Bank Research : cartes' },
+    { v: '--br-orig', l: 'Titre original / texte secondaire', section: 'Bank Research : cartes' },
+    { v: '--br-bullet', l: 'Puces et analyse – texte', section: 'Bank Research : cartes' },
+    { v: '--br-text-line', l: 'Trait avant l\'analyse', section: 'Bank Research : cartes' },
+    { v: '--br-link', l: 'Liens et boutons – texte', section: 'Bank Research : cartes' },
     { v: '--br-key-bg', l: 'Points clés – fond', section: 'Bank Research : FX Daily' },
     { v: '--br-key-bd', l: 'Points clés – liseré', section: 'Bank Research : FX Daily' },
     { v: '--br-key-title', l: 'Points clés – titre', section: 'Bank Research : FX Daily' },
@@ -380,8 +404,8 @@ const THEME_FIELDS = {
     { v: '--br-sec-bd', l: 'Bloc d\'une devise – bordure', section: 'Bank Research : FX Daily' },
     { v: '--br-sec-title', l: 'Bloc d\'une devise – titre', section: 'Bank Research : FX Daily' },
     { v: '--br-sec-line', l: 'Bloc d\'une devise – trait sous le titre', section: 'Bank Research : FX Daily' },
-    { v: '--br-badge-bg', l: 'Pastille (hors devise) – fond', section: 'Bank Research : FX Daily' },
-    { v: '--br-badge-text', l: 'Pastille – texte', section: 'Bank Research : FX Daily' },
+    { v: '--br-badge-bg', l: 'Pastille d\'une devise hors des 8 du FXT – fond', section: 'Bank Research : FX Daily' },
+    { v: '--br-badge-text', l: 'Pastille (toutes) – texte (couleurs des 8 devises = Force des devises)', section: 'Bank Research : FX Daily' },
     { v: '--pcal-bg', l: 'Calendrier – fond', section: 'Calendrier de période (News Feed)' },
     { v: '--pcal-bd', l: 'Calendrier – bordure', section: 'Calendrier de période (News Feed)' },
     { v: '--pcal-title', l: 'Calendrier – mois et année', section: 'Calendrier de période (News Feed)' },
@@ -505,6 +529,8 @@ const THEME_FIELDS = {
     { v: '--macro-head-bg', l: 'Fond des titres de colonnes', section: 'Tableau' },
     { v: '--macro-head-text', l: 'Texte des titres de colonnes', section: 'Tableau' },
     { v: '--macro-sub-text', l: 'Texte des noms de colonnes (PIB, PMI…)', section: 'Tableau' },
+    { v: '--macro-stripe', l: 'Rayures : fond d\'une ligne sur deux', section: 'Tableau' },
+    { v: '--macro-grid', l: 'Quadrillage (traits entre les cases)', section: 'Tableau' },
     { v: '--macro-row-hover', l: 'Fond de la case survolée', section: 'Tableau' },
     { v: '--macro-ccy', l: 'Code de la devise', section: 'Lignes' },
     { v: '--macro-country', l: 'Nom du pays', section: 'Lignes' },
@@ -548,9 +574,19 @@ const THEME_FIELDS = {
     { v: '--bp-dim', l: 'Texte secondaire', section: 'Textes' },
     { v: '--bp-pos', l: 'Achat / hausse', section: 'Variations' },
     { v: '--bp-neg', l: 'Vente / baisse', section: 'Variations' },
+    { v: '--bp-line', l: 'Traits de séparation (lignes des tableaux)', section: 'Séparations' },
+    { v: '--bp-sum-bg', l: 'Fond', section: 'Bandeau de résumé' },
+    { v: '--bp-sum-bd', l: 'Bordure', section: 'Bandeau de résumé' },
+    { v: '--bp-sum-key', l: 'Texte secondaire (libellés)', section: 'Bandeau de résumé' },
+    { v: '--bp-sum-value', l: 'Texte principal (chiffres)', section: 'Bandeau de résumé' },
+    { v: '--bp-head', l: 'Titres de colonnes', section: 'Tableaux' },
+    { v: '--bp-rank', l: 'Numéros de rang', section: 'Tableaux' },
+    { v: '--bp-tag-bd', l: 'Pastille « nouveau » : bordure', section: 'Pastille' },
+    { v: '--bp-tag-text', l: 'Pastille « nouveau » : texte', section: 'Pastille' },
     { v: '--bp-row-hover', l: 'Survol d\'une ligne', section: 'Variations' },
   ],
   globe: [
+    { v: '--globe-space', l: 'Espace derrière le globe', type: 'select', section: 'Fond de l\'espace', options: [{ v: 'stars', l: 'Étoiles (actuel)' }, { v: 'black', l: 'Noir total' }, { v: 'galaxy', l: 'Voie lactée (galaxie 3D)' }] },
     { v: '--globe-tanker', l: 'Pétroliers', section: 'Navires' },
     { v: '--globe-cargo', l: 'Cargos / porte-conteneurs', section: 'Navires' },
     { v: '--globe-panel-bg', l: 'Fond des bulles', section: 'Bulles (info navire, état)' },
@@ -1141,6 +1177,13 @@ function renderThemeFields(sectionKey) {
               </span>
             </div>`;
           }
+          if (f.type === 'select') {
+            const cur = String(currentValueFor(f.v)).replace(/['"]/g, '').trim();
+            return `<div class="theme-field-row">
+              <span class="theme-field-label">${f.l}</span>
+              <select class="theme-field-select" data-var="${f.v}">${f.options.map((o) => `<option value="${o.v}"${o.v === cur ? ' selected' : ''}>${o.l}</option>`).join('')}</select>
+            </div>`;
+          }
           if (f.type === 'alpha') {
             const percent = Math.max(0, Math.min(100, Math.round(parseFloat(currentValueFor(f.v)) || 0)));
             return `<div class="theme-field-row">
@@ -1175,6 +1218,14 @@ function renderThemeFields(sectionKey) {
         previewThemeVars();
         btn.style.background = newHex;
       });
+    });
+  });
+
+  container.querySelectorAll('.theme-field-select').forEach((sel) => {
+    sel.addEventListener('change', () => {
+      themeVars[sel.dataset.var] = sel.value;
+      applyThemeVars();
+      window.dispatchEvent(new Event('fx-theme-changed'));
     });
   });
 

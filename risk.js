@@ -248,8 +248,8 @@
           <span class="speeches-toolbar-info">CNN Fear &amp; Greed Index · 0–100</span>
         </div>
         <div class="risk-gauge"></div>
-        <div class="risk-hist"><div class="risk-hist-head"><div class="risk-hist-title">Historique du risque <span class="risk-hist-key"><i class="risk-k risk-k--off"></i>&lt; 30 peur <i class="risk-k risk-k--mid"></i>30–70 neutre <i class="risk-k risk-k--on"></i>&gt; 70 avidité</span><span class="risk-hist-note"></span></div><div class="risk-tfs">${TFS.map((t) => `<button type="button" class="risk-tf risk-tf--${t[0]}" data-tf="${t[0]}">${t[1]}</button>`).join('')}</div></div><div class="risk-hist-box"></div></div>
-        <div class="risk-info"></div>`;
+        <div class="risk-info"></div>
+        <div class="risk-hist"><div class="risk-hist-head"><div class="risk-hist-title">Historique du risque <span class="risk-hist-key"><i class="risk-k risk-k--off"></i>&lt; 30 peur <i class="risk-k risk-k--mid"></i>30–70 neutre <i class="risk-k risk-k--on"></i>&gt; 70 avidité</span><span class="risk-hist-note"></span></div><div class="risk-tfs">${TFS.map((t) => `<button type="button" class="risk-tf risk-tf--${t[0]}" data-tf="${t[0]}">${t[1]}</button>`).join('')}</div></div><div class="risk-hist-box"></div></div>`;
       g = buildGauge();
       wrap.querySelector('.risk-gauge').appendChild(g.svg);
       g.val.textContent = '–';
@@ -389,6 +389,11 @@
       const { data, error } = await client.from('risk_sentiment')
         .select('score, score_1d, score_1w, score_1m, components, rating, source, history').eq('id', 'composite').maybeSingle();
       if (error) throw error;
+      try {
+        const vx = await client.from('vix_candles').select('c').order('ts', { ascending: false }).limit(1);
+        const c = vx.data && vx.data[0] ? Number(vx.data[0].c) : NaN;
+        if (Number.isFinite(c)) { vixLast = c; paintVix(); }
+      } catch (e) { /* VIX indisponible : la case reste vide */ }
       if (data) { lastRow = data; miniGauges.forEach((m) => paintGauge(m, data)); if (histRow && histRow.history_long) data.history_long = histRow.history_long; setScore(data); if (rangeDays() > 95) ensureLong(); }
     } catch (e) {
       console.warn('risk.js', e);
@@ -400,14 +405,19 @@
   /* Instance réduite (fenêtre Overwatch) : jauge seule, sans historique */
   const miniGauges = [];
   let lastRow = null;
+  let vixLast = null;
+  function paintVix() {
+    document.querySelectorAll('[data-ow-vix-val]').forEach((el) => { el.textContent = vixLast == null ? '–' : vixLast.toFixed(2); });
+  }
   function mountGauge(host) {
     if (!host || host.querySelector('.risk-gauge-svg')) return;
-    host.innerHTML = '<div class="risk-gauge risk-gauge--mini"></div>';
+    host.innerHTML = '<div class="risk-gauge risk-gauge--mini"></div><button type="button" class="ow-vix" data-ow-vix title="Voir le VIX dans Indicator">VIX <b data-ow-vix-val>–</b></button>';
     const mg = buildGauge();
     mg.val.textContent = '–';
     host.querySelector('.risk-gauge').appendChild(mg.svg);
     miniGauges.push(mg);
     if (lastRow) paintGauge(mg, lastRow);
+    paintVix();
     load();
   }
 

@@ -82,7 +82,10 @@
     const back = backBtn(); if (back) back.addEventListener('click', goBack);
 
     // Risk-on / risk-off
-    $('owRisk').addEventListener('click', () => go('tab-risk'));
+    $('owRisk').addEventListener('click', (e) => {
+      if (e.target.closest('[data-ow-vix]')) { go('tab-indicator'); return; } // petite zone VIX -> graphique du VIX (fenêtre Indicator)
+      go('tab-risk');
+    });
     // Globe : un clic sans glisser (glisser = tourner le globe)
     plainClick($('owGlobe'), () => go('tab-globe'));
     // Force des devises : un clic simple (glisser = zoom sur une zone, double-clic = replacer)

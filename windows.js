@@ -54,7 +54,6 @@
     {
       title: 'Sentiment et positionnement',
       items: [
-        { id: 'tab-retail', label: 'Sentiment retail', soon: true, currency: { win: 'retail', all: 'own' } },
         { id: 'tab-cot', label: 'COT', currency: { win: 'cot', all: 'panels' } },
         { id: 'tab-bankpos', label: 'Position des banques' },
         { id: 'tab-risk', label: 'Sentiment du risque' },

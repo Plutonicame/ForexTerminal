@@ -45,7 +45,21 @@
   const RANGES = [
     { l: '1J', d: 1 }, { l: '5J', d: 5 }, { l: '1M', d: 30 }, { l: '3M', d: 91 }, { l: '6M', d: 182 }, { l: '1A', d: 365 }, { l: 'Tout', d: 0 },
   ];
-  const AXIS_W = 62; const AXIS_H = 26; const PAD_RIGHT_BARS = 8;
+  const AXIS_W = 62; const AXIS_H = 26;
+  // Réglages (Paramètres > Market Watch) : unité de temps au « Replacer », nombre de bougies, espace libre à droite
+  const LS_SET = 'fxt-mw-settings';
+  function settings() {
+    let s = {};
+    try { s = JSON.parse(localStorage.getItem(LS_SET) || '{}') || {}; } catch (e) { s = {}; }
+    const ahead = Number(s.ahead);
+    return { tf: s.tf || '60', bars: Math.max(0, Math.round(Number(s.bars) || 0)), ahead: Number.isFinite(ahead) && s.ahead !== '' && s.ahead != null ? Math.max(0, Math.min(200, Math.round(ahead))) : 8 };
+  }
+  function saveSettings(patch) {
+    const s = Object.assign(settings(), patch || {});
+    try { localStorage.setItem(LS_SET, JSON.stringify(s)); } catch (e) { /* stockage indisponible */ }
+    return s;
+  }
+  const padR = () => settings().ahead;
   const cssVar = (n, d) => { try { return getComputedStyle(document.documentElement).getPropertyValue(n).trim() || d; } catch (e) { return d; } };
   const mono = () => cssVar('--mono', 'ui-monospace, Menlo, Consolas, monospace');
   const fmtTZ = (opts) => new Intl.DateTimeFormat('fr-FR', Object.assign({ timeZone: 'Europe/Paris' }, opts));
@@ -126,7 +140,7 @@
   const tfLabel = (k) => tfOf(k).label;
   function create(host, opts) {
     const o = Object.assign({ currency: 'USD', name: 'USD', big: false, tf: '60' }, opts || {});
-    const st = { tf: o.tf, style: 'candles', bars: [], right: 0, bw: 8, auto: true, log: false, man: [0, 1], cross: null, drag: null, pointers: new Map(), w: 0, h: 0, msg: 'Chargement…' };
+    const st = { tf: settings().tf, style: 'candles', bars: [], right: 0, bw: 8, auto: true, log: false, man: [0, 1], cross: null, drag: null, pointers: new Map(), w: 0, h: 0, msg: 'Chargement…' };
     host.classList.add('fxc');
     host.tabIndex = 0;
     host.innerHTML = '';
@@ -193,8 +207,8 @@
       const step = tfOf(st.tf).step;
       let cnt = days ? Math.max(20, Math.round((days * 86400) / step * (step >= 86400 ? 5 / 7 : 1))) : n;
       cnt = Math.min(n, cnt);
-      st.bw = plotW() / (cnt + PAD_RIGHT_BARS);
-      st.right = n - 1 + PAD_RIGHT_BARS;
+      st.bw = plotW() / (cnt + padR());
+      st.right = n - 1 + padR();
       st.auto = true;
       clampView();
     }
@@ -433,13 +447,15 @@
       const n = st.bars.length; const t = tfOf(st.tf);
       if (!n) return;
       if (t.weeks || t.months) { fit(0); return; }
+      const want = settings().bars;
+      if (want > 0) { const cnt = Math.min(n, want); st.bw = plotW() / (cnt + padR()); st.right = n - 1 + padR(); st.auto = true; clampView(); return; }
       const target = o.big ? 8 : 6;
-      if ((n + PAD_RIGHT_BARS) * target < plotW()) { fit(0); return; }
-      st.bw = target; st.right = n - 1 + PAD_RIGHT_BARS; st.auto = true; clampView();
+      if ((n + padR()) * target < plotW()) { fit(0); return; }
+      st.bw = target; st.right = n - 1 + padR(); st.auto = true; clampView();
     }
     const defDays = () => { const t = tfOf(st.tf); const m = t.mins; if (m !== undefined) return m <= 1 ? 0.5 : m <= 5 ? 1 : m <= 15 ? (o.big ? 3 : 2) : m <= 60 ? (o.big ? 10 : 5) : 30; return t.months ? 0 : t.weeks ? 0 : 180; };
     let busy = false;
-    const followingEnd = () => st.bars.length === 0 || Math.abs(st.right - (st.bars.length - 1 + PAD_RIGHT_BARS)) < 0.5;
+    const followingEnd = () => st.bars.length === 0 || Math.abs(st.right - (st.bars.length - 1 + padR())) < 0.5;
     // applique le dernier cours en direct à la bougie en cours (ou ouvre la suivante)
     function applyLive() {
       const lv = live.get(o.currency);
@@ -467,7 +483,7 @@
         st.bars = bars;
         const n = bars.length;
         if (refit || !prevN) fitDefault();
-        else if (following) st.right = n - 1 + PAD_RIGHT_BARS;
+        else if (following) st.right = n - 1 + padR();
         else { // l'utilisateur a déplacé le graphique : on garde exactement la même position dans le temps
           let lo = 0; let hi = n - 1;
           while (lo < hi) { const mid = (lo + hi + 1) >> 1; if (bars[mid].t <= prevLastT) lo = mid; else hi = mid - 1; }
@@ -478,7 +494,7 @@
       } catch (e) { console.warn('fxchart', e); } finally { busy = false; }
     }
     function resetView() {
-      st.tf = o.tf; st.style = 'candles'; st.log = false; st.auto = true; syncBtns(); closeKb();
+      st.tf = settings().tf; st.style = 'candles'; st.log = false; st.auto = true; syncBtns(); closeKb();
       return load(true, true);
     }
     const ro = window.ResizeObserver ? new ResizeObserver(() => {
@@ -495,5 +511,5 @@
     return { reload: () => load(true, false), resetView, redraw, destroy() { if (ro) ro.disconnect(); liveSubs.delete(applyLive); tickSubs.delete(redraw); }, el: host, setTf };
   }
 
-  window.FXChart = { create, TFS, parseTf };
+  window.FXChart = { create, TFS, parseTf, settings, saveSettings };
 })();

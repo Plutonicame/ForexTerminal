@@ -70,7 +70,7 @@
     const big = box.dataset.big === '1';
     const code = box.closest('.mw-tile').dataset.code;
     if (!window.FXChart) { box.textContent = 'Graphique indisponible.'; return; }
-    charts.push(window.FXChart.create(box, { currency: code, name: INDEX[code].name, big, tf: '60' }));
+    charts.push(window.FXChart.create(box, { currency: code, name: INDEX[code].name, big }));
   }
 
   // Crée les graphiques des panneaux réellement visibles (fenêtre ouverte, onglet de devise affiché).
@@ -101,6 +101,7 @@
   document.addEventListener('fx-currency-select', () => setTimeout(fitHeights, 0));
 
   window.MarketWatch = { refresh() { build(); ensure(); fitHeights(); setTimeout(fitHeights, 150); charts.forEach((c) => c.reload()); } };
+  document.addEventListener('fxt-mw-settings', () => charts.forEach((c) => c.resetView()));
   setInterval(() => { const sec = document.getElementById(PANEL_ID); if (sec && !sec.hidden && !document.hidden) charts.forEach((c) => c.reload()); }, 60000);
 
   document.addEventListener('DOMContentLoaded', () => {
@@ -108,3 +109,17 @@
     document.addEventListener('fx-currency-select', (e) => { if (e.detail && e.detail.win === WIN) ensure(); });
   });
 })();
+
+// Réglages « Paramètres > Paramètres Market Watch » : appliqués tout de suite (les graphiques sont replacés)
+document.addEventListener('DOMContentLoaded', () => {
+  const FX = window.FXChart; if (!FX) return;
+  const tf = document.getElementById('mwSetTf'); const bars = document.getElementById('mwSetBars'); const ahead = document.getElementById('mwSetAhead');
+  if (!tf || !bars || !ahead) return;
+  const s = FX.settings();
+  tf.value = s.tf; bars.value = s.bars; ahead.value = s.ahead;
+  const apply = () => {
+    FX.saveSettings({ tf: tf.value, bars: Math.max(0, Math.round(Number(bars.value) || 0)), ahead: Math.max(0, Math.min(200, Math.round(Number(ahead.value) || 0))) });
+    document.dispatchEvent(new Event('fxt-mw-settings'));
+  };
+  [tf, bars, ahead].forEach((el) => el.addEventListener('change', apply));
+});

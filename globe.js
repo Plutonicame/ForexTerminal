@@ -160,6 +160,37 @@
     els.choke.innerHTML = CHOKES.map((q, i) => `<button type="button" class="globe-chip" data-choke="${i}" title="${String(q[5]).replace(/"/g, '&quot;')}">${q[0]}${shipRows.length ? `<b>${nf.format(n[i])}</b>` : ''}</button>`).join('');
   }
 
+  /* ---------------- Fond de l'espace (réglage Paramètres > Thème > Globe) ---------------- */
+  const GALAXY_URL = 'https://cdn.jsdelivr.net/gh/mrdoob/three.js@r150/examples/textures/cube/MilkyWay/dark-s_';
+  function spaceMode() {
+    const m = getComputedStyle(document.documentElement).getPropertyValue('--globe-space').trim().replace(/['"]/g, '');
+    return m === 'black' || m === 'galaxy' ? m : 'stars';
+  }
+  function applySpace(v) {
+    const C = window.Cesium;
+    if (!v || !C) return;
+    const sc = v.scene;
+    if (!v._defSky) v._defSky = sc.skyBox;
+    const mode = spaceMode();
+    if (v._spaceMode === mode) return;
+    v._spaceMode = mode;
+    sc.backgroundColor = C.Color.BLACK;
+    if (mode === 'black') {
+      sc.skyBox.show = false; sc.sun.show = false; sc.moon.show = false;
+      return;
+    }
+    sc.sun.show = true; sc.moon.show = true;
+    if (mode === 'stars') { sc.skyBox = v._defSky; sc.skyBox.show = true; return; }
+    // galaxie : panorama de la Voie lactée ; si le téléchargement échoue, on garde les étoiles
+    if (!v._galaxy) {
+      const u = (k) => GALAXY_URL + k + '.jpg';
+      try {
+        v._galaxy = new C.SkyBox({ sources: { positiveX: u('px'), negativeX: u('nx'), positiveY: u('py'), negativeY: u('ny'), positiveZ: u('pz'), negativeZ: u('nz') } });
+      } catch (e) { v._galaxy = null; }
+    }
+    if (v._galaxy) { sc.skyBox = v._galaxy; sc.skyBox.show = true; } else { v._spaceMode = null; }
+  }
+
   /* ---------------- Globe ---------------- */
   function flyHome() {
     const C = window.Cesium;
@@ -193,6 +224,7 @@
       v.imageryLayers.addImageryProvider(new C.UrlTemplateImageryProvider({ url: ESRI_URL, maximumLevel: 18, credit: 'Imagerie : Esri, Maxar, Earthstar Geographics' }));
       v.camera.setView({ destination: C.Cartesian3.fromDegrees(SPACE_VIEW.lon, SPACE_VIEW.lat, SPACE_VIEW.h) });
       viewer = v;
+      applySpace(v);
 
       Object.keys(CATS).forEach((k) => {
         collections[k] = v.scene.primitives.add(new C.PointPrimitiveCollection());
@@ -402,6 +434,7 @@
       v.imageryLayers.addImageryProvider(new C.UrlTemplateImageryProvider({ url: ESRI_URL, maximumLevel: 18, credit: 'Esri' }));
       v.camera.setView({ destination: C.Cartesian3.fromDegrees(SPACE_VIEW.lon, SPACE_VIEW.lat, SPACE_VIEW.h) });
       mini = v;
+      applySpace(v);
       v.useDefaultRenderLoop = miniOn;
       v.resize();
     }).catch((e) => { console.warn('globe.js mini', e); miniInit = null; });
@@ -410,6 +443,6 @@
   window.Globe = { setActive, reload: loadShips, mountMini, setMiniActive };
 
   document.addEventListener('DOMContentLoaded', () => {
-    window.addEventListener('fx-theme-changed', () => { if (viewer && shipRows.length) drawShips(); renderBar(); });
+    window.addEventListener('fx-theme-changed', () => { applySpace(viewer); applySpace(mini); if (viewer && shipRows.length) drawShips(); renderBar(); });
   });
 })();
