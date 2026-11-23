@@ -41,7 +41,8 @@
     spreadOn = localStorage.getItem(LS_SPREAD) === '1';
   } catch (e) { /* stockage indisponible */ }
 
-  const cssVar = (n, d) => { try { return getComputedStyle(document.documentElement).getPropertyValue(n).trim() || d; } catch (e) { return d; } };
+  let cssEl = null; // Overwatch : lit ses propres couleurs sur sa case
+  const cssVar = (n, d) => { try { return getComputedStyle(cssEl || document.documentElement).getPropertyValue(n).trim() || d; } catch (e) { return d; } };
   const esc = (s) => String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
   const fmt = (v, d = 2) => (v >= 0 ? '+' : '−') + Math.abs(v).toFixed(d) + ' %';
   const nice = (range, target) => {
@@ -221,11 +222,12 @@
     const y0 = Math.floor(lo / step) * step; const y1 = Math.ceil(hi / step) * step;
     const Y = (v) => m.t + (1 - (v - y0) / (y1 - y0)) * ph;
     const grid = cssVar('--seas-grid', '#2a2a2a'); const txt = cssVar('--seas-text', '#9a9a9a');
+    const yTxt = cssVar('--seas-ytext', txt); const xTxt = cssVar('--seas-xtext', txt); const valTxt = cssVar('--seas-label', txt);
     const up = cssVar('--seas-pos', '#2ecc71'); const down = cssVar('--seas-neg', '#fe1111');
     let s = '';
     for (let v = y0; v <= y1 + step / 2; v += step) {
       s += `<line x1="${m.l}" x2="${W - m.r}" y1="${Y(v).toFixed(1)}" y2="${Y(v).toFixed(1)}" stroke="${Math.abs(v) < 1e-9 ? cssVar('--seas-zero', '#e6e6e6') : grid}" stroke-width="1" ${Math.abs(v) < 1e-9 ? 'opacity="0.7"' : ''}/>`;
-      s += `<text x="${m.l - 6}" y="${(Y(v) + 4).toFixed(1)}" text-anchor="end" fill="${txt}" font-size="10" font-family="var(--mono)">${v.toFixed(step < 0.01 ? 3 : step < 0.1 ? 2 : 1)}%</text>`;
+      s += `<text x="${m.l - 6}" y="${(Y(v) + 4).toFixed(1)}" text-anchor="end" fill="${yTxt}" font-size="10" font-family="var(--mono)">${v.toFixed(step < 0.01 ? 3 : step < 0.1 ? 2 : 1)}%</text>`;
     }
     const slot = pw / items.length; const bw = Math.min(40, slot * 0.62);
     const dec = hi - lo < 0.6 ? 3 : 2; // petites variations (barres par jour) : 3 décimales
@@ -236,8 +238,8 @@
       const tip = `${it.name} : ${fmt(it.avg)} en moyenne · positif ${it.pos}/${it.n}`;
       s += `<rect x="${(cx - bw / 2).toFixed(1)}" y="${top.toFixed(1)}" width="${bw.toFixed(1)}" height="${h.toFixed(1)}" rx="2" fill="${it.avg >= 0 ? up : down}"><title>${esc(tip)}</title></rect>`;
       const ly = it.avg >= 0 ? top - 4 : top + h + 11;
-      if (slot >= 30) s += `<text x="${cx.toFixed(1)}" y="${ly.toFixed(1)}" text-anchor="middle" fill="${txt}" font-size="${slot < 40 ? 8.5 : 10}" font-family="var(--mono)">${it.avg >= 0 ? '+' : '−'}${Math.abs(it.avg).toFixed(dec)}</text>`;
-      s += `<text x="${cx.toFixed(1)}" y="${H - 8}" text-anchor="middle" fill="${txt}" font-size="${slot < 34 ? 9 : 11}" font-family="var(--mono)">${esc(it.label)}</text>`;
+      if (slot >= 30) s += `<text x="${cx.toFixed(1)}" y="${ly.toFixed(1)}" text-anchor="middle" fill="${valTxt}" font-size="${slot < 40 ? 8.5 : 10}" font-family="var(--mono)">${it.avg >= 0 ? '+' : '−'}${Math.abs(it.avg).toFixed(dec)}</text>`;
+      s += `<text x="${cx.toFixed(1)}" y="${H - 8}" text-anchor="middle" fill="${xTxt}" font-size="${slot < 34 ? 9 : 11}" font-family="var(--mono)">${esc(it.label)}</text>`;
       if (hit) s += `<rect class="seas-hit" data-cur="${esc(it.name)}" x="${(m.l + slot * i).toFixed(1)}" y="0" width="${slot.toFixed(1)}" height="${H}" fill="transparent"><title>${esc(tip)} — clic : saisonnalité ${esc(it.name)}</title></rect>`;
     });
     return `<svg viewBox="0 0 ${W} ${H}" width="${W}" height="${H}" role="img" aria-label="${esc(label)}">${s}</svg>`;
@@ -342,7 +344,8 @@
     MINI_ORDER.forEach((c) => { const r = compute(c); if (r) items.push({ name: c, label: c, avg: r.months[m].avg, pos: r.months[m].pos, n: r.months[m].n }); });
     if (!items.length) { body.innerHTML = `<p class="ind-empty">${failed ? 'Données indisponibles' : 'Chargement…'}</p>`; return; }
     const W = Math.max(220, body.clientWidth || 360);
-    body.innerHTML = barsChart(items, W, title, 290, true);
+    cssEl = host;
+    try { body.innerHTML = barsChart(items, W, title, 290, true); } finally { cssEl = null; }
   }
   function mountMonth(host) {
     if (!host || host.querySelector('[data-seas-body]')) return;

@@ -4804,18 +4804,16 @@ button.sq-btn.is-on, button.sq-btn.is-on:hover { background: var(--sqb-on-bg); b
 .nf-row--reading { outline: 2px solid var(--nf-reading-outline, #4d94ff); outline-offset: 1px; border-radius: 4px; }
 
 /* ===== Overwatch ===== */
-:root { --risk-box-border: #2a2a2a; --ow-vix-bg: #0f0f0f; --ow-vix-bd: #2a2a2a; --ow-vix-text: #e6e6e6; --ow-vix-hover-bd: #4d94ff; }
+:root { --risk-box-border: #2a2a2a; }
 .ow-vix { margin: 0 8px 8px; padding: 4px 10px; align-self: center; cursor: pointer; font-family: var(--mono); font-size: 12px; background: var(--ow-vix-bg); border: 1px solid var(--ow-vix-bd); border-radius: 6px; color: var(--ow-vix-text); }
-.ow-vix:hover { border-color: var(--ow-vix-hover-bd); }
 :root { --globe-space: stars; }
 :root {
-  --ow-tile-bg: #161616; --ow-tile-border: #2a2a2a; --ow-gap: 8px;
-  --ow-rate-hover-bg: #1f1f1f; --ow-rate-hover-border: #4d94ff;
+  --ow-gap: 8px;
 }
 .ow-grid { display: grid; grid-template-columns: repeat(12, minmax(0, 1fr)); gap: var(--ow-gap); padding: var(--ow-gap) 0 24px; align-items: stretch; }
 .ow-tile { min-width: 0; } /* simple conteneur : la zone titre et le contenu sont deux cases indépendantes */
 .ow-tile > .speeches-toolbar, .ow-cal > .calendar-toolbar, .ow-news-col > .speeches-toolbar { margin: 0 0 var(--ow-gap); }
-.ow-box, .ow-risk, .ow-globe, .ow-fx .fxs-legend, .ow-fx .fxs-chart, .seas-mini-body, .ow-news .nx-list, .ow-news .speeches-empty, #owCalendar { background: var(--ow-tile-bg); border: 1px solid var(--ow-tile-border); border-radius: var(--radius-card); }
+.ow-risk, .ow-globe, .ow-fx .fxs-legend, .seas-mini-body, .ow-news .nx-list, .ow-news .speeches-empty, #owCalendar { background: transparent; border: 1px solid transparent; border-radius: var(--radius-card); }
 .ow-risk, .ow-globe { overflow: hidden; }
 .ow-fx .fxs-chart { overflow: hidden; }
 .ow-fx .fxs-legend { margin-bottom: var(--ow-gap); }
@@ -4828,8 +4826,8 @@ button.sq-btn.is-on, button.sq-btn.is-on:hover { background: var(--sqb-on-bg); b
 .ow-risk, .ow-globe { aspect-ratio: 4 / 3; }
 .ow-risk { display: flex; flex-direction: column; }
 .ow-risk .risk-gauge { flex: 1; min-height: 0; display: flex; align-items: center; justify-content: center; width: 100%; padding: 0; }
-.ow-globe-reset { position: absolute; top: 8px; right: 8px; z-index: 5; width: 28px; height: 28px; padding: 0; display: inline-flex; align-items: center; justify-content: center; cursor: pointer; border-radius: 6px; background: var(--nf-listen-bg, #00000099); border: 1px solid var(--ow-tile-border); color: var(--text-dim, #9a9a9a); }
-.ow-globe-reset:hover { border-color: var(--ow-rate-hover-border); color: var(--ow-rate-hover-border); }
+.ow-globe-reset { position: absolute; top: 8px; right: 8px; z-index: 5; width: 28px; height: 28px; padding: 0; display: inline-flex; align-items: center; justify-content: center; cursor: pointer; border-radius: 6px; background: var(--nf-listen-bg, #00000099); border: 1px solid var(--ow-globe-bd); color: var(--text-dim, #9a9a9a); }
+.ow-globe-reset:hover { border-color: var(--blue-light); color: var(--blue-light); }
 .ow-seas { grid-column: 1 / -1; }
 .ow-rates, .ow-news, .ow-cal { grid-column: 1 / -1; }
 .ow-fx .fxs-chip { padding: 2px 6px; font-size: 11px; }
@@ -4846,7 +4844,6 @@ button.sq-btn.is-on, button.sq-btn.is-on:hover { background: var(--sqb-on-bg); b
 .ow-globe canvas { touch-action: none; cursor: grab; }
 .ow-rates-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: var(--ow-gap); }
 .ow-rate { text-align: left; cursor: pointer; font: inherit; padding: 8px 10px; gap: 2px; }
-.ow-rate:hover { background: var(--ow-rate-hover-bg); border-color: var(--ow-rate-hover-border); border-left-color: var(--kpi); }
 .ow-rate-main { font-family: var(--mono); font-size: 13px; color: var(--rates-kpi-value); line-height: 1.25; }
 .ow-rate-main b { font-size: 15px; }
 .ow-news { display: grid; grid-template-columns: 1fr 1fr; gap: var(--ow-gap); }
@@ -4865,11 +4862,6 @@ button.sq-btn.is-on, button.sq-btn.is-on:hover { background: var(--sqb-on-bg); b
 
 
 /* Overwatch : listes Trump / autres news */
-:root {
-  --ow-news-title: #e6e6e6; --ow-news-time: #9a9a9a; --ow-news-line: #2a2a2a; --ow-news-link: #4d94ff;
-  --ow-secbtn-bg: #161616; --ow-secbtn-bd: #2a2a2a; --ow-secbtn-text: #e6e6e6;
-  --ow-secbtn-hover-bd: #4d94ff; --ow-secbtn-hover-text: #4d94ff; --ow-secbtn-count-bd: #2a2a2a; --ow-secbtn-hover-bg: #1f1f1f; --ow-secbtn-count-bg: #0f0f0f; --ow-secbtn-count-text: #9a9a9a;
-}
 .ow-news .nx-item { border-bottom-color: var(--ow-news-line); }
 .ow-news .nx-title { color: var(--ow-news-title); }
 .ow-news .nx-time { color: var(--ow-news-time); }
@@ -4908,3 +4900,273 @@ button.sq-btn.is-on, button.sq-btn.is-on:hover { background: var(--sqb-on-bg); b
 .settings-card .settings-row { margin: 0; }
 .settings-card-title { margin: 0 0 4px; font-family: var(--mono); font-size: 13px; font-weight: 700; letter-spacing: 1px; text-transform: uppercase; color: var(--settings-row-text); }
 .settings-input { min-width: 110px; padding: 6px 8px; background: var(--settings-btn-bg); border: 1px solid var(--settings-btn-border); border-radius: var(--radius-sm); color: var(--settings-btn-text); font-family: var(--mono); font-size: 13px; }
+
+/* ===== Overwatch : couleurs indépendantes des autres fenêtres (une section par partie) ===== */
+:root {
+  --ow-fx-bar-bg: #161616;
+  --ow-fx-bar-bd: #2a2a2a;
+  --ow-fx-bar-title: #fafafa;
+  --ow-fx-sel-bg: #161616;
+  --ow-fx-sel-bd: #2a2a2a;
+  --ow-fx-reset-bg: #161616;
+  --ow-fx-reset-bd: #4a4a4a;
+  --ow-fx-reset-ic: #b2b5be;
+  --ow-fx-chip-bg: #161616;
+  --ow-fx-chip-bd: #2a2a2a;
+  --ow-fx-chip-text: #fafafa;
+  --ow-fx-chip-sub: #9a9a9a;
+  --ow-fx-usd: #2ecc71;
+  --ow-fx-eur: #4d94ff;
+  --ow-fx-gbp: #a35cf0;
+  --ow-fx-jpy: #2fd0e0;
+  --ow-fx-cad: #fe1111;
+  --ow-fx-chf: #ff9f1a;
+  --ow-fx-aud: #f5d90a;
+  --ow-fx-nzd: #b48cff;
+  --ow-fx-chart-bg: #161616;
+  --ow-fx-chart-bd: #2a2a2a;
+  --ow-fx-grid: #2a2a2a;
+  --ow-fx-zero: #e6e6e6;
+  --ow-fx-axis: #9a9a9a;
+  --ow-risk-bg: #161616;
+  --ow-risk-bd: #2a2a2a;
+  --ow-risk-off: #ff6b6b;
+  --ow-risk-mid: #f5c542;
+  --ow-risk-on: #2dd4bf;
+  --ow-risk-seg-off: #232323;
+  --ow-risk-needle: #ff8a8a;
+  --ow-risk-hub: #111111;
+  --ow-risk-tick: #8a8a8a;
+  --ow-risk-sub: #8a8a8a;
+  --ow-risk-mark-1d: #4d94ff;
+  --ow-risk-mark-1w: #f5c542;
+  --ow-risk-mark-1m: #c084fc;
+  --ow-risk-mark-text: #e6e6e6;
+  --ow-vix-bg: #0f0f0f;
+  --ow-vix-bd: #2a2a2a;
+  --ow-vix-text: #e6e6e6;
+  --ow-vix-hover-bd: #4d94ff;
+  --ow-seas-bar-bg: #161616;
+  --ow-seas-bar-bd: #2a2a2a;
+  --ow-seas-bar-title: #fafafa;
+  --ow-seas-bg: #161616;
+  --ow-seas-bd: #2a2a2a;
+  --ow-seas-grid: #2a2a2a;
+  --ow-seas-zero: #e6e6e6;
+  --ow-seas-ytext: #9a9a9a;
+  --ow-seas-xtext: #9a9a9a;
+  --ow-seas-label: #9a9a9a;
+  --ow-seas-pos: #2ecc71;
+  --ow-seas-neg: #fe1111;
+  --ow-rates-bar-bg: #161616;
+  --ow-rates-bar-bd: #2a2a2a;
+  --ow-rates-bar-title: #fafafa;
+  --ow-rate-bg: #161616;
+  --ow-rate-bd: #2a2a2a;
+  --ow-rate-hover-bg: #1f1f1f;
+  --ow-rate-hover-border: #4d94ff;
+  --ow-rate-label: #9a9a9a;
+  --ow-rate-value: #fafafa;
+  --ow-rate-sub: #9a9a9a;
+  --ow-rate-bar-none: #b8b8b8;
+  --ow-rate-bar-up: #2ecc71;
+  --ow-rate-bar-down: #fe1111;
+  --ow-rate-bar-other: #f5a623;
+  --ow-cal-bar-bg: #161616;
+  --ow-cal-bar-bd: #2a2a2a;
+  --ow-cal-bar-title: #fafafa;
+  --ow-cal-tog-bg: #1c1c1c;
+  --ow-cal-tog-bd: #2a2a2a;
+  --ow-cal-tog-knob: #404040;
+  --ow-cal-high: #fe1111;
+  --ow-cal-medium: #ff9800;
+  --ow-cal-low: #ffd400;
+  --ow-cal-tr-bg: #111827;
+  --ow-cal-tr-bd: #1e2d45;
+  --ow-cal-tr-ic: #64748b;
+  --ow-cal-bg: #161616;
+  --ow-cal-bd: #2a2a2a;
+  --ow-cal-line: #2a2a2a;
+  --ow-cal-row-hover: #222222;
+  --ow-cal-head-bg: #101010;
+  --ow-cal-head-text: #9a9a9a;
+  --ow-cal-name: #fafafa;
+  --ow-cal-value: #fafafa;
+  --ow-cal-actual: #4d94ff;
+  --ow-cal-up: #35c46b;
+  --ow-cal-down: #ff4d4d;
+  --ow-cal-cty-text: #9a9a9a;
+  --ow-cal-cty-bg: #00000000;
+  --ow-cal-cty-bd: #bababa;
+  --ow-cal-gr-bg: #00000000;
+  --ow-cal-gr-bd: #bababa;
+  --ow-cal-gr-text: #9a9a9a;
+  --ow-cal-gr-hbg: #161616;
+  --ow-cal-gr-hbd: #9a9a9a;
+  --ow-cal-gr-htext: #fafafa;
+  --ow-spk-bar-bg: #161616;
+  --ow-spk-bar-bd: #2a2a2a;
+  --ow-spk-bar-title: #fafafa;
+  --ow-spk-bar-info: #9a9a9a;
+  --ow-spk-empty-bg: #00000000;
+  --ow-spk-empty-bd: #00000000;
+  --ow-spk-empty-text: #9a9a9a;
+  --ow-spk-card-bg: #1b2838;
+  --ow-spk-card-bd: #2a475e;
+  --ow-spk-first: #8ba3b8;
+  --ow-spk-last: #fafafa;
+  --ow-spk-role: #8ba3b8;
+  --ow-spk-tag: #9a9a9a;
+  --ow-spk-star-on: #f5b301;
+  --ow-spk-star-off: #5f7f99;
+  --ow-spk-btn-bg: #161616;
+  --ow-spk-btn-bd: #2a2a2a;
+  --ow-spk-btn-text: #fafafa;
+  --ow-spk-btn-hbg: #404040;
+  --ow-spk-btn-hbd: #bababa;
+  --ow-spk-btn-htext: #fafafa;
+  --ow-globe-bg: #161616;
+  --ow-globe-bd: #2a2a2a;
+  --ow-news-box-bg: #161616;
+  --ow-news-box-bd: #2a2a2a;
+  --ow-news-title: #e6e6e6;
+  --ow-news-time: #9a9a9a;
+  --ow-news-line: #2a2a2a;
+  --ow-news-link: #4d94ff;
+  --ow-secbtn-bg: #161616;
+  --ow-secbtn-bd: #2a2a2a;
+  --ow-secbtn-text: #e6e6e6;
+  --ow-secbtn-hover-bg: #1f1f1f;
+  --ow-secbtn-hover-bd: #4d94ff;
+  --ow-secbtn-hover-text: #4d94ff;
+  --ow-secbtn-count-bg: #0f0f0f;
+  --ow-secbtn-count-bd: #2a2a2a;
+  --ow-secbtn-count-text: #9a9a9a;
+}
+.ow-fx {
+  --speech-toolbar-bg: var(--ow-fx-bar-bg);
+  --speech-toolbar-border: var(--ow-fx-bar-bd);
+  --speech-toolbar-title: var(--ow-fx-bar-title);
+  --fxs-reset-bg: var(--ow-fx-reset-bg);
+  --fxs-reset-border: var(--ow-fx-reset-bd);
+  --fxs-reset-icon: var(--ow-fx-reset-ic);
+  --fxs-usd: var(--ow-fx-usd);
+  --fxs-eur: var(--ow-fx-eur);
+  --fxs-gbp: var(--ow-fx-gbp);
+  --fxs-jpy: var(--ow-fx-jpy);
+  --fxs-cad: var(--ow-fx-cad);
+  --fxs-chf: var(--ow-fx-chf);
+  --fxs-aud: var(--ow-fx-aud);
+  --fxs-nzd: var(--ow-fx-nzd);
+  --fxs-bg: var(--ow-fx-chart-bg);
+  --fxs-border: var(--ow-fx-chart-bd);
+  --fxs-grid: var(--ow-fx-grid);
+  --fxs-zero: var(--ow-fx-zero);
+  --fxs-text: var(--ow-fx-axis);
+}
+.ow-risk {
+  --risk-off: var(--ow-risk-off);
+  --risk-mid: var(--ow-risk-mid);
+  --risk-on: var(--ow-risk-on);
+  --risk-seg-off: var(--ow-risk-seg-off);
+  --risk-needle: var(--ow-risk-needle);
+  --risk-hub-fill: var(--ow-risk-hub);
+  --risk-tick: var(--ow-risk-tick);
+  --risk-sub: var(--ow-risk-sub);
+  --risk-mark-1d: var(--ow-risk-mark-1d);
+  --risk-mark-1w: var(--ow-risk-mark-1w);
+  --risk-mark-1m: var(--ow-risk-mark-1m);
+  --risk-mark-text: var(--ow-risk-mark-text);
+}
+.ow-seas {
+  --speech-toolbar-bg: var(--ow-seas-bar-bg);
+  --speech-toolbar-border: var(--ow-seas-bar-bd);
+  --speech-toolbar-title: var(--ow-seas-bar-title);
+  --seas-grid: var(--ow-seas-grid);
+  --seas-zero: var(--ow-seas-zero);
+  --seas-ytext: var(--ow-seas-ytext);
+  --seas-xtext: var(--ow-seas-xtext);
+  --seas-label: var(--ow-seas-label);
+  --seas-pos: var(--ow-seas-pos);
+  --seas-neg: var(--ow-seas-neg);
+}
+.ow-rates {
+  --speech-toolbar-bg: var(--ow-rates-bar-bg);
+  --speech-toolbar-border: var(--ow-rates-bar-bd);
+  --speech-toolbar-title: var(--ow-rates-bar-title);
+  --rates-kpi-bg: var(--ow-rate-bg);
+  --rates-kpi-border: var(--ow-rate-bd);
+  --rates-kpi-label: var(--ow-rate-label);
+  --rates-kpi-value: var(--ow-rate-value);
+  --rates-kpi-sub: var(--ow-rate-sub);
+  --rates-kpi-bar-none: var(--ow-rate-bar-none);
+  --rates-kpi-bar-up: var(--ow-rate-bar-up);
+  --rates-kpi-bar-down: var(--ow-rate-bar-down);
+  --rates-kpi-bar-other: var(--ow-rate-bar-other);
+}
+.ow-cal {
+  --calendar-toolbar-bg: var(--ow-cal-bar-bg);
+  --calendar-toolbar-border: var(--ow-cal-bar-bd);
+  --calendar-toolbar-title: var(--ow-cal-bar-title);
+  --calendar-impact-toggle-track-bg: var(--ow-cal-tog-bg);
+  --calendar-impact-toggle-track-border: var(--ow-cal-tog-bd);
+  --calendar-impact-toggle-knob-bg: var(--ow-cal-tog-knob);
+  --calendar-impact-high: var(--ow-cal-high);
+  --calendar-impact-medium: var(--ow-cal-medium);
+  --calendar-impact-low: var(--ow-cal-low);
+  --calendar-translate-btn-bg: var(--ow-cal-tr-bg);
+  --calendar-translate-btn-border: var(--ow-cal-tr-bd);
+  --calendar-translate-btn-icon: var(--ow-cal-tr-ic);
+  --calendar-border: var(--ow-cal-line);
+  --calendar-row-hover-bg: var(--ow-cal-row-hover);
+  --calendar-head-bg: var(--ow-cal-head-bg);
+  --calendar-head-text: var(--ow-cal-head-text);
+  --calendar-name-text: var(--ow-cal-name);
+  --calendar-value-text: var(--ow-cal-value);
+  --calendar-actual-text: var(--ow-cal-actual);
+  --calendar-actual-up: var(--ow-cal-up);
+  --calendar-actual-down: var(--ow-cal-down);
+  --calendar-country-text: var(--ow-cal-cty-text);
+  --calendar-country-bg: var(--ow-cal-cty-bg);
+  --calendar-country-border: var(--ow-cal-cty-bd);
+  --tegraph-btn-bg: var(--ow-cal-gr-bg);
+  --tegraph-btn-border: var(--ow-cal-gr-bd);
+  --tegraph-btn-text: var(--ow-cal-gr-text);
+  --tegraph-btn-hover-bg: var(--ow-cal-gr-hbg);
+  --tegraph-btn-hover-border: var(--ow-cal-gr-hbd);
+  --tegraph-btn-hover-text: var(--ow-cal-gr-htext);
+}
+.ow-speeches {
+  --speech-toolbar-bg: var(--ow-spk-bar-bg);
+  --speech-toolbar-border: var(--ow-spk-bar-bd);
+  --speech-toolbar-title: var(--ow-spk-bar-title);
+  --speech-toolbar-info: var(--ow-spk-bar-info);
+  --speech-card-bg: var(--ow-spk-card-bg);
+  --speech-card-border: var(--ow-spk-card-bd);
+  --speech-card-first-text: var(--ow-spk-first);
+  --speech-card-last-text: var(--ow-spk-last);
+  --speech-card-role-text: var(--ow-spk-role);
+  --news-speech-tag-text: var(--ow-spk-tag);
+  --speech-star-on: var(--ow-spk-star-on);
+  --speech-star-off: var(--ow-spk-star-off);
+  --speech-btn-bg: var(--ow-spk-btn-bg);
+  --speech-btn-border: var(--ow-spk-btn-bd);
+  --speech-btn-text: var(--ow-spk-btn-text);
+  --speech-btn-hover-bg: var(--ow-spk-btn-hbg);
+  --speech-btn-hover-border: var(--ow-spk-btn-hbd);
+  --speech-btn-hover-text: var(--ow-spk-btn-htext);
+}
+/* éléments sans variable d'origine : réglés directement */
+.ow-fx .fxs-legend { background: var(--ow-fx-sel-bg); border-color: var(--ow-fx-sel-bd); }
+.ow-fx .fxs-chip { background: var(--ow-fx-chip-bg); border-color: var(--ow-fx-chip-bd); color: var(--ow-fx-chip-text); }
+.ow-fx .fxs-chip .fxs-val { color: var(--ow-fx-chip-sub); }
+.ow-risk { background: var(--ow-risk-bg); border-color: var(--ow-risk-bd); }
+.ow-vix { background: var(--ow-vix-bg); border-color: var(--ow-vix-bd); color: var(--ow-vix-text); }
+.ow-vix:hover { border-color: var(--ow-vix-hover-bd); }
+.seas-mini-body { background: var(--ow-seas-bg); border-color: var(--ow-seas-bd); }
+.ow-rate:hover { background: var(--ow-rate-hover-bg); border-color: var(--ow-rate-hover-border); border-left-color: var(--kpi); }
+#owCalendar { background: var(--ow-cal-bg); border-color: var(--ow-cal-bd); }
+.ow-cal .calendar-scroll { background: transparent; border: 0; border-radius: 0; }
+.ow-speeches .speeches-empty { background: var(--ow-spk-empty-bg); border: 1px solid var(--ow-spk-empty-bd); border-radius: var(--radius-card); color: var(--ow-spk-empty-text); }
+.ow-globe { background: var(--ow-globe-bg); border-color: var(--ow-globe-bd); }
+.ow-news .nx-list, .ow-news .speeches-empty { background: var(--ow-news-box-bg); border-color: var(--ow-news-box-bd); }

@@ -30,7 +30,7 @@
   try { JSON.parse(localStorage.getItem('fxt-indicator-hidden') || '[]').forEach((c) => hidden.add(c)); } catch (e) { /* stockage indisponible */ }
   function saveHidden() { try { localStorage.setItem('fxt-indicator-hidden', JSON.stringify([...hidden])); } catch (e) { /* ignoré */ } }
 
-  const cssVar = (n, d) => { try { return getComputedStyle(document.documentElement).getPropertyValue(n).trim() || d; } catch (e) { return d; } };
+  const cssVar = (n, d, el) => { try { return getComputedStyle(el || document.documentElement).getPropertyValue(n).trim() || d; } catch (e) { return d; } };
   function svg(tag, attrs, parent) {
     const n = document.createElementNS(NS, tag);
     Object.keys(attrs || {}).forEach((k) => n.setAttribute(k, attrs[k]));
@@ -189,7 +189,7 @@
 
     host.innerHTML = '';
     const root = svg('svg', { viewBox: `0 0 ${W} ${H}`, width: W, height: H, role: 'img', 'aria-label': 'Force des devises depuis l\'ouverture de la semaine' }, host);
-    const grid = cssVar('--fxs-grid', '#2a2a2a'); const txt = cssVar('--fxs-text', '#9a9a9a'); const zero = cssVar('--fxs-zero', '#e6e6e6');
+    const grid = cssVar('--fxs-grid', '#2a2a2a', host); const txt = cssVar('--fxs-text', '#9a9a9a', host); const zero = cssVar('--fxs-zero', '#e6e6e6', host);
     for (let v = inst.compact ? Math.ceil(y0 / step - 1e-9) * step : y0; v <= (inst.compact ? y1 + 1e-9 : y1 + step / 2); v += step) {
       const y = Y(v);
       svg('line', { x1: m.l, x2: W - m.r, y1: y, y2: y, stroke: grid, 'stroke-width': 1 }, root);
@@ -214,7 +214,7 @@
 
     shown.forEach((c) => {
       const pts = vis[c].map((p) => `${X(p[0]).toFixed(1)},${Y(p[1]).toFixed(1)}`).join(' ');
-      svg('polyline', { points: pts, fill: 'none', stroke: cssVar('--fxs-' + c.toLowerCase(), '#888'), 'stroke-width': 2, 'stroke-linejoin': 'round', 'stroke-linecap': 'round' }, root);
+      svg('polyline', { points: pts, fill: 'none', stroke: cssVar('--fxs-' + c.toLowerCase(), '#888', host), 'stroke-width': 2, 'stroke-linejoin': 'round', 'stroke-linecap': 'round' }, root);
     });
 
     // survol : repère vertical + info-bulle
@@ -379,6 +379,8 @@
     setTimeout(() => { renderFx(); renderYc(); }, 60);
   }
   window.Indicator = { refresh, mountFx, reloadFx: loadFx };
+  // changement de couleur dans Paramètres > Thème : on redessine les courbes (celles d'Overwatch ont leurs propres couleurs)
+  window.addEventListener('fx-theme-changed', () => { fxInsts.forEach((i) => { try { renderFx(i); } catch (e) { /* ignoré */ } }); });
 
   document.addEventListener('DOMContentLoaded', () => {
     build();
