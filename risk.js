@@ -389,11 +389,7 @@
       const { data, error } = await client.from('risk_sentiment')
         .select('score, score_1d, score_1w, score_1m, components, rating, source, history').eq('id', 'composite').maybeSingle();
       if (error) throw error;
-      try {
-        const vx = await client.from('vix_candles').select('c').order('ts', { ascending: false }).limit(1);
-        const c = vx.data && vx.data[0] ? Number(vx.data[0].c) : NaN;
-        if (Number.isFinite(c)) { vixLast = c; paintVix(); }
-      } catch (e) { /* VIX indisponible : la case reste vide */ }
+      loadVix();
       if (data) { lastRow = data; miniGauges.forEach((m) => paintGauge(m, data)); if (histRow && histRow.history_long) data.history_long = histRow.history_long; setScore(data); if (rangeDays() > 95) ensureLong(); }
     } catch (e) {
       console.warn('risk.js', e);
@@ -406,6 +402,16 @@
   const miniGauges = [];
   let lastRow = null;
   let vixLast = null;
+  // VIX en direct : même flux TradingView (CAPITALCOM:VIX) que le graphique de la fenêtre Indicator
+  async function loadVix() {
+    try {
+      const cl = window.Auth && window.Auth.getClient(); if (!cl) return;
+      const { data, error } = await cl.functions.invoke('vix-quote');
+      const p = data && Number(data.price);
+      if (error || !Number.isFinite(p)) throw error || new Error('VIX indisponible');
+      vixLast = p; paintVix();
+    } catch (e) { vixLast = null; paintVix(); } // jamais de valeur périmée : « – » si le direct est indisponible
+  }
   function paintVix() {
     document.querySelectorAll('[data-ow-vix-val]').forEach((el) => { el.textContent = vixLast == null ? '–' : vixLast.toFixed(2); });
   }
@@ -421,7 +427,7 @@
     load();
   }
 
-  window.Risk = { refresh: load, showChart, mountGauge };
+  window.Risk = { refresh: load, showChart, mountGauge, refreshVix: loadVix };
 
   document.addEventListener('DOMContentLoaded', () => {
     ensureGauge();

@@ -126,5 +126,11 @@
       if (window.Rates) window.Rates.reload();
       if (window.OverwatchCalendar) window.OverwatchCalendar.refresh();
     }, 60 * 1000);
+    // VIX : mis à jour toutes les 20 s tant que la fenêtre est affichée
+    setInterval(() => {
+      const p = document.getElementById(PANEL_ID);
+      if (!p || p.hidden || document.hidden) return;
+      if (window.Risk && window.Risk.refreshVix) window.Risk.refreshVix();
+    }, 20 * 1000);
   });
 })();
