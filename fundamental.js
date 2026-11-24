@@ -410,6 +410,189 @@
     return body;
   }
 
+
+  /* =========================================================
+     Compteur de biais (0 = haussier fort … 100 = baissier fort)
+     Valeur personnelle, stockée dans le thème du compte ("--fgm-<id>").
+     ========================================================= */
+  const NS = 'http://www.w3.org/2000/svg';
+  const mVar = (id) => '--fgm-' + id;
+  function getMeter(id) {
+    const T = window.ThemeColors;
+    const v = T && T.getVar ? T.getVar(mVar(id)) : null;
+    if (v === null || v === undefined) return null;
+    const n = Number(v);
+    return Number.isFinite(n) ? Math.max(0, Math.min(100, n)) : null;
+  }
+  function setMeter(id, value) { // null = compteur désactivé
+    const T = window.ThemeColors;
+    if (!T || !T.setVars) return;
+    T.setVars({ [mVar(id)]: value === null ? null : String(Math.round(value)) });
+  }
+  const svgEl = (tag, attrs) => { const e = document.createElementNS(NS, tag); Object.entries(attrs || {}).forEach(([k, v]) => e.setAttribute(k, v)); return e; };
+  // 0 en haut, 50 à droite, 100 en bas : angle en degrés (−90 → +90)
+  const meterAngle = (v) => -90 + v * 1.8;
+  const polar = (cx, cy, r, v) => { const a = (meterAngle(v) * Math.PI) / 180; return [cx + r * Math.cos(a), cy + r * Math.sin(a)]; };
+  const arcPath = (cx, cy, r, v0, v1) => { const [x0, y0] = polar(cx, cy, r, v0); const [x1, y1] = polar(cx, cy, r, v1); return `M${x0.toFixed(2)} ${y0.toFixed(2)} A${r} ${r} 0 0 1 ${x1.toFixed(2)} ${y1.toFixed(2)}`; };
+  const zoneClass = (v) => (v < 40 ? 'up' : v > 60 ? 'down' : 'mid');
+
+  // Dessine le cadran (arc à droite, 3 zones, aiguille) ; renvoie { svg, setValue }
+  function buildMeterSvg(size, cx, cy, r, sw, opts) {
+    const svg = svgEl('svg', { viewBox: `0 0 ${size[0]} ${size[1]}`, class: 'fund-meter-svg', 'aria-hidden': 'true' });
+    [[0, 40, 'up'], [40, 60, 'mid'], [60, 100, 'down']].forEach(([a, b, z]) => {
+      svg.appendChild(svgEl('path', { d: arcPath(cx, cy, r, a, b), class: 'fund-meter-arc fund-meter-arc--' + z, 'stroke-width': sw, fill: 'none', 'stroke-linecap': 'butt' }));
+    });
+    const needle = svgEl('line', { x1: cx, y1: cy, x2: cx, y2: cy - r + sw, class: 'fund-meter-needle', 'stroke-width': opts.needleW, 'stroke-linecap': 'round' });
+    const hub = svgEl('circle', { cx, cy, r: opts.hubR, class: 'fund-meter-hub', 'stroke-width': 1 });
+    svg.appendChild(needle); svg.appendChild(hub);
+    function setValue(v) {
+      const [x, y] = polar(cx, cy, r - sw * 0.6, v);
+      needle.setAttribute('x2', x.toFixed(2)); needle.setAttribute('y2', y.toFixed(2));
+      svg.dataset.zone = zoneClass(v);
+    }
+    return { svg, needle, hub, setValue };
+  }
+
+  function buildMeterButton(node) {
+    const v = getMeter(node.id);
+    if (v === null) return null;
+    const b = el('button', 'fund-meter');
+    b.type = 'button';
+    b.title = 'Biais : ' + v + ' / 100 (clic droit pour modifier)';
+    b.dataset.meterId = node.id;
+    const m = buildMeterSvg([32, 32], 9, 16, 13, 4, { needleW: 2, hubR: 2.4 });
+    m.setValue(v);
+    b.appendChild(m.svg);
+    b.addEventListener('click', (e) => e.stopPropagation());
+    return b;
+  }
+
+  let meterDlg = null;
+  function closeMeterDialog() {
+    if (!meterDlg) return;
+    document.removeEventListener('keydown', meterDlg.onKey, true);
+    meterDlg.root.remove();
+    meterDlg = null;
+  }
+
+  function openMeterDialog(id) {
+    const node = nodes.get(id);
+    if (!node) return;
+    closeMeterDialog();
+    let value = getMeter(id);
+    if (value === null) value = 50;
+
+    const root = el('div', 'fund-meter-dlg');
+    const card = el('div', 'fund-meter-card');
+    card.setAttribute('role', 'dialog');
+    card.setAttribute('aria-modal', 'true');
+    card.appendChild(el('div', 'fund-meter-title', 'Biais'));
+    card.appendChild(el('div', 'fund-meter-sub', node.name));
+
+    const stage = el('div', 'fund-meter-stage');
+    const m = buildMeterSvg([200, 240], 40, 120, 100, 18, { needleW: 5, hubR: 11 });
+    m.svg.classList.add('fund-meter-svg--big');
+    // graduations
+    [[0, '0'], [40, '40'], [60, '60'], [100, '100']].forEach(([v, t]) => {
+      const [x, y] = polar(40, 120, 118, v);
+      const tx = svgEl('text', { x: x.toFixed(1), y: (y + (v === 0 ? -4 : v === 100 ? 12 : 4)).toFixed(1), class: 'fund-meter-tick', 'text-anchor': 'start' });
+      tx.textContent = t;
+      m.svg.appendChild(tx);
+    });
+    m.hub.setAttribute('class', 'fund-meter-hub fund-meter-hub--btn');
+    m.hub.style.cursor = 'pointer';
+    stage.appendChild(m.svg);
+    const readout = el('div', 'fund-meter-readout');
+    const hint = el('div', 'fund-meter-hint', 'Glisse l’aiguille · clique le centre pour saisir une valeur');
+    card.appendChild(stage);
+    card.appendChild(readout);
+    card.appendChild(hint);
+
+    const btns = el('div', 'fund-meter-btns');
+    const bClose = el('button', 'fund-meter-btn fund-meter-btn--close', 'Fermer'); bClose.type = 'button';
+    const bSave = el('button', 'fund-meter-btn fund-meter-btn--save', 'Sauvegarder'); bSave.type = 'button';
+    btns.appendChild(bClose); btns.appendChild(bSave);
+    card.appendChild(btns);
+    root.appendChild(card);
+    document.body.appendChild(root);
+
+    const paint = () => {
+      m.setValue(value);
+      readout.textContent = String(Math.round(value));
+      readout.dataset.zone = zoneClass(value);
+    };
+    paint();
+
+    // Glisser l'aiguille
+    const fromPointer = (e) => {
+      const r = m.svg.getBoundingClientRect();
+      const sc = r.width / 200;
+      const dx = e.clientX - (r.left + 40 * sc); const dy = e.clientY - (r.top + 120 * sc);
+      let v;
+      if (dx <= 0 && Math.abs(dy) < 1) v = value;
+      else if (dx < 0) v = dy < 0 ? 0 : 100;
+      else v = (Math.atan2(dy, dx) * 180 / Math.PI + 90) / 1.8;
+      value = Math.max(0, Math.min(100, Math.round(v)));
+      paint();
+    };
+    let dragging = false;
+    m.svg.addEventListener('pointerdown', (e) => {
+      if (e.target === m.hub) return; // le centre ouvre la saisie
+      dragging = true;
+      try { m.svg.setPointerCapture(e.pointerId); } catch (err) { /* ignoré */ }
+      fromPointer(e);
+      e.preventDefault();
+    });
+    m.svg.addEventListener('pointermove', (e) => { if (dragging) fromPointer(e); });
+    const stop = () => { dragging = false; };
+    m.svg.addEventListener('pointerup', stop);
+    m.svg.addEventListener('pointercancel', stop);
+
+    // Centre : saisie au clavier
+    m.hub.addEventListener('click', () => {
+      const sub = el('div', 'fund-meter-dlg fund-meter-dlg--input');
+      const c2 = el('div', 'fund-meter-card fund-meter-card--small');
+      c2.appendChild(el('div', 'fund-meter-title', 'Niveau du biais'));
+      c2.appendChild(el('div', 'fund-meter-sub', '0 = haussier fort · 100 = baissier fort'));
+      const inp = el('input', 'fund-meter-input');
+      inp.type = 'number'; inp.min = '0'; inp.max = '100'; inp.step = '1'; inp.value = String(Math.round(value));
+      c2.appendChild(inp);
+      const b2 = el('div', 'fund-meter-btns');
+      const no = el('button', 'fund-meter-btn fund-meter-btn--close', 'Annuler'); no.type = 'button';
+      const ok = el('button', 'fund-meter-btn fund-meter-btn--save', 'Valider'); ok.type = 'button';
+      b2.appendChild(no); b2.appendChild(ok); c2.appendChild(b2); sub.appendChild(c2);
+      document.body.appendChild(sub);
+      const done = (apply) => {
+        if (apply) { const n = Number(inp.value); if (Number.isFinite(n)) { value = Math.max(0, Math.min(100, Math.round(n))); paint(); } }
+        sub.remove();
+      };
+      no.addEventListener('click', () => done(false));
+      ok.addEventListener('click', () => done(true));
+      sub.addEventListener('pointerdown', (e) => { if (e.target === sub) done(false); });
+      inp.addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); e.stopPropagation(); done(true); } else if (e.key === 'Escape') { e.preventDefault(); e.stopPropagation(); done(false); } });
+      inp.focus(); inp.select();
+    });
+
+    const onKey = (e) => {
+      if (document.querySelector('.fund-meter-dlg--input')) return;
+      if (e.key === 'Escape') { e.preventDefault(); closeMeterDialog(); }
+      else if (e.key === 'ArrowUp' || e.key === 'ArrowLeft') { e.preventDefault(); value = Math.max(0, value - 1); paint(); }
+      else if (e.key === 'ArrowDown' || e.key === 'ArrowRight') { e.preventDefault(); value = Math.min(100, value + 1); paint(); }
+      else if (e.key === 'Enter') { e.preventDefault(); bSave.click(); }
+    };
+    document.addEventListener('keydown', onKey, true);
+    meterDlg = { root, onKey };
+
+    bClose.addEventListener('click', closeMeterDialog);
+    bSave.addEventListener('click', () => { setMeter(id, value); closeMeterDialog(); render(); });
+    root.addEventListener('pointerdown', (e) => { if (e.target === root) closeMeterDialog(); });
+  }
+
+  function toggleMeter(id) {
+    if (getMeter(id) === null) { setMeter(id, 50); render(); openMeterDialog(id); }
+    else { setMeter(id, null); render(); }
+  }
+
   function buildNode(node, depth) {
     const isGroup = depth === 0;
     const isOpen = openIds.has(node.id);
@@ -428,6 +611,8 @@
     toggle.appendChild(el('span', 'fund-name', node.name));
     toggle.addEventListener('click', () => toggleNode(node.id));
     row.appendChild(toggle);
+    const meterBtn = buildMeterButton(node);
+    if (meterBtn) row.appendChild(meterBtn);
 
     wrap.appendChild(row);
     if (isGroup) applyGroupColors(wrap, node.id);
@@ -702,6 +887,7 @@
       setStatus(friendlyError(error, 'Impossible de supprimer'));
       return;
     }
+    descendantIds(id).concat(id).forEach((d) => setMeter(d, null));
     removeLocal(id);
     if (node.parent_id === null) saveGroupColors(id, { bg: null, border: null, text: null });
     setStatus('');
@@ -962,6 +1148,7 @@
 
   function onTreePointerDown(e) {
     if (e.button !== 0 || e.pointerType !== 'mouse' || !els.tree) return;
+    if (e.target.closest && e.target.closest('.fund-meter')) return;
     const row = e.target.closest ? e.target.closest('.fund-row') : null;
     if (!row || !els.tree.contains(row)) return;
     const id = row.parentElement.dataset.id;
@@ -1191,6 +1378,7 @@
     if (!node) return;
     e.preventDefault();
     if (drag && drag.active) return;
+    if (e.target.closest('.fund-meter')) { openMeterDialog(id); return; } // clic droit sur le compteur : régler le biais
 
     const isGroup = node.parent_id === null;
     const sibs = childrenOf(node.parent_id);
@@ -1198,6 +1386,7 @@
     openMenu(e.clientX, e.clientY, [
       { label: isGroup ? 'Modifier / personnaliser…' : 'Renommer…', onClick: () => renameNode(id) },
       { label: 'Ajouter un onglet…', disabled: !canAddChild(node), onClick: () => addNode(id) },
+      { label: getMeter(id) === null ? 'Compteur' : 'Compteur ✓ (retirer)', onClick: () => toggleMeter(id) },
       { sep: true },
       { label: 'Copier', onClick: () => copyNode(id) },
       { label: 'Coller à l\'intérieur…', disabled: !canPaste(id, 'inside'), onClick: () => pasteClip(id, 'inside') },

@@ -5172,3 +5172,36 @@ button.sq-btn.is-on, button.sq-btn.is-on:hover { background: var(--sqb-on-bg); b
 .ow-speeches .speeches-empty { background: var(--ow-spk-empty-bg); border: 1px solid var(--ow-spk-empty-bd); border-radius: var(--radius-card); color: var(--ow-spk-empty-text); }
 .ow-globe { background: var(--ow-globe-bg); border-color: var(--ow-globe-bd); }
 .ow-news .nx-list, .ow-news .speeches-empty { background: var(--ow-news-box-bg); border-color: var(--ow-news-box-bd); }
+
+/* ---------- Compteur de biais (Notes fondamentales) ---------- */
+:root { --fm-up: #4d94ff; --fm-mid: #8a8a8a; --fm-down: #fe1111; --fm-needle: #fafafa; --fm-hub-bg: #161616; --fm-hub-bd: #fafafa; --fm-mini-bg: #101010; --fm-mini-bd: #2a2a2a; --fm-mini-hover-bd: #bababa; --fm-dlg-overlay: #000000; --fm-dlg-bg: #161616; --fm-dlg-bd: #bababa; --fm-dlg-title: #fafafa; --fm-dlg-sub: #9a9a9a; --fm-dlg-tick: #9a9a9a; --fm-dlg-hint: #8a8a8a; --fm-dlg-hub-hover: #4d94ff; --fm-save-bg: #0062d2; --fm-save-bd: #0062d2; --fm-save-text: #ffffff; --fm-close-bg: #00000000; --fm-close-bd: #bababa; --fm-close-text: #fafafa; --fm-key-bg: #161616; --fm-key-bd: #bababa; --fm-key-title: #fafafa; --fm-key-sub: #9a9a9a; --fm-key-in-bg: #101010; --fm-key-in-bd: #2a2a2a; --fm-key-in-text: #fafafa; }
+.fund-meter { flex: 0 0 auto; align-self: center; width: 32px; height: 32px; margin-right: 10px; padding: 0; display: inline-flex; align-items: center; justify-content: center; background: var(--fm-mini-bg); border: 1px solid var(--fm-mini-bd); border-radius: 6px; cursor: context-menu; }
+.fund-meter:hover { border-color: var(--fm-mini-hover-bd); }
+.fund-meter-svg { display: block; width: 100%; height: 100%; overflow: visible; }
+.fund-meter-arc--up { stroke: var(--fm-up); }
+.fund-meter-arc--mid { stroke: var(--fm-mid); }
+.fund-meter-arc--down { stroke: var(--fm-down); }
+
+.fund-meter-needle { stroke: var(--fm-needle); }
+.fund-meter-hub { fill: var(--fm-hub-bg); stroke: var(--fm-hub-bd); }
+.fund-meter-hub--btn:hover { stroke: var(--fm-dlg-hub-hover); stroke-width: 2; }
+.fund-meter-dlg { position: fixed; inset: 0; z-index: 310; display: flex; align-items: center; justify-content: center; padding: 16px; background: color-mix(in srgb, var(--fm-dlg-overlay) 72%, transparent); }
+.fund-meter-dlg--input { z-index: 320; }
+.fund-meter-card { width: 100%; max-width: 340px; display: flex; flex-direction: column; align-items: center; gap: 8px; padding: 18px; background: var(--fm-dlg-bg); border: 1px solid var(--fm-dlg-bd); border-radius: 12px; }
+.fund-meter-card--small { max-width: 300px; align-items: stretch; background: var(--fm-key-bg); border-color: var(--fm-key-bd); }
+.fund-meter-title { font-family: var(--mono); font-size: 13px; font-weight: 700; letter-spacing: 1.5px; text-transform: uppercase; color: var(--fm-dlg-title); }
+.fund-meter-sub { font-family: var(--sans); font-size: 13px; color: var(--fm-dlg-sub); text-align: center; }
+.fund-meter-card--small .fund-meter-title { color: var(--fm-key-title); }
+.fund-meter-card--small .fund-meter-sub { color: var(--fm-key-sub); }
+.fund-meter-stage { width: 100%; max-width: 220px; touch-action: none; user-select: none; }
+.fund-meter-svg--big { cursor: grab; }
+.fund-meter-tick { font-family: var(--mono); font-size: 11px; fill: var(--fm-dlg-tick); }
+.fund-meter-readout { font-family: var(--mono); font-size: 34px; font-weight: 700; line-height: 1; color: var(--fm-mid); }
+.fund-meter-readout[data-zone="up"] { color: var(--fm-up); }
+.fund-meter-readout[data-zone="down"] { color: var(--fm-down); }
+.fund-meter-hint { font-family: var(--sans); font-size: 12px; color: var(--fm-dlg-hint); text-align: center; }
+.fund-meter-btns { display: flex; justify-content: flex-end; gap: 8px; width: 100%; margin-top: 4px; }
+.fund-meter-btn { padding: 9px 16px; border-radius: var(--radius-sm); font-family: var(--mono); font-size: 11px; letter-spacing: 1px; text-transform: uppercase; cursor: pointer; }
+.fund-meter-btn--save { background: var(--fm-save-bg); border: 1px solid var(--fm-save-bd); color: var(--fm-save-text); }
+.fund-meter-btn--close { background: var(--fm-close-bg); border: 1px solid var(--fm-close-bd); color: var(--fm-close-text); }
+.fund-meter-input { width: 100%; box-sizing: border-box; padding: 10px 12px; background: var(--fm-key-in-bg); border: 1px solid var(--fm-key-in-bd); border-radius: 8px; color: var(--fm-key-in-text); font-family: var(--mono); font-size: 16px; text-align: center; }

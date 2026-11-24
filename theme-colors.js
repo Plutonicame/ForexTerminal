@@ -736,6 +736,37 @@ const THEME_FIELDS = {
     { v: '--globe-sub', l: 'Texte secondaire', section: 'Bulles (info navire, état)' },
   ],
   fondamentale: [
+    { v: '--fm-up', l: 'Arc et aiguille : biais haussier (0 à 40)', category: 'Compteur de biais', section: 'Couleurs du compteur' },
+    { v: '--fm-mid', l: 'Arc et aiguille : biais neutre (40 à 60)', category: 'Compteur de biais', section: 'Couleurs du compteur' },
+    { v: '--fm-down', l: 'Arc et aiguille : biais baissier (60 à 100)', category: 'Compteur de biais', section: 'Couleurs du compteur' },
+    { v: '--fm-needle', l: 'Aiguille', category: 'Compteur de biais', section: 'Mini-compteur (dans le titre de l\'onglet)' },
+    { v: '--fm-hub-bg', l: 'Centre de l\'aiguille : fond', category: 'Compteur de biais', section: 'Mini-compteur (dans le titre de l\'onglet)' },
+    { v: '--fm-hub-bd', l: 'Centre de l\'aiguille : bordure', category: 'Compteur de biais', section: 'Mini-compteur (dans le titre de l\'onglet)' },
+    { v: '--fm-mini-bg', l: 'Carré : fond', category: 'Compteur de biais', section: 'Mini-compteur (dans le titre de l\'onglet)' },
+    { v: '--fm-mini-bd', l: 'Carré : bordure', category: 'Compteur de biais', section: 'Mini-compteur (dans le titre de l\'onglet)' },
+    { v: '--fm-mini-hover-bd', l: 'Carré : bordure au survol', category: 'Compteur de biais', section: 'Mini-compteur (dans le titre de l\'onglet)' },
+    { v: '--fm-dlg-overlay', l: 'Voile derrière la fenêtre', category: 'Compteur de biais', section: 'Fenêtre du compteur (aiguille à déplacer)' },
+    { v: '--fm-dlg-bg', l: 'Fond', category: 'Compteur de biais', section: 'Fenêtre du compteur (aiguille à déplacer)' },
+    { v: '--fm-dlg-bd', l: 'Bordure', category: 'Compteur de biais', section: 'Fenêtre du compteur (aiguille à déplacer)' },
+    { v: '--fm-dlg-title', l: 'Titre', category: 'Compteur de biais', section: 'Fenêtre du compteur (aiguille à déplacer)' },
+    { v: '--fm-dlg-sub', l: 'Sous-titre (nom de l\'onglet)', category: 'Compteur de biais', section: 'Fenêtre du compteur (aiguille à déplacer)' },
+    { v: '--fm-dlg-tick', l: 'Graduations (0, 40, 60, 100)', category: 'Compteur de biais', section: 'Fenêtre du compteur (aiguille à déplacer)' },
+    { v: '--fm-dlg-hint', l: 'Texte d\'aide', category: 'Compteur de biais', section: 'Fenêtre du compteur (aiguille à déplacer)' },
+    { v: '--fm-dlg-hub-hover', l: 'Centre au survol (clic = saisie)', category: 'Compteur de biais', section: 'Fenêtre du compteur (aiguille à déplacer)' },
+    { v: '--fm-save-bg', l: 'Fond', category: 'Compteur de biais', section: 'Bouton « Sauvegarder »' },
+    { v: '--fm-save-bd', l: 'Bordure', category: 'Compteur de biais', section: 'Bouton « Sauvegarder »' },
+    { v: '--fm-save-text', l: 'Texte', category: 'Compteur de biais', section: 'Bouton « Sauvegarder »' },
+    { v: '--fm-close-bg', l: 'Fond', category: 'Compteur de biais', section: 'Bouton « Fermer »' },
+    { v: '--fm-close-bd', l: 'Bordure', category: 'Compteur de biais', section: 'Bouton « Fermer »' },
+    { v: '--fm-close-text', l: 'Texte', category: 'Compteur de biais', section: 'Bouton « Fermer »' },
+    { v: '--fm-key-bg', l: 'Fond', category: 'Compteur de biais', section: 'Mini-fenêtre de saisie au clavier' },
+    { v: '--fm-key-bd', l: 'Bordure', category: 'Compteur de biais', section: 'Mini-fenêtre de saisie au clavier' },
+    { v: '--fm-key-title', l: 'Titre', category: 'Compteur de biais', section: 'Mini-fenêtre de saisie au clavier' },
+    { v: '--fm-key-sub', l: 'Sous-texte', category: 'Compteur de biais', section: 'Mini-fenêtre de saisie au clavier' },
+    { v: '--fm-key-in-bg', l: 'Champ : fond', category: 'Compteur de biais', section: 'Mini-fenêtre de saisie au clavier' },
+    { v: '--fm-key-in-bd', l: 'Champ : bordure', category: 'Compteur de biais', section: 'Mini-fenêtre de saisie au clavier' },
+    { v: '--fm-key-in-text', l: 'Champ : texte', category: 'Compteur de biais', section: 'Mini-fenêtre de saisie au clavier' },
+
     { v: '--fund-toolbar-bg', l: 'Fond', category: 'Page', section: 'Bandeau « Note fondamentale »' },
     { v: '--fund-toolbar-border', l: 'Bordure', category: 'Page', section: 'Bandeau « Note fondamentale »' },
     { v: '--fund-toolbar-title', l: 'Titre', category: 'Page', section: 'Bandeau « Note fondamentale »' },
@@ -1506,7 +1537,7 @@ function resetThemeVars() {
   // (clés "--fgc-...") ne sont pas réglables dans ce panneau : on les garde.
   const kept = {};
   Object.keys(themeVars).forEach((k) => {
-    if (k.startsWith('--fgc-')) kept[k] = themeVars[k];
+    if (k.startsWith('--fgc-') || k.startsWith('--fgm-')) kept[k] = themeVars[k];
   });
   themeVars = kept;
   saveThemeVars();
