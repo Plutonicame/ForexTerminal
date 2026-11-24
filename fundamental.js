@@ -460,9 +460,13 @@
     b.type = 'button';
     b.title = 'Biais : ' + v + ' / 100 (clic droit pour modifier)';
     b.dataset.meterId = node.id;
-    const m = buildMeterSvg([32, 32], 9, 16, 13, 4, { needleW: 2, hubR: 2.4 });
-    m.setValue(v);
-    b.appendChild(m.svg);
+    // Mini-compteur : juste une flèche, même orientation que l'aiguille, couleur de la zone visée
+    const svg = svgEl('svg', { viewBox: '-16 -16 32 32', class: 'fund-meter-svg fund-meter-arrow fund-meter-arrow--' + zoneClass(v), 'aria-hidden': 'true' });
+    const g = svgEl('g', { transform: 'rotate(' + meterAngle(v).toFixed(1) + ')' });
+    g.appendChild(svgEl('line', { x1: -10, y1: 0, x2: 8, y2: 0, 'stroke-width': 3, 'stroke-linecap': 'round' }));
+    g.appendChild(svgEl('path', { d: 'M4 -6 L12 0 L4 6 Z', stroke: 'none' }));
+    svg.appendChild(g);
+    b.appendChild(svg);
     b.addEventListener('click', (e) => e.stopPropagation());
     return b;
   }

@@ -5205,3 +5205,9 @@ button.sq-btn.is-on, button.sq-btn.is-on:hover { background: var(--sqb-on-bg); b
 .fund-meter-btn--save { background: var(--fm-save-bg); border: 1px solid var(--fm-save-bd); color: var(--fm-save-text); }
 .fund-meter-btn--close { background: var(--fm-close-bg); border: 1px solid var(--fm-close-bd); color: var(--fm-close-text); }
 .fund-meter-input { width: 100%; box-sizing: border-box; padding: 10px 12px; background: var(--fm-key-in-bg); border: 1px solid var(--fm-key-in-bd); border-radius: 8px; color: var(--fm-key-in-text); font-family: var(--mono); font-size: 16px; text-align: center; }
+
+.fund-meter-arrow line { stroke: currentColor; }
+.fund-meter-arrow path { fill: currentColor; }
+.fund-meter-arrow--up { color: var(--fm-up); }
+.fund-meter-arrow--mid { color: var(--fm-mid); }
+.fund-meter-arrow--down { color: var(--fm-down); }
