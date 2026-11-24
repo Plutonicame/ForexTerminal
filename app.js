@@ -2041,8 +2041,7 @@ document.addEventListener('DOMContentLoaded', () => {
     if (tabId === 'tab-calendar' && currentCalendarCurrency) loadCalendar(currentCalendarCurrency);
     if (tabId === 'tab-rates' && window.Rates) window.Rates.reload();
     if (tabId === 'tab-cot') { if (window.Cot) window.Cot.reload(); if (window.Retail) window.Retail.reload(); }
-    if (tabId === 'tab-risk' && window.Risk) window.Risk.refresh();
-    if (tabId === 'tab-indicator' && window.Risk) window.Risk.showChart();
+    if (tabId === 'tab-risk' && window.Risk) { window.Risk.refresh(); window.Risk.showChart(); }
     if (tabId === 'tab-indicator' && window.Indicator) window.Indicator.refresh(tabId); // force des devises + courbe des taux
     if (tabId === 'tab-speeches') { if (window.Trump) window.Trump.refresh(); }
     if (tabId === 'tab-5' && window.Fundamental) window.Fundamental.refresh(); // Note fondamentale

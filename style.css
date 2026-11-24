@@ -5211,3 +5211,9 @@ button.sq-btn.is-on, button.sq-btn.is-on:hover { background: var(--sqb-on-bg); b
 .fund-meter-arrow--up { color: var(--fm-up); }
 .fund-meter-arrow--mid { color: var(--fm-mid); }
 .fund-meter-arrow--down { color: var(--fm-down); }
+
+/* Sentiment du risque : S&P 500 (gauche) et VIX (droite) sous l'historique */
+.risk-charts { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 4px; }
+.risk-charts .risk-wrap { margin-bottom: 0; min-width: 0; }
+.risk-charts .risk-chart { height: 460px; min-height: 360px; max-height: none; }
+@media (max-width: 900px) { .risk-charts { grid-template-columns: 1fr; } }

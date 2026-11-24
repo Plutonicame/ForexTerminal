@@ -8,7 +8,7 @@
  * ce sera ajouté plus tard si besoin (ex. cache des réponses API).
  */
 
-const CACHE_VERSION = 'fx-terminal-shell-v172';
+const CACHE_VERSION = 'fx-terminal-shell-v173';
 
 const APP_SHELL = [
   './',

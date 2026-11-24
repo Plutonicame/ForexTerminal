@@ -9,13 +9,11 @@
  */
 (function () {
   const GAUGE_PANEL_ID = 'tab-risk';
-  const CHART_PANEL_ID = 'tab-indicator';
   const NS = 'http://www.w3.org/2000/svg';
   const CX = 200; const CY = 190; const R_OUT = 150; const R_IN = 122;
   const A0 = 150; const A1 = 390; // degrés : de bas-gauche (0) à bas-droite (100), en passant par le haut
   const SEG = 40;
   let wrap = null;
-  let chartWrap = null;
   let tvDone = false;
   let loading = false;
 
@@ -249,7 +247,11 @@
         </div>
         <div class="risk-gauge"></div>
         <div class="risk-info"></div>
-        <div class="risk-hist"><div class="risk-hist-head"><div class="risk-hist-title">Historique du risque <span class="risk-hist-key"><i class="risk-k risk-k--off"></i>&lt; 30 peur <i class="risk-k risk-k--mid"></i>30–70 neutre <i class="risk-k risk-k--on"></i>&gt; 70 avidité</span><span class="risk-hist-note"></span></div><div class="risk-tfs">${TFS.map((t) => `<button type="button" class="risk-tf risk-tf--${t[0]}" data-tf="${t[0]}">${t[1]}</button>`).join('')}</div></div><div class="risk-hist-box"></div></div>`;
+        <div class="risk-hist"><div class="risk-hist-head"><div class="risk-hist-title">Historique du risque <span class="risk-hist-key"><i class="risk-k risk-k--off"></i>&lt; 30 peur <i class="risk-k risk-k--mid"></i>30–70 neutre <i class="risk-k risk-k--on"></i>&gt; 70 avidité</span><span class="risk-hist-note"></span></div><div class="risk-tfs">${TFS.map((t) => `<button type="button" class="risk-tf risk-tf--${t[0]}" data-tf="${t[0]}">${t[1]}</button>`).join('')}</div></div><div class="risk-hist-box"></div></div>
+        <div class="risk-charts">
+          <div class="risk-wrap risk-wrap--chart"><div class="speeches-toolbar"><span class="speeches-toolbar-title">S&amp;P 500</span><span class="speeches-toolbar-info">TradingView</span></div><div class="risk-chart"><div id="riskChartSpx" style="height:100%;width:100%"></div></div></div>
+          <div class="risk-wrap risk-wrap--chart"><div class="speeches-toolbar"><span class="speeches-toolbar-title">VIX</span><span class="speeches-toolbar-info">TradingView</span></div><div class="risk-chart"><div id="riskChartHost" style="height:100%;width:100%"></div></div></div>
+        </div>`;
       g = buildGauge();
       wrap.querySelector('.risk-gauge').appendChild(g.svg);
       g.val.textContent = '–';
@@ -263,33 +265,16 @@
     return wrap;
   }
 
-  function ensureChart() {
-    const panel = document.getElementById(CHART_PANEL_ID);
-    if (!panel) return null;
-    if (!chartWrap) {
-      chartWrap = document.createElement('div');
-      chartWrap.className = 'risk-wrap';
-      chartWrap.innerHTML = `
-        <div class="speeches-toolbar">
-          <span class="speeches-toolbar-title">VIX</span>
-          <span class="speeches-toolbar-info">Graphique H1</span>
-        </div>
-        <div class="risk-chart"></div>`;
-      panel.appendChild(chartWrap);
-    }
-    return chartWrap;
-  }
-
   const cssVar = (n, d) => { try { return getComputedStyle(document.documentElement).getPropertyValue(n).trim() || d; } catch (e) { return d; } };
 
   // Repli : widget « embed » officiel (fond et grille réglables, mais pas les bougies) si tv.js ne se charge pas.
-  function mountEmbedFallback(box) {
+  function mountEmbedFallback(box, symbol) {
     box.innerHTML = '<div class="tradingview-widget-container" style="height:100%;width:100%"><div class="tradingview-widget-container__widget" style="height:100%;width:100%"></div></div>';
     const s = document.createElement('script');
     s.src = 'https://s3.tradingview.com/external-embedding/embed-widget-advanced-chart.js';
     s.async = true;
     s.text = JSON.stringify({
-      autosize: true, symbol: 'CAPITALCOM:VIX', interval: '120', timezone: 'Europe/Paris', theme: 'dark', style: '1', locale: 'fr',
+      autosize: true, symbol: symbol, interval: '120', timezone: 'Europe/Paris', theme: 'dark', style: '1', locale: 'fr',
       backgroundColor: cssVar('--risk-chart-bg', '#272727'), gridColor: 'rgba(0, 0, 0, 0)', hide_volume: true,
       allow_symbol_change: true, hide_side_toolbar: true, save_image: false, calendar: false,
       support_host: 'https://www.tradingview.com',
@@ -298,7 +283,7 @@
   }
 
   // Widget TradingView complet (tv.js) : accepte les réglages « overrides » (bougies, fond, grille).
-  function buildWidget() {
+  function buildWidget(containerId, symbol) {
     const up = cssVar('--risk-candle-up-body', '#ffffff');
     const down = cssVar('--risk-candle-down-body', '#000000');
     const border = cssVar('--risk-candle-border', '#ffffff');
@@ -333,9 +318,9 @@
       'chartProperties.paneProperties.horzGridProperties.color': none,
     };
     new window.TradingView.widget({
-      container_id: 'riskChartHost',
+      container_id: containerId,
       autosize: true,
-      symbol: 'CAPITALCOM:VIX',
+      symbol: symbol,
       interval: '120',
       timezone: 'Europe/Paris',
       theme: 'dark',
@@ -353,28 +338,29 @@
     });
   }
 
-  // Le widget doit être créé quand la fenêtre est visible (sinon sa taille est nulle).
+  // Les widgets doivent être créés quand la fenêtre est visible (sinon leur taille est nulle).
+  const CHARTS = [['riskChartSpx', 'SP:SPX'], ['riskChartHost', 'CAPITALCOM:VIX']];
   function mountChart() {
-    const panel = document.getElementById(CHART_PANEL_ID);
-    if (tvDone || !chartWrap || !panel || panel.hidden) return;
+    const panel = document.getElementById(GAUGE_PANEL_ID);
+    if (tvDone || !panel || panel.hidden || !document.getElementById('riskChartHost')) return;
     tvDone = true;
-    const box = chartWrap.querySelector('.risk-chart');
-    box.innerHTML = '<div id="riskChartHost" style="height:100%;width:100%"></div>';
     const start = () => {
-      try { buildWidget(); } catch (e) { console.warn('risk.js widget', e); mountEmbedFallback(box); }
+      CHARTS.forEach(([id, sym]) => {
+        try { buildWidget(id, sym); } catch (e) { console.warn('risk.js widget', e); const box = document.getElementById(id); if (box) mountEmbedFallback(box.parentNode, sym); }
+      });
     };
     if (window.TradingView && window.TradingView.widget) { start(); return; }
     const s = document.createElement('script');
     s.src = 'https://s3.tradingview.com/tv.js';
     s.async = true;
     s.onload = start;
-    s.onerror = () => mountEmbedFallback(box);
+    s.onerror = () => CHARTS.forEach(([id, sym]) => { const box = document.getElementById(id); if (box) mountEmbedFallback(box.parentNode, sym); });
     document.head.appendChild(s);
   }
 
-  // Appelé à l'ouverture de la fenêtre « Indicator »
+  // Appelé à l'ouverture de la fenêtre « Sentiment du risque »
   function showChart() {
-    if (!ensureChart()) return;
+    ensureGauge();
     mountChart();
   }
 
@@ -431,7 +417,6 @@
 
   document.addEventListener('DOMContentLoaded', () => {
     ensureGauge();
-    ensureChart();
     if (window.Auth) window.Auth.onAuthStateChange((s) => { if (s) load(); });
     setInterval(() => {
       const p = document.getElementById(GAUGE_PANEL_ID);

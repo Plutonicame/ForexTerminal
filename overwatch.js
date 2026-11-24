@@ -83,7 +83,7 @@
 
     // Risk-on / risk-off
     $('owRisk').addEventListener('click', (e) => {
-      if (e.target.closest('[data-ow-vix]')) { go('tab-indicator'); return; } // petite zone VIX -> graphique du VIX (fenêtre Indicator)
+      if (e.target.closest('[data-ow-vix]')) { go('tab-risk'); return; } // petite zone VIX -> graphique du VIX (fenêtre Sentiment du risque)
       go('tab-risk');
     });
     // Globe : un clic sans glisser (glisser = tourner le globe)
