@@ -339,7 +339,7 @@
   }
 
   // Les widgets doivent être créés quand la fenêtre est visible (sinon leur taille est nulle).
-  const CHARTS = [['riskChartSpx', 'SP:SPX'], ['riskChartHost', 'CAPITALCOM:VIX']];
+  const CHARTS = [['riskChartSpx', 'CAPITALCOM:US500'], ['riskChartHost', 'CAPITALCOM:VIX']];
   function mountChart() {
     const panel = document.getElementById(GAUGE_PANEL_ID);
     if (tvDone || !panel || panel.hidden || !document.getElementById('riskChartHost')) return;
