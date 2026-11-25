@@ -2048,6 +2048,8 @@ document.addEventListener('DOMContentLoaded', () => {
     if (tabId === 'tab-seasonality' && window.Seasonality) window.Seasonality.refresh();
     if (tabId === 'tab-marketwatch' && window.MarketWatch) window.MarketWatch.refresh();
     if (tabId === 'tab-bankpos' && window.BankPos) window.BankPos.refresh();
+    if (tabId === 'tab-understand' && window.Understand) window.Understand.refresh();
+    if (tabId === 'tab-recap' && window.Recap) window.Recap.refresh();
     if (tabId === 'tab-riskcalc' && window.RiskCalc) window.RiskCalc.refresh();
     if (tabId === 'tab-macro' && window.Macro) window.Macro.refresh();
     if (window.Globe) window.Globe.setActive(tabId === 'tab-globe'); // Globe : créé à la 1re ouverture, en pause ailleurs

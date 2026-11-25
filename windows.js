@@ -64,8 +64,8 @@
       items: [
         { id: 'tab-marketwatch', label: 'Market Watch', currency: { win: 'marketwatch', all: 'own' } },
         { id: 'tab-seasonality', label: 'Saisonnalité', currency: { win: 'seasonality', all: 'panels' } },
-        { id: 'tab-fundheat', label: 'Fondamental heatmap', soon: true, currency: { win: 'fundheat', all: 'own' } },
-        { id: 'tab-techheat', label: 'Technical heatmap', soon: true, currency: { win: 'techheat', all: 'own' } },
+        { id: 'tab-understand', label: 'Compréhension fondamentale' },
+        { id: 'tab-recap', label: 'Session Recap' },
         { id: 'tab-indicator', label: 'Indicator' },
       ],
     },

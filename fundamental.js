@@ -1623,6 +1623,14 @@
     refresh() {
       if (userId) load();
     },
+    // Utilisé par « Compréhension fondamentale » : compteur de biais d'un nœud + jauge en lecture seule.
+    getMeter,
+    gauge(v) {
+      const m = buildMeterSvg([200, 240], 40, 120, 100, 18, { needleW: 5, hubR: 11 });
+      m.setValue(v);
+      m.svg.classList.add('fund-meter-svg--big');
+      return m.svg;
+    },
   };
 
   document.addEventListener('DOMContentLoaded', init);
