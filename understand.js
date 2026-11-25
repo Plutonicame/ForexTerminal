@@ -9,6 +9,8 @@
  *  - biais non respecté : l'edge function fx-insight (mode bias) passe en revue news, données éco, discours,
  *    Trump, banques, taux, macro et sentiment du risque, et liste les raisons probables de l'écart
  *    + celles qui pourraient quand même aller dans le sens du biais. Un clic sur une raison ouvre son analyse.
+ * L'analyse relit aussi la note de la semaine (onglet de la devise : récap + scénarios + biais) et vérifie, point par point,
+ * si ce qui était prévu se confirme, se contredit ou n'est pas encore arrivé (même quand le biais est respecté).
  * Exclus de l'analyse : calculateur de risque, paramètres, notes.
  * Expose aussi Understand.getBiases() (utilisé par Session Recap).
  * Couleurs : style.css (variables --un-*) ou Paramètres > Thème > Compréhension fondamentale.
@@ -45,7 +47,7 @@
   async function loadTree() {
     const c = client();
     if (!c) throw new Error('non connecté');
-    const { data, error } = await c.from('fundamental_nodes').select('id,parent_id,name');
+    const { data, error } = await c.from('fundamental_nodes').select('id,parent_id,name,content');
     if (error) throw error;
     const kids = (pid) => (data || []).filter((n) => n.parent_id === pid);
     const norm = (s) => String(s || '').trim().toLowerCase();
@@ -65,9 +67,9 @@
       if (start <= now.day && (!best || start > best.start)) best = { node: w, start };
     });
     if (!best) throw new Error('semaine en cours introuvable dans « ' + mName + ' »');
-    const nodes = {};
-    kids(best.node.id).forEach((n) => { const code = String(n.name || '').trim().toUpperCase(); if (CCYS.includes(code)) nodes[code] = n.id; });
-    return { weekName: best.node.name, month: mName, year: now.year, nodes };
+    const nodes = {}; const notes = {};
+    kids(best.node.id).forEach((n) => { const code = String(n.name || '').trim().toUpperCase(); if (CCYS.includes(code)) { nodes[code] = n.id; notes[code] = String(n.content || '').trim(); } });
+    return { weekName: best.node.name, month: mName, year: now.year, nodes, notes, weekNote: String(best.node.content || '').trim() };
   }
 
   async function loadStrength() {
@@ -156,7 +158,7 @@
         ? `<p class="un-note">Aucun compteur sur l'onglet ${ccy} de la semaine ${esc(state.weekName)}. Dans Note fondamentale : clic droit sur l'onglet > Compteur.</p>`
         : '<p class="un-note">Force des devises indisponible.</p>';
     } else if (v === 'ok') {
-      html += '<div class="un-banner un-banner--ok">Biais respecté : le marché va dans ton sens.</div>';
+      html += '<div class="un-banner un-banner--ok">Biais respecté : le marché va dans ton sens.</div><div class="un-ai" data-un-ai></div>';
     } else {
       const why = b < 40 ? 'ton biais est haussier mais la devise recule' : b > 60 ? 'ton biais est baissier mais la devise monte' : 'ton biais est neutre mais la devise bouge fortement';
       html += `<div class="un-banner un-banner--bad">Biais non respecté : ${why}.</div><div class="un-ai" data-un-ai></div>`;
@@ -166,7 +168,8 @@
     const gh = bodyEl.querySelector('[data-un-gauge]');
     if (gh && F && F.gauge && b != null) gh.appendChild(F.gauge(b));
     else if (gh) gh.remove();
-    if (v === 'bad') renderAi(false);
+    if (v === 'bad' || (v === 'ok' && state.notes[ccy])) renderAi(false);
+    else if (v === 'ok') { const h = bodyEl.querySelector('[data-un-ai]'); if (h) h.remove(); }
   }
 
   function renderAi(force) {
@@ -174,12 +177,14 @@
     if (!host) return;
     const ccy = sel;
     const b = state.bias[ccy];
-    const key = ccy + '|' + b + '|' + (strengthOf(state.series, ccy) || 0).toFixed(1);
+    const note = state.notes[ccy] || '';
+    const violated = verdictOf(b, strengthOf(state.series, ccy)) === 'bad';
+    const key = ccy + '|' + b + '|' + violated + '|' + note.length + '|' + (strengthOf(state.series, ccy) || 0).toFixed(1);
     let st = insights[ccy];
     if (!st || st.key !== key || force) {
       st = insights[ccy] = { key, result: null, loading: true, error: null };
       const c = client();
-      c.functions.invoke('fx-insight', { body: { mode: 'bias', ccy, bias: b, force: !!force } }).then(({ data, error }) => {
+      c.functions.invoke('fx-insight', { body: { mode: 'bias', ccy, bias: b, violated, note, weekNote: state.weekNote || '', force: !!force } }).then(({ data, error }) => {
         if (error || !data || !data.ok) throw new Error((data && data.error) || (error && error.message) || 'analyse indisponible');
         st.result = data.result;
       }).catch((e) => { st.error = e.message || String(e); }).finally(() => {
@@ -190,10 +195,19 @@
     if (st.loading) { host.innerHTML = '<p class="un-dim">Analyse en cours (news, données éco, discours, risque…)</p>'; return; }
     if (st.error) { host.innerHTML = `<p class="un-note">${esc(st.error)}</p><button type="button" class="un-btn" data-un-redo>Réessayer</button>`; return; }
     const r = st.result || {};
-    host.innerHTML = `<p class="un-verdict">${esc(r.verdict || '')}</p>
-      <h3 class="un-h">Pourquoi le biais n'est probablement pas respecté</h3>${itemsHtml(r.against, 'against')}
-      <h3 class="un-h">Pourquoi ça pourrait quand même aller dans ton sens</h3>${itemsHtml(r.for_you, 'for')}
-      <button type="button" class="un-btn" data-un-redo>Réanalyser</button>`;
+    const lines = (r.note_check || []).map((it, i) => {
+      const st = it.status === 'confirmed' ? 'ok' : it.status === 'contradicted' ? 'ko' : 'wait';
+      const ic = st === 'ok' ? '✓' : st === 'ko' ? '✗' : '…';
+      return `<div class="un-item un-item--note-${st}"><button type="button" class="un-item-head" aria-expanded="false"><span class="un-chev">▸</span><span class="un-st un-st--${st}">${ic}</span>${esc(it.expectation)}</button><div class="un-item-body" hidden>${esc(it.analysis)}</div></div>`;
+    }).join('');
+    const noteHtml = !state.notes[ccy]
+      ? `<p class="un-dim">Pas de note pour ${ccy} cette semaine : rien à vérifier.</p>`
+      : lines ? `<h3 class="un-h">Tes notes de la semaine : ce qui était prévu</h3>${lines}` : '';
+    const split = violated
+      ? `<h3 class="un-h">Pourquoi le biais n'est probablement pas respecté</h3>${itemsHtml(r.against, 'against')}
+      <h3 class="un-h">Pourquoi ça pourrait quand même aller dans ton sens</h3>${itemsHtml(r.for_you, 'for')}`
+      : '';
+    host.innerHTML = `<p class="un-verdict">${esc(r.verdict || '')}</p>${noteHtml}${split}<button type="button" class="un-btn" data-un-redo>Réanalyser</button>`;
   }
 
   async function load() {
@@ -201,7 +215,7 @@
     loading = true;
     try {
       const [t, series] = await Promise.all([loadTree(), loadStrength()]);
-      state = { weekName: t.weekName, month: t.month, year: t.year, nodes: t.nodes, bias: currentBiases(t.nodes), series };
+      state = { weekName: t.weekName, month: t.month, year: t.year, nodes: t.nodes, notes: t.notes, weekNote: t.weekNote, bias: currentBiases(t.nodes), series };
       renderTabs();
       renderBody();
     } catch (e) {

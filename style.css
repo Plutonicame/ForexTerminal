@@ -5226,6 +5226,7 @@ button.sq-btn.is-on, button.sq-btn.is-on:hover { background: var(--sqb-on-bg); b
   --un-ok-bg: #12261a; --un-ok-border: #2ecc71; --un-ok-text: #bff0d0;
   --un-bad-bg: #2a1414; --un-bad-border: #fe1111; --un-bad-text: #ffc9c9;
   --un-against: #ff8a3d; --un-for: #4ea1ff; --un-item-bg: #161616; --un-item-border: #2a2a2a; --un-item-hover: #1f1f1f; --un-item-text: #e6e6e6;
+  --un-note-ok: #2ecc71; --un-note-ko: #fe1111; --un-note-wait: #9a9a9a;
   --un-btn-bg: #161616; --un-btn-border: #2a2a2a; --un-btn-text: #e6e6e6;
 }
 .un-wrap { padding: 10px 14px 24px; display: flex; flex-direction: column; gap: 12px; color: var(--un-text); }
@@ -5313,3 +5314,9 @@ button.sq-btn.is-on, button.sq-btn.is-on:hover { background: var(--sqb-on-bg); b
 .intra-hist-mid { position: absolute; left: 0; right: 0; top: 50%; border-top: 1px dashed var(--intra-hist-mid); opacity: .5; pointer-events: none; }
 .intra-hist-msg { margin: auto; font-family: var(--mono); font-size: 12px; color: var(--intra-hist-dim); }
 .intra-hist-foot { margin: 0; font-family: var(--mono); font-size: 11px; color: var(--intra-hist-dim); }
+
+.un-item--note-ok { border-left-color: var(--un-note-ok); }
+.un-item--note-ko { border-left-color: var(--un-note-ko); }
+.un-item--note-wait { border-left-color: var(--un-note-wait); }
+.un-st { font-family: var(--mono); font-weight: 700; }
+.un-st--ok { color: var(--un-note-ok); } .un-st--ko { color: var(--un-note-ko); } .un-st--wait { color: var(--un-note-wait); }
