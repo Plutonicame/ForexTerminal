@@ -5286,3 +5286,30 @@ button.sq-btn.is-on, button.sq-btn.is-on:hover { background: var(--sqb-on-bg); b
 .rcp-chip { flex: 0 0 auto; padding: 1px 8px; border-radius: 10px; background: var(--rcp-chip-bg); color: var(--rcp-chip-text); font-family: var(--mono); font-size: 11px; }
 .rcp-dim { margin: 0; font-family: var(--mono); font-size: 12px; color: var(--rcp-dim); }
 .rcp-err { margin: 0; font-family: var(--sans); font-size: 13px; color: var(--rcp-err); }
+
+/* ---------- COT Retail : pop-up des 30 derniers jours ---------- */
+:root {
+  --intra-hist-overlay: #000000; --intra-hist-bg: #161616; --intra-hist-border: #2a2a2a; --intra-hist-title: #fafafa; --intra-hist-text: #e6e6e6; --intra-hist-dim: #9a9a9a;
+  --intra-hist-mid: #ffffff; --intra-hist-empty: #1f1f1f; --intra-hist-close-bg: #161616; --intra-hist-close-border: #2a2a2a; --intra-hist-close-text: #e6e6e6;
+}
+.intra-pie-wrap--click { cursor: pointer; }
+.intra-pie-wrap--click:focus-visible { outline: 2px solid var(--intra-hist-title); outline-offset: 3px; border-radius: 50%; }
+.intra-hist-ov { position: fixed; inset: 0; z-index: 330; display: flex; align-items: center; justify-content: center; padding: 16px; background: color-mix(in srgb, var(--intra-hist-overlay) 70%, transparent); }
+.intra-hist-card { width: 100%; max-width: 560px; display: flex; flex-direction: column; gap: 10px; padding: 16px; background: var(--intra-hist-bg); border: 1px solid var(--intra-hist-border); border-radius: 12px; color: var(--intra-hist-text); }
+.intra-hist-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.intra-hist-title { font-family: var(--mono); font-size: 12px; letter-spacing: 1px; text-transform: uppercase; color: var(--intra-hist-title); }
+.intra-hist-close { padding: 4px 9px; background: var(--intra-hist-close-bg); border: 1px solid var(--intra-hist-close-border); border-radius: var(--radius-sm); color: var(--intra-hist-close-text); cursor: pointer; }
+.intra-hist-legend { display: flex; flex-wrap: wrap; gap: 14px; font-family: var(--sans); font-size: 12px; color: var(--intra-hist-dim); }
+.intra-hist-legend .intra-dot { margin-right: 6px; }
+.intra-hist-chart { display: flex; gap: 8px; height: 240px; }
+.intra-hist-axis { display: flex; flex-direction: column; justify-content: space-between; font-family: var(--mono); font-size: 10px; color: var(--intra-hist-dim); }
+.intra-hist-cols { position: relative; flex: 1; display: flex; gap: 2px; }
+.intra-hist-col { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+.intra-hist-col--none { background: var(--intra-hist-empty); }
+.intra-hist-top--retail { background: var(--intra-retail-long); }
+.intra-hist-bot--retail { background: var(--intra-retail-short); }
+.intra-hist-top--contra { background: var(--intra-contra-long); }
+.intra-hist-bot--contra { background: var(--intra-contra-short); }
+.intra-hist-mid { position: absolute; left: 0; right: 0; top: 50%; border-top: 1px dashed var(--intra-hist-mid); opacity: .5; pointer-events: none; }
+.intra-hist-msg { margin: auto; font-family: var(--mono); font-size: 12px; color: var(--intra-hist-dim); }
+.intra-hist-foot { margin: 0; font-family: var(--mono); font-size: 11px; color: var(--intra-hist-dim); }

@@ -163,7 +163,7 @@
           <span class="intra-card-sub">${subParts.join(' · ')}</span>
         </div>
         <div class="intra-body">
-          <div class="intra-pie-wrap">${pieSvg(L, S, 'retail', 'COT Retail : acheteurs et vendeurs')}</div>
+          <div class="intra-pie-wrap intra-pie-wrap--click" data-hist="retail" data-ccy="${esc(r.currency)}" role="button" tabindex="0" title="Voir les 30 derniers jours">${pieSvg(L, S, 'retail', 'COT Retail : acheteurs et vendeurs')}</div>
           <div class="intra-details">
             ${row('<i class="intra-dot intra-dot--retail-long"></i>Long (acheteurs)', `<b>${pct(L)}</b> des lots${Number.isFinite(posLong) ? ` · ${pct(posLong)} des positions` : ''}`)}
             ${row('<i class="intra-dot intra-dot--retail-short"></i>Short (vendeurs)', `<b>${pct(S)}</b> des lots${Number.isFinite(posLong) ? ` · ${pct(100 - posLong)} des positions` : ''}`)}
@@ -189,7 +189,7 @@
           <span class="intra-card-sub">Inverse du COT Retail ci-dessus (déduction, pas une mesure)</span>
         </div>
         <div class="intra-body">
-          <div class="intra-pie-wrap">${pieSvg(S, L, 'contra', 'COT Retail inversé')}</div>
+          <div class="intra-pie-wrap intra-pie-wrap--click" data-hist="contra" data-ccy="${esc(r.currency)}" role="button" tabindex="0" title="Voir les 30 derniers jours">${pieSvg(S, L, 'contra', 'COT Retail inversé')}</div>
           <div class="intra-details">
             ${row('<i class="intra-dot intra-dot--contra-long"></i>Lecture haussière', `<b>${pct(S)}</b>`)}
             ${row('<i class="intra-dot intra-dot--contra-short"></i>Lecture baissière', `<b>${pct(L)}</b>`)}
@@ -269,6 +269,60 @@
       renderAll();
     }
   }
+
+  /* ---------- Pop-up : 30 derniers jours (table retail_history, une photo par jour, Paris) ---------- */
+  const parisDay = (ms) => new Date(ms).toLocaleDateString('en-CA', { timeZone: 'Europe/Paris' }); // AAAA-MM-JJ
+  const shortDay = (iso) => { const [, m, d] = iso.split('-'); return d + '/' + m; };
+
+  function closeHist() { const o = document.querySelector('.intra-hist-ov'); if (o) o.remove(); }
+
+  async function openHist(ccy, kind) {
+    closeHist();
+    const contra = kind === 'contra';
+    const ov = document.createElement('div');
+    ov.className = 'intra-hist-ov';
+    ov.innerHTML = `<div class="intra-hist-card" role="dialog" aria-label="Historique 30 jours">
+      <div class="intra-hist-head"><span class="intra-hist-title">${esc(ccy)} · ${contra ? 'COT Retail inversé' : 'COT Retail'} · 30 derniers jours</span><button type="button" class="intra-hist-close" aria-label="Fermer">✕</button></div>
+      <div class="intra-hist-legend"><span><i class="intra-dot intra-dot--${contra ? 'contra-long' : 'retail-long'}"></i>${contra ? 'Lecture haussière (en haut)' : 'Acheteurs (en haut)'}</span><span><i class="intra-dot intra-dot--${contra ? 'contra-short' : 'retail-short'}"></i>${contra ? 'Lecture baissière (en bas)' : 'Vendeurs (en bas)'}</span></div>
+      <div class="intra-hist-chart"><p class="intra-hist-msg">Chargement…</p></div>
+      <p class="intra-hist-foot"></p></div>`;
+    document.body.appendChild(ov);
+    ov.addEventListener('click', (e) => { if (e.target === ov || e.target.closest('.intra-hist-close')) closeHist(); });
+    const chart = ov.querySelector('.intra-hist-chart');
+    const foot = ov.querySelector('.intra-hist-foot');
+    const client = window.Auth && window.Auth.getClient ? window.Auth.getClient() : null;
+    try {
+      const { data, error } = await client.from('retail_history').select('day,long_pct,short_pct').eq('currency', ccy).order('day', { ascending: false }).limit(30);
+      if (error) throw error;
+      const by = {};
+      (data || []).forEach((x) => { by[x.day] = x; });
+      const days = [];
+      for (let i = 29; i >= 0; i--) days.push(parisDay(Date.now() - i * 86400000));
+      let have = 0;
+      const cols = days.map((d) => {
+        const x = by[d];
+        if (!x) return `<div class="intra-hist-col intra-hist-col--none" title="${shortDay(d)} : pas de donnée"></div>`;
+        have += 1;
+        const L = Number(x.long_pct), S = Number(x.short_pct), t = (L + S) || 1;
+        const top = (contra ? S : L) / t * 100, bot = 100 - top;
+        const lt = contra ? 'Lecture haussière' : 'Acheteurs', st = contra ? 'Lecture baissière' : 'Vendeurs';
+        return `<div class="intra-hist-col" title="${shortDay(d)} : ${lt} ${top.toFixed(1).replace('.', ',')} % · ${st} ${bot.toFixed(1).replace('.', ',')} %"><div class="intra-hist-top intra-hist-top--${contra ? 'contra' : 'retail'}" style="height:${top.toFixed(2)}%"></div><div class="intra-hist-bot intra-hist-bot--${contra ? 'contra' : 'retail'}" style="height:${bot.toFixed(2)}%"></div></div>`;
+      }).join('');
+      chart.innerHTML = `<div class="intra-hist-axis"><span>100 %</span><span>50 %</span><span>0 %</span></div><div class="intra-hist-cols">${cols}<i class="intra-hist-mid"></i></div>`;
+      foot.textContent = `${shortDay(days[0])} → ${shortDay(days[29])}` + (have < 30 ? ` · ${have} jour${have > 1 ? 's' : ''} enregistré${have > 1 ? 's' : ''} (l'historique se constitue jour après jour, une valeur par jour : la dernière lecture du jour)` : '');
+    } catch (e) {
+      chart.innerHTML = `<p class="intra-hist-msg">Historique indisponible (${esc(e && e.message || e)}).</p>`;
+    }
+  }
+
+  document.addEventListener('click', (e) => {
+    const w = e.target.closest('.intra-pie-wrap--click');
+    if (w) openHist(w.dataset.ccy, w.dataset.hist);
+  });
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') closeHist();
+    if ((e.key === 'Enter' || e.key === ' ') && e.target.classList && e.target.classList.contains('intra-pie-wrap--click')) { e.preventDefault(); openHist(e.target.dataset.ccy, e.target.dataset.hist); }
+  });
 
   document.addEventListener('DOMContentLoaded', () => {
     renderAll();
