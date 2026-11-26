@@ -6,6 +6,8 @@
  *   1. Force des devises : reprise de l'indicateur Pine « Macro & Currency Dashboard »
  *      (variation des 8 devises depuis l'ouverture de la semaine, dimanche 23 h heure de Paris).
  *      Données : table fx_strength (robot fx-strength-bot, Yahoo Finance).
+ *   3. Carte thermique TradingView (widget « stock heatmap ») avec filtre d'indice : S&P 500 par défaut, Nasdaq 100,
+ *      Euro Stoxx 50, DAX, Nikkei 225, CAC 40 (identifiants dans HEAT_INDEX ci-dessous).
  *   2. Courbe des taux américains : 14 échéances, de 1 mois à 30 ans.
  *      Données : table yield_curve (robot yields-bot, source U.S. Department of the Treasury).
  */
@@ -24,6 +26,27 @@
   let wrapFx = null;
   const fxInsts = [];
   let wrapYc = null;
+  let wrapHm = null;
+  let hmMounted = null;
+  // Identifiants « dataSource » du widget TradingView (stock heatmap)
+  const HEAT_INDEX = [
+    { id: 'SPX500', label: 'S&P 500' },
+    { id: 'NASDAQ100', label: 'Nasdaq 100' },
+    { id: 'SX5E', label: 'Euro Stoxx 50' },
+    { id: 'DAX', label: 'DAX' },
+    { id: 'NI225', label: 'Nikkei 225' },
+    { id: 'CAC40', label: 'CAC 40' },
+  ];
+  // Période affichée dans les carrés (pourcentage de hausse/baisse) : champ « blockColor » du widget
+  const HEAT_PERIOD = [
+    { id: 'change', label: 'Jour' },
+    { id: 'Perf.W', label: 'Semaine' },
+    { id: 'Perf.1M', label: 'Mois' },
+  ];
+  let hmPer = 'change';
+  try { const v = localStorage.getItem('fxt-indicator-heat-per'); if (HEAT_PERIOD.some((x) => x.id === v)) hmPer = v; } catch (e) { /* ignoré */ }
+  let hmSel = 'SPX500';
+  try { const v = localStorage.getItem('fxt-indicator-heat'); if (HEAT_INDEX.some((x) => x.id === v)) hmSel = v; } catch (e) { /* stockage indisponible */ }
   let busyFx = false;
   let busyYc = false;
 
@@ -82,14 +105,52 @@
         <span class="speeches-toolbar-info" data-yc-info>Trésor américain · de 1 mois à 30 ans</span>
       </div>
       <div class="yc-chart" data-yc-chart><p class="ind-empty">Chargement…</p></div>`;
+    wrapHm = el('div', 'hm-wrap');
+    wrapHm.innerHTML = `
+      <div class="speeches-toolbar">
+        <span class="speeches-toolbar-title">Carte thermique</span>
+        <select class="hm-select" data-hm-select aria-label="Indice de la carte thermique">${HEAT_INDEX.map((x) => `<option value="${x.id}"${x.id === hmSel ? ' selected' : ''}>${x.label}</option>`).join('')}</select>
+        <select class="hm-select" data-hm-period aria-label="Période de la variation">${HEAT_PERIOD.map((x) => `<option value="${x.id}"${x.id === hmPer ? ' selected' : ''}>${x.label}</option>`).join('')}</select>
+      </div>
+      <div class="hm-chart" data-hm-chart></div>`;
     panel.insertBefore(wrapYc, panel.firstChild);
     panel.insertBefore(wrapFx, panel.firstChild);
+    panel.appendChild(wrapHm);
+    wrapHm.querySelector('[data-hm-select]').addEventListener('change', (ev) => {
+      hmSel = ev.target.value;
+      try { localStorage.setItem('fxt-indicator-heat', hmSel); } catch (e) { /* ignoré */ }
+      mountHeat();
+    });
+    wrapHm.querySelector('[data-hm-period]').addEventListener('change', (ev) => {
+      hmPer = ev.target.value;
+      try { localStorage.setItem('fxt-indicator-heat-per', hmPer); } catch (e) { /* ignoré */ }
+      mountHeat();
+    });
 
     const inst = newFxInst(wrapFx, false);
     if (window.ResizeObserver) {
       let t = null;
       new ResizeObserver(() => { clearTimeout(t); t = setTimeout(() => { if (!panel.hidden) { renderFx(inst); renderYc(); } }, 120); }).observe(panel);
     }
+  }
+
+  /* ---------------- Carte thermique (widget TradingView) ---------------- */
+  function mountHeat() {
+    if (!wrapHm) return;
+    const box = wrapHm.querySelector('[data-hm-chart]');
+    const sig = hmSel + '|' + hmPer;
+    if (hmMounted === sig && box.firstChild) return;
+    hmMounted = sig;
+    box.innerHTML = '<div class="tradingview-widget-container" style="height:100%;width:100%"><div class="tradingview-widget-container__widget" style="height:100%;width:100%"></div></div>';
+    const sc = document.createElement('script');
+    sc.src = 'https://s3.tradingview.com/external-embedding/embed-widget-stock-heatmap.js';
+    sc.async = true;
+    sc.text = JSON.stringify({
+      exchanges: [], dataSource: hmSel, grouping: 'sector', blockSize: 'market_cap_basic', blockColor: hmPer,
+      locale: 'fr', symbolUrl: '', colorTheme: 'dark', hasTopBar: false, isDataSetEnabled: false, isZoomEnabled: true,
+      hasSymbolTooltip: true, isMonoSize: false, width: '100%', height: '100%',
+    });
+    box.firstChild.appendChild(sc);
   }
 
   /* ---------------- Force des devises ---------------- */
@@ -375,7 +436,7 @@
   function refresh(tabId) {
     if (tabId && tabId !== PANEL_ID) return;
     build();
-    loadFx(); loadYc();
+    loadFx(); loadYc(); mountHeat();
     setTimeout(() => { renderFx(); renderYc(); }, 60);
   }
   window.Indicator = { refresh, mountFx, reloadFx: loadFx };
