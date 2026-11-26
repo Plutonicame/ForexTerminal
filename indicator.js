@@ -6,8 +6,8 @@
  *   1. Force des devises : reprise de l'indicateur Pine « Macro & Currency Dashboard »
  *      (variation des 8 devises depuis l'ouverture de la semaine, dimanche 23 h heure de Paris).
  *      Données : table fx_strength (robot fx-strength-bot, Yahoo Finance).
- *   3. Carte thermique TradingView (widget « stock heatmap ») avec filtre d'indice : S&P 500 par défaut, Nasdaq 100,
- *      Euro Stoxx 50, DAX, Nikkei 225, CAC 40 (identifiants dans HEAT_INDEX ci-dessous).
+ *   3. Carte thermique (treemap dessiné ici, données du scanner TradingView via heatmap-data) avec filtre d'indice : S&P 500 par défaut, Nasdaq 100,
+ *      Euro Stoxx 50, DAX, Nikkei 225, CAC 40 (HEAT_INDEX ci-dessous) et période Jour / Semaine / Mois.
  *   2. Courbe des taux américains : 14 échéances, de 1 mois à 30 ans.
  *      Données : table yield_curve (robot yields-bot, source U.S. Department of the Treasury).
  */
@@ -27,8 +27,7 @@
   const fxInsts = [];
   let wrapYc = null;
   let wrapHm = null;
-  let hmMounted = null;
-  // Identifiants « dataSource » du widget TradingView (stock heatmap)
+  // Indices proposés (id = clé de l'edge function heatmap-data)
   const HEAT_INDEX = [
     { id: 'SPX500', label: 'S&P 500' },
     { id: 'NASDAQ100', label: 'Nasdaq 100' },
@@ -37,7 +36,7 @@
     { id: 'NI225', label: 'Nikkei 225' },
     { id: 'CAC40', label: 'CAC 40' },
   ];
-  // Période affichée dans les carrés (pourcentage de hausse/baisse) : champ « blockColor » du widget
+  // Période de la variation affichée dans les carrés
   const HEAT_PERIOD = [
     { id: 'change', label: 'Jour' },
     { id: 'Perf.W', label: 'Semaine' },
@@ -78,6 +77,7 @@
     return new Date(sec * 1000).toLocaleString('fr-FR', Object.assign({ timeZone: 'Europe/Paris' }, opts));
   }
 
+  const esc = (v) => String(v == null ? '' : v).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
   async function client() {
     if (!window.Auth || !window.Auth.isConfigured()) return null;
     const c = window.Auth.getClient();
@@ -109,6 +109,7 @@
     wrapHm.innerHTML = `
       <div class="speeches-toolbar">
         <span class="speeches-toolbar-title">Carte thermique</span>
+        <span class="speeches-toolbar-info hm-info" data-hm-info></span>
         <select class="hm-select" data-hm-select aria-label="Indice de la carte thermique">${HEAT_INDEX.map((x) => `<option value="${x.id}"${x.id === hmSel ? ' selected' : ''}>${x.label}</option>`).join('')}</select>
         <select class="hm-select" data-hm-period aria-label="Période de la variation">${HEAT_PERIOD.map((x) => `<option value="${x.id}"${x.id === hmPer ? ' selected' : ''}>${x.label}</option>`).join('')}</select>
       </div>
@@ -130,27 +131,108 @@
     const inst = newFxInst(wrapFx, false);
     if (window.ResizeObserver) {
       let t = null;
-      new ResizeObserver(() => { clearTimeout(t); t = setTimeout(() => { if (!panel.hidden) { renderFx(inst); renderYc(); } }, 120); }).observe(panel);
+      new ResizeObserver(() => { clearTimeout(t); t = setTimeout(() => { if (!panel.hidden) { renderFx(inst); renderYc(); renderHeat(); } }, 120); }).observe(panel);
     }
   }
 
-  /* ---------------- Carte thermique (widget TradingView) ---------------- */
-  function mountHeat() {
+  /* ---------------- Carte thermique (treemap maison, données du scanner TradingView) ---------------- */
+  // Le widget TradingView gratuit refuse Euro Stoxx 50, CAC 40 et Nikkei (il les remplace par le S&P 500) :
+  // la carte est donc dessinée ici à partir de l'edge function heatmap-data (composition + variations de l'indice).
+  const hmData = {}; // id -> { at, rows }
+  let hmBusy = false;
+  const HM_SCALE = { change: 3, 'Perf.W': 6, 'Perf.1M': 12 }; // % pour la couleur pleine
+  const HM_FIELD = { change: 'd1', 'Perf.W': 'w', 'Perf.1M': 'm' };
+
+  function squarify(items, x, y, w, h) {
+    // items : [{v, ...}] triés décroissant ; renvoie les rectangles {item,x,y,w,h}
+    const out = [];
+    const total = items.reduce((a, b) => a + b.v, 0);
+    if (!total || w <= 0 || h <= 0) return out;
+    const scale = (w * h) / total;
+    let rest = items.map((i) => ({ i, a: i.v * scale }));
+    let cx = x; let cy = y; let cw = w; let ch = h;
+    const worst = (row, side) => {
+      const sum = row.reduce((p, r) => p + r.a, 0);
+      const mx = Math.max(...row.map((r) => r.a)); const mn = Math.min(...row.map((r) => r.a));
+      return Math.max((side * side * mx) / (sum * sum), (sum * sum) / (side * side * mn));
+    };
+    while (rest.length) {
+      const side = Math.min(cw, ch);
+      const row = [rest[0]];
+      let k = 1;
+      while (k < rest.length && worst(row.concat(rest[k]), side) <= worst(row, side)) { row.push(rest[k]); k++; }
+      const sum = row.reduce((p, r) => p + r.a, 0);
+      if (cw >= ch) {
+        const rw = sum / ch; let yy = cy;
+        row.forEach((r) => { const rh = r.a / rw; out.push({ item: r.i, x: cx, y: yy, w: rw, h: rh }); yy += rh; });
+        cx += rw; cw -= rw;
+      } else {
+        const rh = sum / cw; let xx = cx;
+        row.forEach((r) => { const rw = r.a / rh; out.push({ item: r.i, x: xx, y: cy, w: rw, h: rh }); xx += rw; });
+        cy += rh; ch -= rh;
+      }
+      rest = rest.slice(row.length);
+    }
+    return out;
+  }
+
+  function hmColor(p, scale) {
+    if (p == null || !isFinite(p)) return 'var(--hm-flat)';
+    const k = Math.min(1, Math.abs(p) / scale);
+    return `color-mix(in srgb, ${p >= 0 ? 'var(--hm-up)' : 'var(--hm-down)'} ${Math.round(18 + k * 82)}%, var(--hm-flat))`;
+  }
+  const hmFmt = (p) => (p == null || !isFinite(p) ? '–' : (p > 0 ? '+' : '') + p.toFixed(2).replace('.', ',') + ' %');
+
+  function renderHeat() {
     if (!wrapHm) return;
     const box = wrapHm.querySelector('[data-hm-chart]');
-    const sig = hmSel + '|' + hmPer;
-    if (hmMounted === sig && box.firstChild) return;
-    hmMounted = sig;
-    box.innerHTML = '<div class="tradingview-widget-container" style="height:100%;width:100%"><div class="tradingview-widget-container__widget" style="height:100%;width:100%"></div></div>';
-    const sc = document.createElement('script');
-    sc.src = 'https://s3.tradingview.com/external-embedding/embed-widget-stock-heatmap.js';
-    sc.async = true;
-    sc.text = JSON.stringify({
-      exchanges: [], dataSource: hmSel, grouping: 'sector', blockSize: 'market_cap_basic', blockColor: hmPer,
-      locale: 'fr', symbolUrl: '', colorTheme: 'dark', hasTopBar: false, isDataSetEnabled: false, isZoomEnabled: true,
-      hasSymbolTooltip: true, isMonoSize: false, width: '100%', height: '100%',
+    const d = hmData[hmSel];
+    if (!d) return;
+    const W = box.clientWidth; const H = box.clientHeight;
+    if (W < 50 || H < 50) return;
+    const key = HM_FIELD[hmPer];
+    const scale = HM_SCALE[hmPer];
+    // secteurs → actions
+    const bySec = new Map();
+    d.rows.forEach((r) => { const k = r.sec || 'Autres'; if (!bySec.has(k)) bySec.set(k, { name: k, v: 0, rows: [] }); const g = bySec.get(k); g.v += r.cap; g.rows.push({ ...r, v: r.cap }); });
+    const secs = [...bySec.values()].sort((a, b) => b.v - a.v);
+    const HEAD = 15; const GAP = 1;
+    let html = '';
+    squarify(secs, 0, 0, W, H).forEach(({ item: g, x, y, w, h }) => {
+      const hh = h > 46 && w > 70 ? HEAD : 0;
+      html += `<div class="hm-sec" style="left:${x}px;top:${y}px;width:${w}px;height:${h}px">${hh ? `<span class="hm-sec-name">${esc(g.name)}</span>` : ''}</div>`;
+      g.rows.sort((a, b) => b.v - a.v);
+      squarify(g.rows, x + GAP, y + hh + GAP, w - 2 * GAP, h - hh - 2 * GAP).forEach(({ item: r, x: rx, y: ry, w: rw, h: rh }) => {
+        const p = r[key];
+        const big = rw > 46 && rh > 30; const mid = rw > 28 && rh > 18;
+        const fs = Math.max(9, Math.min(26, Math.sqrt(rw * rh) / 4.2));
+        const label = big ? `<b style="font-size:${fs}px">${esc(r.n)}</b><i style="font-size:${Math.max(9, fs * 0.62)}px">${hmFmt(p)}</i>` : mid ? `<b style="font-size:9px">${esc(r.n)}</b>` : '';
+        html += `<div class="hm-cell" style="left:${rx}px;top:${ry}px;width:${rw}px;height:${rh}px;background:${hmColor(p, scale)}" title="${esc(r.desc || r.n)} · ${hmFmt(p)} (${hmPer === 'change' ? 'jour' : hmPer === 'Perf.W' ? 'semaine' : 'mois'})">${label}</div>`;
+      });
     });
-    box.firstChild.appendChild(sc);
+    box.innerHTML = html;
+    const info = wrapHm.querySelector('[data-hm-info]');
+    if (info) info.textContent = `${d.rows.length} valeurs · taille = capitalisation · couleur = variation · maj ${new Date(d.at).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}`;
+  }
+
+  async function mountHeat(force) {
+    if (!wrapHm || hmBusy) return;
+    const box = wrapHm.querySelector('[data-hm-chart]');
+    const id = hmSel;
+    const cached = hmData[id];
+    if (cached && !force && Date.now() - cached.loaded < 120000) { renderHeat(); return; }
+    if (cached) renderHeat(); else box.innerHTML = '<p class="ind-empty">Chargement…</p>';
+    hmBusy = true;
+    try {
+      const c = await client();
+      if (!c) return;
+      const { data, error } = await c.functions.invoke('heatmap-data', { body: { index: id } });
+      if (error || !data || !data.ok) throw new Error((data && data.error) || (error && error.message) || 'indisponible');
+      hmData[id] = { rows: data.rows, at: data.at, loaded: Date.now() };
+      if (id === hmSel) renderHeat();
+    } catch (e) {
+      if (!hmData[id]) box.innerHTML = `<p class="ind-empty">Carte indisponible (${esc(e && e.message || e)}).</p>`;
+    } finally { hmBusy = false; if (id !== hmSel) mountHeat(); }
   }
 
   /* ---------------- Force des devises ---------------- */
@@ -436,7 +518,7 @@
   function refresh(tabId) {
     if (tabId && tabId !== PANEL_ID) return;
     build();
-    loadFx(); loadYc(); mountHeat();
+    loadFx(); loadYc(); mountHeat(false);
     setTimeout(() => { renderFx(); renderYc(); }, 60);
   }
   window.Indicator = { refresh, mountFx, reloadFx: loadFx };
