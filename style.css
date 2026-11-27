@@ -4391,8 +4391,8 @@ a.br-link:hover { color: var(--br-link-hover); }
   --fxs-cad: #fe1111; --fxs-chf: #ff9f1a; --fxs-aud: #f5d90a; --fxs-nzd: #b48cff;
   --fxs-grid: #2a2a2a; --fxs-zero: #e6e6e6; --fxs-text: #9a9a9a;
   --hm-c-m3: #f23645; --hm-c-m2: #b22833; --hm-c-m1: #801922; --hm-c-z: #303030; --hm-c-p1: #1a3326; --hm-c-p2: #056636; --hm-c-p3: #089950;
-  --hm-text: #ffffff; --hm-sec-text: #dbdbdb; --hm-cell-border: #000000; --hm-hover: #ffffff; --hm-stage-bg: #000000; --hm-leg-text: #dbdbdb;
-  --hm-tip-bg: #1e222d; --hm-tip-border: #363a45; --hm-tip-text: #d1d4dc; --hm-tip-dim: #787b86;
+  --hm-text: #ffffff; --hm-sec-text: #dbdbdb; --hm-cell-border: #000000; --hm-stage-bg: #000000; --hm-leg-text: #dbdbdb;
+  --hm-hot: #2962ff; --hm-tip-bg: #151515; --hm-tip-border: #2a2a2a; --hm-tip-text: #d1d4dc; --hm-tip-dim: #868686;
   --hm-bg: #161616; --hm-border: #2a2a2a; --hm-select-bg: #161616; --hm-select-border: #4a4a4a; --hm-select-text: #e6e6e6;
   --yc-bar-top: #4d94ff; --yc-bar-bottom: #0a3a7a; --yc-grid: #2a2a2a; --yc-text: #9a9a9a;
   --fxs-bg: #161616; --fxs-border: #2a2a2a; --fxs-reset-bg: #161616; --fxs-reset-border: #4a4a4a; --fxs-reset-icon: #b2b5be; --mw-reset-bg: #161616; --mw-reset-border: #4a4a4a; --mw-reset-icon: #b2b5be; --yc-bg: #161616; --yc-border: #2a2a2a;
@@ -5338,17 +5338,18 @@ button.sq-btn.is-on, button.sq-btn.is-on:hover { background: var(--sqb-on-bg); b
 .hm-sec { position: absolute; box-sizing: border-box; pointer-events: none; }
 .hm-sec-name { position: absolute; left: 6px; top: 3px; max-width: calc(100% - 10px); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-family: -apple-system, BlinkMacSystemFont, 'Trebuchet MS', Roboto, Ubuntu, sans-serif; font-size: 12px; font-weight: 500; color: var(--hm-sec-text); }
 .hm-cell { position: absolute; box-sizing: border-box; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 1px; overflow: hidden; cursor: pointer; border: 1px solid var(--hm-cell-border); color: var(--hm-text); font-family: -apple-system, BlinkMacSystemFont, 'Trebuchet MS', Roboto, Ubuntu, sans-serif; line-height: 1.12; text-align: center; }
-.hm-cell:hover { outline: 2px solid var(--hm-hover); outline-offset: -2px; z-index: 2; }
 .hm-cell b { font-weight: 700; } .hm-cell i { font-style: normal; font-weight: 500; }
 .hm-logo { border-radius: 50%; background: #1c1c1c; object-fit: contain; margin-bottom: 3px; flex: 0 0 auto; }
 .hm-legend-host { flex: 0 0 auto; padding: 8px 8px 6px; background: var(--hm-stage-bg); }
 .hm-legend { display: inline-flex; gap: 2px; }
 .hm-leg-step { display: block; min-width: 44px; text-align: left; font-family: -apple-system, BlinkMacSystemFont, 'Trebuchet MS', Roboto, Ubuntu, sans-serif; font-size: 10px; line-height: 14px; color: var(--hm-leg-text); } .hm-leg-step i { display: block; height: 3px; margin-top: 3px; }
-.hm-tip { position: absolute; z-index: 5; width: 240px; padding: 10px 12px; background: var(--hm-tip-bg); border: 1px solid var(--hm-tip-border); border-radius: 6px; box-shadow: 0 4px 16px rgba(0,0,0,.5); color: var(--hm-tip-text); font-family: -apple-system, BlinkMacSystemFont, 'Trebuchet MS', Roboto, Ubuntu, sans-serif; font-size: 12px; pointer-events: none; }
-.hm-tip-head { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
-.hm-tip-head img { width: 28px; height: 28px; border-radius: 50%; background: #fff; object-fit: contain; }
-.hm-tip-head b { display: block; font-size: 14px; color: var(--hm-text); }
-.hm-tip-head span { display: block; color: var(--hm-tip-dim); }
-.hm-tip-price { margin-bottom: 6px; font-size: 16px; } .hm-tip-price small { color: var(--hm-tip-dim); font-size: 11px; } .hm-tip-price em { font-style: normal; font-size: 13px; margin-left: 4px; }
-.hm-tip-price .hm-up { color: var(--hm-c-p3); } .hm-tip-price .hm-down { color: var(--hm-c-m3); }
-.hm-tip-row { display: flex; justify-content: space-between; gap: 8px; padding: 2px 0; } .hm-tip-row span { color: var(--hm-tip-dim); } .hm-tip-row b { font-weight: 500; text-align: right; }
+.hm-chart--own { position: relative; }
+.hm-sec--hot { border: 3px solid var(--hm-hot); z-index: 3; }
+.hm-sec--hot .hm-sec-name { left: 3px; top: 0; right: 0; max-width: none; padding: 3px 3px 3px 3px; background: var(--hm-hot); color: #fff; }
+.hm-cell--hot { outline: 1px solid var(--hm-hot); outline-offset: -1px; z-index: 4; }
+.hm-tip { position: absolute; left: 50%; bottom: 46px; transform: translateX(-50%); z-index: 6; display: flex; align-items: center; gap: 28px; padding: 9px 20px; background: var(--hm-tip-bg); border: 1px solid var(--hm-tip-border); border-radius: 8px; box-shadow: 0 4px 16px rgba(0,0,0,.6); color: var(--hm-tip-text); font-family: -apple-system, BlinkMacSystemFont, 'Trebuchet MS', Roboto, Ubuntu, sans-serif; white-space: nowrap; pointer-events: none; }
+.hm-tip-id { display: flex; align-items: center; gap: 8px; } .hm-tip-id b { font-size: 15px; color: var(--hm-text); font-weight: 600; }
+.hm-tip-id img { width: 18px; height: 18px; border-radius: 50%; background: #1c1c1c; object-fit: contain; }
+.hm-tip-col b { display: flex; align-items: center; gap: 6px; font-size: 15px; font-weight: 500; color: var(--hm-text); }
+.hm-tip-col span { display: block; margin-top: 2px; font-size: 9.5px; letter-spacing: .3px; color: var(--hm-tip-dim); }
+ .hm-tip-row b { font-weight: 500; text-align: right; }

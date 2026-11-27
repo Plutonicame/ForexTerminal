@@ -326,7 +326,7 @@ const THEME_FIELDS = {
     { v: '--hm-c-p3', l: "Palier +3 % et plus", section: "Carte thermique : couleurs et infobulle (Euro Stoxx, CAC 40, Nikkei)" },
     { v: '--hm-stage-bg', l: "Fond de la carte", section: "Carte thermique : couleurs et infobulle (Euro Stoxx, CAC 40, Nikkei)" },
     { v: '--hm-cell-border', l: "Séparation des carrés", section: "Carte thermique : couleurs et infobulle (Euro Stoxx, CAC 40, Nikkei)" },
-    { v: '--hm-hover', l: "Contour au survol", section: "Carte thermique : couleurs et infobulle (Euro Stoxx, CAC 40, Nikkei)" },
+    { v: '--hm-hot', l: "Contour bleu du secteur et de la case survolés", section: "Carte thermique : couleurs et infobulle (Euro Stoxx, CAC 40, Nikkei)" },
     { v: '--hm-text', l: "Texte des carrés", section: "Carte thermique : couleurs et infobulle (Euro Stoxx, CAC 40, Nikkei)" },
     { v: '--hm-sec-text', l: "Nom des secteurs", section: "Carte thermique : couleurs et infobulle (Euro Stoxx, CAC 40, Nikkei)" },
     { v: '--hm-leg-text', l: "Légende (échelle en bas)", section: "Carte thermique : couleurs et infobulle (Euro Stoxx, CAC 40, Nikkei)" },

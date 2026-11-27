@@ -216,6 +216,7 @@
   }
   const hmFmt = (p) => (p == null || !isFinite(p) ? '–' : (p > 0 ? '+' : p < 0 ? '−' : '') + Math.abs(p).toFixed(2).replace('.', ',') + '%');
   const hmCap = (v) => (v >= 1e12 ? (v / 1e12).toFixed(2) + ' T' : v >= 1e9 ? (v / 1e9).toFixed(2) + ' B' : (v / 1e6).toFixed(2) + ' M');
+  const hmCapShort = (v) => (v >= 1e12 ? (v / 1e12).toFixed(2).replace('.', ',') + 'T' : v >= 1e9 ? (v / 1e9).toFixed(2).replace('.', ',') + 'B' : (v / 1e6).toFixed(2).replace('.', ',') + 'M');
   const hmLogo = (r) => (r.logo ? `https://s3-symbol-logo.tradingview.com/${encodeURIComponent(r.logo)}--big.svg` : '');
 
   function hmLegend(scale) {
@@ -244,9 +245,11 @@
     const secs = [...bySec.values()].sort((a, b) => b.v - a.v);
     const HEAD = 20;
     let html = '';
+    let secIdx = 0;
     squarify(secs, 0, 0, W, H).forEach(({ item: g, x, y, w, h }) => {
       const hh = h > 50 && w > 50 ? HEAD : 0;
-      html += `<div class="hm-sec" style="left:${x}px;top:${y}px;width:${w}px;height:${h}px">${hh ? `<span class="hm-sec-name">${esc(HM_SEC_FR[g.name] || g.name)} ›</span>` : ''}</div>`;
+      const si = secIdx++;
+      html += `<div class="hm-sec" data-s="${si}" style="left:${x}px;top:${y}px;width:${w}px;height:${h}px">${hh ? `<span class="hm-sec-name">${esc(HM_SEC_FR[g.name] || g.name)} ›</span>` : ''}</div>`;
       g.rows.sort((a, b) => b.v - a.v);
       squarify(g.rows, x + 1, y + hh + 1, w - 2, h - hh - 2).forEach(({ item: r, x: rx, y: ry, w: rw, h: rh }) => {
         const p = r[key];
@@ -258,7 +261,7 @@
         if (rw > 52 && rh > 64) label = `${logo}<b style="font-size:${fs}px">${esc(r.n)}</b><i style="font-size:${Math.max(10, fs * 0.9)}px">${hmFmt(p)}</i>`;
         else if (rw > 44 && rh > 40) label = `${r.logo ? `<img class="hm-logo" src="${hmLogo(r)}" alt="" style="width:${Math.min(ls, 22)}px;height:${Math.min(ls, 22)}px" loading="lazy" onerror="this.remove()">` : ''}<b style="font-size:10px">${esc(r.n)}</b><i style="font-size:10px">${hmFmt(p)}</i>`;
         else if (rw > 20 && rh > 20) label = r.logo ? `<img class="hm-logo" src="${hmLogo(r)}" alt="" style="width:${Math.min(ls, 16)}px;height:${Math.min(ls, 16)}px;margin:0" loading="lazy" onerror="this.remove()">` : '';
-        html += `<div class="hm-cell" data-i="${esc(r.t)}" style="left:${rx}px;top:${ry}px;width:${rw}px;height:${rh}px;background:${hmColor(p, scale)}">${label}</div>`;
+        html += `<div class="hm-cell" data-i="${esc(r.t)}" data-s="${si}" style="left:${rx}px;top:${ry}px;width:${rw}px;height:${rh}px;background:${hmColor(p, scale)}">${label}</div>`;
       });
     });
     stage.innerHTML = html;
@@ -269,29 +272,33 @@
   function bindHeatTip(box) {
     if (box.dataset.tipBound) return;
     box.dataset.tipBound = '1';
-    let timer = null; let tip = null;
-    const hide = () => { clearTimeout(timer); if (tip) { tip.remove(); tip = null; } };
+    let timer = null; let tip = null; let hotCell = null; let hotSec = null;
+    const hide = () => {
+      clearTimeout(timer);
+      if (tip) { tip.remove(); tip = null; }
+      if (hotCell) { hotCell.classList.remove('hm-cell--hot'); hotCell = null; }
+      if (hotSec) { hotSec.classList.remove('hm-sec--hot'); hotSec = null; }
+    };
     box.addEventListener('pointerover', (ev) => {
       const c = ev.target.closest('.hm-cell'); if (!c) return;
+      if (c === hotCell) return;
       hide();
       timer = setTimeout(() => {
         const d = hmData[hmSel]; if (!d) return;
         const r = d.rows.find((x) => x.t === c.dataset.i); if (!r) return;
-        const cr = c.getBoundingClientRect(); const br = box.getBoundingClientRect();
+        hotCell = c; c.classList.add('hm-cell--hot');
+        hotSec = box.querySelector(`.hm-sec[data-s="${c.dataset.s}"]`); if (hotSec) hotSec.classList.add('hm-sec--hot');
+        const p = r[HM_FIELD[hmPer]];
+        const lab = hmPer === 'change' ? 'CHANGEMENT 1D, %' : hmPer === 'Perf.W' ? 'CHANGEMENT 1S, %' : 'CHANGEMENT 1M, %';
+        const sq = p >= 0 ? 'var(--hm-c-p3)' : 'var(--hm-c-m3)';
         tip = document.createElement('div');
         tip.className = 'hm-tip';
-        const p = r[HM_FIELD[hmPer]];
-        tip.innerHTML = `<div class="hm-tip-head">${r.logo ? `<img src="${hmLogo(r)}" alt="" onerror="this.remove()">` : ''}<div><b>${esc(r.n)}</b><span>${esc(r.desc || '')}</span></div></div>
-          <div class="hm-tip-price"><b>${r.px != null ? Number(r.px).toLocaleString('fr-FR', { maximumFractionDigits: 2 }) : '–'}</b> <small>${esc(r.cur || '')}</small> <em class="${p >= 0 ? 'hm-up' : 'hm-down'}">${hmFmt(p)}</em></div>
-          <div class="hm-tip-row"><span>Cap. boursière</span><b>${hmCap(r.cap)} ${esc(r.cur || '')}</b></div>
-          <div class="hm-tip-row"><span>Secteur</span><b>${esc(r.sec || '–')}</b></div>`;
+        tip.innerHTML = `<div class="hm-tip-id">${r.logo ? `<img src="${hmLogo(r)}" alt="" onerror="this.remove()">` : ''}<b>${esc(r.n)}</b></div>
+          <div class="hm-tip-col"><b>${r.px != null ? Number(r.px).toLocaleString('fr-FR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : '–'}</b><span>PRIX</span></div>
+          <div class="hm-tip-col"><b><svg viewBox="0 0 16 16" width="13" height="13" aria-hidden="true"><path d="M2 6V2h4M10 2h4v4M14 10v4h-4M6 14H2v-4" fill="none" stroke="currentColor" stroke-width="1.4"/></svg>${hmCapShort(r.cap)}</b><span>CAPITALISATION BOURSIÈRE</span></div>
+          <div class="hm-tip-col"><b><svg viewBox="0 0 14 14" width="13" height="13" aria-hidden="true"><rect x="0" y="0" width="6" height="6" fill="${sq}"/><rect x="8" y="0" width="6" height="6" fill="${sq}" opacity=".6"/><rect x="0" y="8" width="6" height="6" fill="${sq}" opacity=".6"/><rect x="8" y="8" width="6" height="6" fill="${sq}"/></svg>${hmFmt(p)}</b><span>${lab}</span></div>`;
         box.appendChild(tip);
-        let left = cr.left - br.left + cr.width / 2 - tip.offsetWidth / 2;
-        left = Math.max(4, Math.min(box.clientWidth - tip.offsetWidth - 4, left));
-        let top = cr.bottom - br.top + 6;
-        if (top + tip.offsetHeight > box.clientHeight - 4) top = Math.max(4, cr.top - br.top - tip.offsetHeight - 6);
-        tip.style.left = left + 'px'; tip.style.top = top + 'px';
-      }, 450);
+      }, 350);
     });
     box.addEventListener('pointerout', (ev) => { if (ev.target.closest('.hm-cell')) hide(); });
     box.addEventListener('pointerleave', hide);
