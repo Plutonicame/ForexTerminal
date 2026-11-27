@@ -283,11 +283,11 @@
       const c = ev.target.closest('.hm-cell'); if (!c) return;
       if (c === hotCell) return;
       hide();
+      hotCell = c; c.classList.add('hm-cell--hot');
+      hotSec = box.querySelector(`.hm-sec[data-s="${c.dataset.s}"]`); if (hotSec) hotSec.classList.add('hm-sec--hot');
       timer = setTimeout(() => {
         const d = hmData[hmSel]; if (!d) return;
         const r = d.rows.find((x) => x.t === c.dataset.i); if (!r) return;
-        hotCell = c; c.classList.add('hm-cell--hot');
-        hotSec = box.querySelector(`.hm-sec[data-s="${c.dataset.s}"]`); if (hotSec) hotSec.classList.add('hm-sec--hot');
         const p = r[HM_FIELD[hmPer]];
         const lab = hmPer === 'change' ? 'CHANGEMENT 1D, %' : hmPer === 'Perf.W' ? 'CHANGEMENT 1S, %' : 'CHANGEMENT 1M, %';
         const sq = p >= 0 ? 'var(--hm-c-p3)' : 'var(--hm-c-m3)';
@@ -298,7 +298,7 @@
           <div class="hm-tip-col"><b><svg viewBox="0 0 16 16" width="13" height="13" aria-hidden="true"><path d="M2 6V2h4M10 2h4v4M14 10v4h-4M6 14H2v-4" fill="none" stroke="currentColor" stroke-width="1.4"/></svg>${hmCapShort(r.cap)}</b><span>CAPITALISATION BOURSIÈRE</span></div>
           <div class="hm-tip-col"><b><svg viewBox="0 0 14 14" width="13" height="13" aria-hidden="true"><rect x="0" y="0" width="6" height="6" fill="${sq}"/><rect x="8" y="0" width="6" height="6" fill="${sq}" opacity=".6"/><rect x="0" y="8" width="6" height="6" fill="${sq}" opacity=".6"/><rect x="8" y="8" width="6" height="6" fill="${sq}"/></svg>${hmFmt(p)}</b><span>${lab}</span></div>`;
         box.appendChild(tip);
-      }, 350);
+      }, 700);
     });
     box.addEventListener('pointerout', (ev) => { if (ev.target.closest('.hm-cell')) hide(); });
     box.addEventListener('pointerleave', hide);
