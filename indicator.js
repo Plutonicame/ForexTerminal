@@ -28,12 +28,15 @@
   let wrapYc = null;
   let wrapHm = null;
   let hmMounted = null;
-  // Identifiants « dataSource » du widget TradingView (stock heatmap). Euro Stoxx 50 (SX5E), CAC 40 (CAC40) et Nikkei 225 (NI225)
-  // existent chez TradingView mais le widget gratuit les refuse et affiche le S&P 500 à la place : ils ne sont donc pas proposés.
+  // S&P 500, Nasdaq 100 et DAX : vrai widget TradingView (« dataSource »). Euro Stoxx 50, CAC 40 et Nikkei 225 (own: true) : le widget
+  // gratuit les refuse (il affiche le S&P 500), on dessine donc une copie de la carte TradingView (données : edge function heatmap-data).
   const HEAT_INDEX = [
     { id: 'SPX500', label: 'S&P 500' },
     { id: 'NASDAQ100', label: 'Nasdaq 100' },
+    { id: 'SX5E', label: 'Euro Stoxx 50', own: true },
     { id: 'DAX', label: 'DAX' },
+    { id: 'NI225', label: 'Nikkei 225', own: true },
+    { id: 'CAC40', label: 'CAC 40', own: true },
   ];
   // Période affichée dans les carrés (pourcentage de hausse/baisse) : champ « blockColor » du widget
   const HEAT_PERIOD = [
@@ -76,6 +79,7 @@
     return new Date(sec * 1000).toLocaleString('fr-FR', Object.assign({ timeZone: 'Europe/Paris' }, opts));
   }
 
+  const esc = (v) => String(v == null ? '' : v).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
   async function client() {
     if (!window.Auth || !window.Auth.isConfigured()) return null;
     const c = window.Auth.getClient();
@@ -128,12 +132,12 @@
     const inst = newFxInst(wrapFx, false);
     if (window.ResizeObserver) {
       let t = null;
-      new ResizeObserver(() => { clearTimeout(t); t = setTimeout(() => { if (!panel.hidden) { renderFx(inst); renderYc(); } }, 120); }).observe(panel);
+      new ResizeObserver(() => { clearTimeout(t); t = setTimeout(() => { if (!panel.hidden) { renderFx(inst); renderYc(); renderHeat(); } }, 120); }).observe(panel);
     }
   }
 
   /* ---------------- Carte thermique (widget TradingView) ---------------- */
-  function mountHeat() {
+  function mountHeatWidget() {
     if (!wrapHm) return;
     const box = wrapHm.querySelector('[data-hm-chart]');
     const sig = hmSel + '|' + hmPer;
@@ -150,6 +154,169 @@
     });
     box.firstChild.appendChild(sc);
   }
+
+
+  /* ---- Copie de la carte thermique TradingView pour les indices refusés par le widget ---- */
+  const hmData = {};
+  let hmBusy = false;
+  const HM_SCALE = { change: 3, 'Perf.W': 6, 'Perf.1M': 12 };
+  const HM_FIELD = { change: 'd1', 'Perf.W': 'w', 'Perf.1M': 'm' };
+  const HM_STOPS = ['m3', 'm2', 'm1', 'z', 'p1', 'p2', 'p3'];
+
+  function squarify(items, x, y, w, h) {
+    const out = [];
+    const total = items.reduce((a, b) => a + b.v, 0);
+    if (!total || w <= 0 || h <= 0) return out;
+    const scale = (w * h) / total;
+    let rest = items.map((i) => ({ i, a: i.v * scale }));
+    let cx = x; let cy = y; let cw = w; let ch = h;
+    const worst = (row, side) => {
+      const sum = row.reduce((p, r) => p + r.a, 0);
+      const mx = Math.max(...row.map((r) => r.a)); const mn = Math.min(...row.map((r) => r.a));
+      return Math.max((side * side * mx) / (sum * sum), (sum * sum) / (side * side * mn));
+    };
+    while (rest.length) {
+      const side = Math.min(cw, ch);
+      const row = [rest[0]];
+      let k = 1;
+      while (k < rest.length && worst(row.concat(rest[k]), side) <= worst(row, side)) { row.push(rest[k]); k++; }
+      const sum = row.reduce((p, r) => p + r.a, 0);
+      if (cw >= ch) {
+        const rw = sum / ch; let yy = cy;
+        row.forEach((r) => { const rh = r.a / rw; out.push({ item: r.i, x: cx, y: yy, w: rw, h: rh }); yy += rh; });
+        cx += rw; cw -= rw;
+      } else {
+        const rh = sum / cw; let xx = cx;
+        row.forEach((r) => { const rw = r.a / rh; out.push({ item: r.i, x: xx, y: cy, w: rw, h: rh }); xx += rw; });
+        cy += rh; ch -= rh;
+      }
+      rest = rest.slice(row.length);
+    }
+    return out;
+  }
+
+  // Échelle de couleurs : 7 paliers (−3 % … +3 % pour le jour), interpolation entre deux paliers voisins
+  function hmColor(p, scale) {
+    if (p == null || !isFinite(p)) return 'var(--hm-c-z)';
+    const t = Math.max(-1, Math.min(1, p / scale)) * 3; // −3 … +3
+    const lo = Math.floor(t); const hi = Math.ceil(t);
+    const name = (n) => 'var(--hm-c-' + HM_STOPS[n + 3] + ')';
+    if (lo === hi) return name(lo);
+    return `color-mix(in srgb, ${name(hi)} ${Math.round((t - lo) * 100)}%, ${name(lo)})`;
+  }
+  const hmFmt = (p) => (p == null || !isFinite(p) ? '–' : (p > 0 ? '+' : p < 0 ? '−' : '') + Math.abs(p).toFixed(2) + '%');
+  const hmCap = (v) => (v >= 1e12 ? (v / 1e12).toFixed(2) + ' T' : v >= 1e9 ? (v / 1e9).toFixed(2) + ' B' : (v / 1e6).toFixed(2) + ' M');
+  const hmLogo = (r) => (r.logo ? `https://s3-symbol-logo.tradingview.com/${encodeURIComponent(r.logo)}--big.svg` : '');
+
+  function hmLegend(scale) {
+    const labels = [-3, -2, -1, 0, 1, 2, 3].map((n) => {
+      const v = (n * scale) / 3;
+      return `<span class="hm-leg-step" style="background:var(--hm-c-${HM_STOPS[n + 3]})">${v > 0 ? '+' : v < 0 ? '−' : ''}${Math.abs(Number.isInteger(v) ? v : +v.toFixed(1))}%</span>`;
+    }).join('');
+    return `<div class="hm-legend">${labels}</div>`;
+  }
+
+  function renderHeatOwn() {
+    if (!wrapHm) return;
+    const box = wrapHm.querySelector('[data-hm-chart]');
+    const d = hmData[hmSel];
+    if (!d) return;
+    const stage = box.querySelector('.hm-stage');
+    if (!stage) return;
+    const leg = box.querySelector('.hm-legend-host');
+    if (leg) leg.innerHTML = hmLegend(HM_SCALE[hmPer]);
+    const W = stage.clientWidth; const H = stage.clientHeight;
+    if (W < 50 || H < 50) return;
+    const key = HM_FIELD[hmPer]; const scale = HM_SCALE[hmPer];
+    const bySec = new Map();
+    d.rows.forEach((r) => { const k = r.sec || 'Autres'; if (!bySec.has(k)) bySec.set(k, { name: k, v: 0, rows: [] }); const g = bySec.get(k); g.v += r.cap; g.rows.push({ ...r, v: r.cap }); });
+    const secs = [...bySec.values()].sort((a, b) => b.v - a.v);
+    const HEAD = 17;
+    let html = '';
+    squarify(secs, 0, 0, W, H).forEach(({ item: g, x, y, w, h }) => {
+      const hh = h > 50 && w > 60 ? HEAD : 0;
+      html += `<div class="hm-sec" style="left:${x}px;top:${y}px;width:${w}px;height:${h}px">${hh ? `<span class="hm-sec-name">${esc(g.name)}</span>` : ''}</div>`;
+      g.rows.sort((a, b) => b.v - a.v);
+      squarify(g.rows, x + 1, y + hh + 1, w - 2, h - hh - 2).forEach(({ item: r, x: rx, y: ry, w: rw, h: rh }) => {
+        const p = r[key];
+        const m = Math.min(rw, rh);
+        const showLogo = m > 54 && r.logo; const big = rw > 40 && rh > 30; const mid = rw > 24 && rh > 15;
+        const fs = Math.max(9, Math.min(34, m / 4.6));
+        const ls = Math.max(18, Math.min(58, m * 0.42));
+        const label = big
+          ? `${showLogo ? `<img class="hm-logo" src="${hmLogo(r)}" alt="" style="width:${ls}px;height:${ls}px" loading="lazy" onerror="this.remove()">` : ''}<b style="font-size:${fs}px">${esc(r.n)}</b><i style="font-size:${Math.max(9, fs * 0.72)}px">${hmFmt(p)}</i>`
+          : mid ? `<b style="font-size:9px">${esc(r.n)}</b>` : '';
+        html += `<div class="hm-cell" data-i="${esc(r.t)}" style="left:${rx}px;top:${ry}px;width:${rw}px;height:${rh}px;background:${hmColor(p, scale)}">${label}</div>`;
+      });
+    });
+    stage.innerHTML = html;
+    const info = wrapHm.querySelector('[data-hm-info]');
+    if (info) info.textContent = '';
+  }
+
+  function bindHeatTip(box) {
+    if (box.dataset.tipBound) return;
+    box.dataset.tipBound = '1';
+    let timer = null; let tip = null;
+    const hide = () => { clearTimeout(timer); if (tip) { tip.remove(); tip = null; } };
+    box.addEventListener('pointerover', (ev) => {
+      const c = ev.target.closest('.hm-cell'); if (!c) return;
+      hide();
+      timer = setTimeout(() => {
+        const d = hmData[hmSel]; if (!d) return;
+        const r = d.rows.find((x) => x.t === c.dataset.i); if (!r) return;
+        const cr = c.getBoundingClientRect(); const br = box.getBoundingClientRect();
+        tip = document.createElement('div');
+        tip.className = 'hm-tip';
+        const p = r[HM_FIELD[hmPer]];
+        tip.innerHTML = `<div class="hm-tip-head">${r.logo ? `<img src="${hmLogo(r)}" alt="" onerror="this.remove()">` : ''}<div><b>${esc(r.n)}</b><span>${esc(r.desc || '')}</span></div></div>
+          <div class="hm-tip-price"><b>${r.px != null ? Number(r.px).toLocaleString('fr-FR', { maximumFractionDigits: 2 }) : '–'}</b> <small>${esc(r.cur || '')}</small> <em class="${p >= 0 ? 'hm-up' : 'hm-down'}">${hmFmt(p)}</em></div>
+          <div class="hm-tip-row"><span>Cap. boursière</span><b>${hmCap(r.cap)} ${esc(r.cur || '')}</b></div>
+          <div class="hm-tip-row"><span>Secteur</span><b>${esc(r.sec || '–')}</b></div>`;
+        box.appendChild(tip);
+        let left = cr.left - br.left + cr.width / 2 - tip.offsetWidth / 2;
+        left = Math.max(4, Math.min(box.clientWidth - tip.offsetWidth - 4, left));
+        let top = cr.bottom - br.top + 6;
+        if (top + tip.offsetHeight > box.clientHeight - 4) top = Math.max(4, cr.top - br.top - tip.offsetHeight - 6);
+        tip.style.left = left + 'px'; tip.style.top = top + 'px';
+      }, 450);
+    });
+    box.addEventListener('pointerout', (ev) => { if (ev.target.closest('.hm-cell')) hide(); });
+    box.addEventListener('pointerleave', hide);
+  }
+
+  async function mountHeatOwn(force) {
+    const box = wrapHm.querySelector('[data-hm-chart]');
+    if (!box.querySelector('.hm-stage')) box.innerHTML = '<div class="hm-stage"></div><div class="hm-legend-host"></div>';
+    bindHeatTip(box);
+    const id = hmSel; const cached = hmData[id];
+    if (cached) renderHeatOwn(); else box.querySelector('.hm-stage').innerHTML = '<p class="ind-empty">Chargement…</p>';
+    if (cached && !force && Date.now() - cached.loaded < 120000) return;
+    if (hmBusy) return;
+    hmBusy = true;
+    try {
+      const c = await client();
+      if (!c) return;
+      const { data, error } = await c.functions.invoke('heatmap-data', { body: { index: id } });
+      if (error || !data || !data.ok) throw new Error((data && data.error) || (error && error.message) || 'indisponible');
+      hmData[id] = { rows: data.rows, at: data.at, loaded: Date.now() };
+      if (id === hmSel) renderHeatOwn();
+    } catch (e) {
+      if (!hmData[id]) { const st = box.querySelector('.hm-stage'); if (st) st.innerHTML = `<p class="ind-empty">Carte indisponible (${esc(e && e.message || e)}).</p>`; }
+    } finally { hmBusy = false; if (id !== hmSel && isOwn(hmSel)) mountHeatOwn(); }
+  }
+
+  const isOwn = (id) => HEAT_INDEX.some((x) => x.id === id && x.own);
+  let hmKind = null;
+  function mountHeat(force) {
+    if (!wrapHm) return;
+    const own = isOwn(hmSel);
+    const box = wrapHm.querySelector('[data-hm-chart]');
+    if (hmKind !== own) { box.innerHTML = ''; hmMounted = null; hmKind = own; delete box.dataset.tipBound; }
+    box.classList.toggle('hm-chart--own', own);
+    if (own) mountHeatOwn(force); else mountHeatWidget();
+  }
+  function renderHeat() { if (isOwn(hmSel)) renderHeatOwn(); }
 
   /* ---------------- Force des devises ---------------- */
   function newFxInst(wrap, compact) {
