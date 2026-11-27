@@ -317,7 +317,7 @@ const THEME_FIELDS = {
     { v: '--fxs-grid', l: 'Quadrillage', section: 'Force des devises (courbes)' },
     { v: '--fxs-zero', l: 'Ligne du zéro', section: 'Force des devises (courbes)' },
     { v: '--fxs-text', l: 'Graduations', section: 'Force des devises (courbes)' },
-    { v: '--hm-c-m3', l: "Palier −3 % et moins", section: "Carte thermique : couleurs et infobulle (Euro Stoxx, CAC 40, Nikkei)" },
+    { v: '--hm-c-m3', l: "Palier −3 % (et en dessous)", section: "Carte thermique : couleurs et infobulle (Euro Stoxx, CAC 40, Nikkei)" },
     { v: '--hm-c-m2', l: "Palier −2 %", section: "Carte thermique : couleurs et infobulle (Euro Stoxx, CAC 40, Nikkei)" },
     { v: '--hm-c-m1', l: "Palier −1 %", section: "Carte thermique : couleurs et infobulle (Euro Stoxx, CAC 40, Nikkei)" },
     { v: '--hm-c-z', l: "Palier 0 %", section: "Carte thermique : couleurs et infobulle (Euro Stoxx, CAC 40, Nikkei)" },

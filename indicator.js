@@ -163,6 +163,16 @@
   const HM_FIELD = { change: 'd1', 'Perf.W': 'w', 'Perf.1M': 'm' };
   const HM_STOPS = ['m3', 'm2', 'm1', 'z', 'p1', 'p2', 'p3'];
 
+  const HM_SEC_FR = {
+    'Electronic Technology': 'Technologie électronique', 'Technology Services': 'Services technologiques', 'Finance': 'Finance',
+    'Health Technology': 'Technologie de la santé', 'Producer Manufacturing': 'Producteurs-fabricants', 'Energy Minerals': 'Minéraux énergétiques',
+    'Utilities': 'Services publics', 'Transportation': 'Transports', 'Consumer Durables': 'Biens de consommation durables',
+    'Retail Trade': 'Commerce de détail', 'Consumer Non-Durables': 'Produits de consommation non durables', 'Consumer Services': 'Services au consommateur',
+    'Process Industries': 'Industries de transformation', 'Commercial Services': 'Services commerciaux', 'Communications': 'Communications',
+    'Distribution Services': 'Services de distribution', 'Health Services': 'Services de santé', 'Industrial Services': 'Services industriels',
+    'Non-Energy Minerals': 'Minéraux non énergétiques', 'Miscellaneous': 'Divers',
+  };
+
   function squarify(items, x, y, w, h) {
     const out = [];
     const total = items.reduce((a, b) => a + b.v, 0);
@@ -204,16 +214,17 @@
     if (lo === hi) return name(lo);
     return `color-mix(in srgb, ${name(hi)} ${Math.round((t - lo) * 100)}%, ${name(lo)})`;
   }
-  const hmFmt = (p) => (p == null || !isFinite(p) ? '–' : (p > 0 ? '+' : p < 0 ? '−' : '') + Math.abs(p).toFixed(2) + '%');
+  const hmFmt = (p) => (p == null || !isFinite(p) ? '–' : (p > 0 ? '+' : p < 0 ? '−' : '') + Math.abs(p).toFixed(2).replace('.', ',') + '%');
   const hmCap = (v) => (v >= 1e12 ? (v / 1e12).toFixed(2) + ' T' : v >= 1e9 ? (v / 1e9).toFixed(2) + ' B' : (v / 1e6).toFixed(2) + ' M');
   const hmLogo = (r) => (r.logo ? `https://s3-symbol-logo.tradingview.com/${encodeURIComponent(r.logo)}--big.svg` : '');
 
   function hmLegend(scale) {
-    const labels = [-3, -2, -1, 0, 1, 2, 3].map((n) => {
+    const steps = [-3, -2, -1, 0, 1, 2, 3].map((n) => {
       const v = (n * scale) / 3;
-      return `<span class="hm-leg-step" style="background:var(--hm-c-${HM_STOPS[n + 3]})">${v > 0 ? '+' : v < 0 ? '−' : ''}${Math.abs(Number.isInteger(v) ? v : +v.toFixed(1))}%</span>`;
+      const t = (v < 0 ? '−' : '') + Math.abs(Number.isInteger(v) ? v : +v.toFixed(1)) + '%';
+      return `<span class="hm-leg-step">${t}<i style="background:var(--hm-c-${HM_STOPS[n + 3]})"></i></span>`;
     }).join('');
-    return `<div class="hm-legend">${labels}</div>`;
+    return `<div class="hm-legend">${steps}</div>`;
   }
 
   function renderHeatOwn() {
@@ -231,21 +242,22 @@
     const bySec = new Map();
     d.rows.forEach((r) => { const k = r.sec || 'Autres'; if (!bySec.has(k)) bySec.set(k, { name: k, v: 0, rows: [] }); const g = bySec.get(k); g.v += r.cap; g.rows.push({ ...r, v: r.cap }); });
     const secs = [...bySec.values()].sort((a, b) => b.v - a.v);
-    const HEAD = 17;
+    const HEAD = 20;
     let html = '';
     squarify(secs, 0, 0, W, H).forEach(({ item: g, x, y, w, h }) => {
-      const hh = h > 50 && w > 60 ? HEAD : 0;
-      html += `<div class="hm-sec" style="left:${x}px;top:${y}px;width:${w}px;height:${h}px">${hh ? `<span class="hm-sec-name">${esc(g.name)}</span>` : ''}</div>`;
+      const hh = h > 50 && w > 50 ? HEAD : 0;
+      html += `<div class="hm-sec" style="left:${x}px;top:${y}px;width:${w}px;height:${h}px">${hh ? `<span class="hm-sec-name">${esc(HM_SEC_FR[g.name] || g.name)} ›</span>` : ''}</div>`;
       g.rows.sort((a, b) => b.v - a.v);
       squarify(g.rows, x + 1, y + hh + 1, w - 2, h - hh - 2).forEach(({ item: r, x: rx, y: ry, w: rw, h: rh }) => {
         const p = r[key];
         const m = Math.min(rw, rh);
-        const showLogo = m > 54 && r.logo; const big = rw > 40 && rh > 30; const mid = rw > 24 && rh > 15;
-        const fs = Math.max(9, Math.min(34, m / 4.6));
-        const ls = Math.max(18, Math.min(58, m * 0.42));
-        const label = big
-          ? `${showLogo ? `<img class="hm-logo" src="${hmLogo(r)}" alt="" style="width:${ls}px;height:${ls}px" loading="lazy" onerror="this.remove()">` : ''}<b style="font-size:${fs}px">${esc(r.n)}</b><i style="font-size:${Math.max(9, fs * 0.72)}px">${hmFmt(p)}</i>`
-          : mid ? `<b style="font-size:9px">${esc(r.n)}</b>` : '';
+        const ls = Math.max(14, Math.min(64, m * 0.36));
+        const fs = Math.max(10, Math.min(24, m / 5.2));
+        const logo = r.logo ? `<img class="hm-logo" src="${hmLogo(r)}" alt="" style="width:${ls}px;height:${ls}px" loading="lazy" onerror="this.remove()">` : '';
+        let label = '';
+        if (rw > 52 && rh > 64) label = `${logo}<b style="font-size:${fs}px">${esc(r.n)}</b><i style="font-size:${Math.max(10, fs * 0.9)}px">${hmFmt(p)}</i>`;
+        else if (rw > 44 && rh > 40) label = `${r.logo ? `<img class="hm-logo" src="${hmLogo(r)}" alt="" style="width:${Math.min(ls, 22)}px;height:${Math.min(ls, 22)}px" loading="lazy" onerror="this.remove()">` : ''}<b style="font-size:10px">${esc(r.n)}</b><i style="font-size:10px">${hmFmt(p)}</i>`;
+        else if (rw > 20 && rh > 20) label = r.logo ? `<img class="hm-logo" src="${hmLogo(r)}" alt="" style="width:${Math.min(ls, 16)}px;height:${Math.min(ls, 16)}px;margin:0" loading="lazy" onerror="this.remove()">` : '';
         html += `<div class="hm-cell" data-i="${esc(r.t)}" style="left:${rx}px;top:${ry}px;width:${rw}px;height:${rh}px;background:${hmColor(p, scale)}">${label}</div>`;
       });
     });
