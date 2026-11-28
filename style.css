@@ -5353,3 +5353,9 @@ button.sq-btn.is-on, button.sq-btn.is-on:hover { background: var(--sqb-on-bg); b
 .hm-tip-col b { display: flex; align-items: center; gap: 6px; font-size: 15px; font-weight: 500; color: var(--hm-text); }
 .hm-tip-col span { display: block; margin-top: 2px; font-size: 9.5px; letter-spacing: .3px; color: var(--hm-tip-dim); }
  .hm-tip-row b { font-weight: 500; text-align: right; }
+
+.hm-zoom { position: absolute; right: 8px; top: 50%; transform: translateY(-50%); z-index: 7; display: flex; flex-direction: column; gap: 4px; }
+.hm-zoom button { width: 30px; height: 30px; display: flex; align-items: center; justify-content: center; background: var(--hm-tip-bg); border: 1px solid var(--hm-tip-border); border-radius: 6px; color: var(--hm-text); font-size: 18px; line-height: 1; cursor: pointer; }
+.hm-zoom button:hover { border-color: var(--hm-hot); }
+.hm-stage.hm-grab { cursor: grabbing; }
+.hm-stage.hm-grab .hm-cell { cursor: grabbing; }

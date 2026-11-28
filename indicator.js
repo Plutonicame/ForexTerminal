@@ -120,6 +120,7 @@
     panel.appendChild(wrapHm);
     wrapHm.querySelector('[data-hm-select]').addEventListener('change', (ev) => {
       hmSel = ev.target.value;
+      hmView.k = 1; hmView.x = 0; hmView.y = 0;
       try { localStorage.setItem('fxt-indicator-heat', hmSel); } catch (e) { /* ignoré */ }
       mountHeat();
     });
@@ -159,6 +160,7 @@
   /* ---- Copie de la carte thermique TradingView pour les indices refusés par le widget ---- */
   const hmData = {};
   let hmBusy = false;
+  const hmView = { k: 1, x: 0, y: 0 }; // zoom de la carte copiée (k = facteur, x/y = décalage en px)
   const HM_SCALE = { change: 3, 'Perf.W': 6, 'Perf.1M': 12 };
   const HM_FIELD = { change: 'd1', 'Perf.W': 'w', 'Perf.1M': 'm' };
   const HM_STOPS = ['m3', 'm2', 'm1', 'z', 'p1', 'p2', 'p3'];
@@ -246,22 +248,30 @@
     const HEAD = 20;
     let html = '';
     let secIdx = 0;
-    squarify(secs, 0, 0, W, H).forEach(({ item: g, x, y, w, h }) => {
+    const K = hmView.k; const VX = hmView.x; const VY = hmView.y;
+    squarify(secs, 0, 0, W * K, H * K).forEach(({ item: g, x: gx, y: gy, w, h }) => {
+      const x = gx + VX; const y = gy + VY;
+      if (x > W + 4 || y > H + 4 || x + w < -4 || y + h < -4) { secIdx++; return; }
       const hh = h > 50 && w > 50 ? HEAD : 0;
       const si = secIdx++;
       html += `<div class="hm-sec" data-s="${si}" style="left:${x}px;top:${y}px;width:${w}px;height:${h}px">${hh ? `<span class="hm-sec-name">${esc(HM_SEC_FR[g.name] || g.name)} ›</span>` : ''}</div>`;
       g.rows.sort((a, b) => b.v - a.v);
       squarify(g.rows, x + 1, y + hh + 1, w - 2, h - hh - 2).forEach(({ item: r, x: rx, y: ry, w: rw, h: rh }) => {
+        if (rx > W + 2 || ry > H + 2 || rx + rw < -2 || ry + rh < -2) return;
         const p = r[key];
-        const m = Math.min(rw, rh);
-        const ls = Math.max(14, Math.min(64, m * 0.36));
-        const fs = Math.max(10, Math.min(24, m / 5.2));
+        const fm = Math.min(rw, rh);
+        const cx0 = Math.max(rx, 0); const cy0 = Math.max(ry, 0);
+        const cw = Math.min(rx + rw, W) - cx0; const ch = Math.min(ry + rh, H) - cy0;
+        if (cw < 2 || ch < 2) return;
+        const m = Math.min(fm, cw, ch);
+        const ls = Math.max(14, Math.min(96, m * 0.36));
+        const fs = Math.max(10, Math.min(34, m / 5.2));
         const logo = r.logo ? `<img class="hm-logo" src="${hmLogo(r)}" alt="" style="width:${ls}px;height:${ls}px" loading="lazy" onerror="this.remove()">` : '';
         let label = '';
-        if (rw > 52 && rh > 64) label = `${logo}<b style="font-size:${fs}px">${esc(r.n)}</b><i style="font-size:${Math.max(10, fs * 0.9)}px">${hmFmt(p)}</i>`;
-        else if (rw > 44 && rh > 40) label = `${r.logo ? `<img class="hm-logo" src="${hmLogo(r)}" alt="" style="width:${Math.min(ls, 22)}px;height:${Math.min(ls, 22)}px" loading="lazy" onerror="this.remove()">` : ''}<b style="font-size:10px">${esc(r.n)}</b><i style="font-size:10px">${hmFmt(p)}</i>`;
-        else if (rw > 20 && rh > 20) label = r.logo ? `<img class="hm-logo" src="${hmLogo(r)}" alt="" style="width:${Math.min(ls, 16)}px;height:${Math.min(ls, 16)}px;margin:0" loading="lazy" onerror="this.remove()">` : '';
-        html += `<div class="hm-cell" data-i="${esc(r.t)}" data-s="${si}" style="left:${rx}px;top:${ry}px;width:${rw}px;height:${rh}px;background:${hmColor(p, scale)}">${label}</div>`;
+        if (cw > 52 && ch > 64) label = `${logo}<b style="font-size:${fs}px">${esc(r.n)}</b><i style="font-size:${Math.max(10, fs * 0.9)}px">${hmFmt(p)}</i>`;
+        else if (cw > 44 && ch > 40) label = `${r.logo ? `<img class="hm-logo" src="${hmLogo(r)}" alt="" style="width:${Math.min(ls, 22)}px;height:${Math.min(ls, 22)}px" loading="lazy" onerror="this.remove()">` : ''}<b style="font-size:10px">${esc(r.n)}</b><i style="font-size:10px">${hmFmt(p)}</i>`;
+        else if (cw > 20 && ch > 20) label = r.logo ? `<img class="hm-logo" src="${hmLogo(r)}" alt="" style="width:${Math.min(ls, 16)}px;height:${Math.min(ls, 16)}px;margin:0" loading="lazy" onerror="this.remove()">` : '';
+        html += `<div class="hm-cell" data-i="${esc(r.t)}" data-s="${si}" style="left:${cx0}px;top:${cy0}px;width:${cw}px;height:${ch}px;background:${hmColor(p, scale)}">${label}</div>`;
       });
     });
     stage.innerHTML = html;
@@ -298,16 +308,66 @@
           <div class="hm-tip-col"><b><svg viewBox="0 0 16 16" width="13" height="13" aria-hidden="true"><path d="M2 6V2h4M10 2h4v4M14 10v4h-4M6 14H2v-4" fill="none" stroke="currentColor" stroke-width="1.4"/></svg>${hmCapShort(r.cap)}</b><span>CAPITALISATION BOURSIÈRE</span></div>
           <div class="hm-tip-col"><b><svg viewBox="0 0 14 14" width="13" height="13" aria-hidden="true"><rect x="0" y="0" width="6" height="6" fill="${sq}"/><rect x="8" y="0" width="6" height="6" fill="${sq}" opacity=".6"/><rect x="0" y="8" width="6" height="6" fill="${sq}" opacity=".6"/><rect x="8" y="8" width="6" height="6" fill="${sq}"/></svg>${hmFmt(p)}</b><span>${lab}</span></div>`;
         box.appendChild(tip);
-      }, 700);
+      }, 500);
     });
     box.addEventListener('pointerout', (ev) => { if (ev.target.closest('.hm-cell')) hide(); });
     box.addEventListener('pointerleave', hide);
   }
 
+  function hmClamp() {
+    const st = wrapHm.querySelector('.hm-stage');
+    if (!st) return;
+    const W = st.clientWidth; const H = st.clientHeight;
+    hmView.k = Math.max(1, Math.min(14, hmView.k));
+    hmView.x = Math.min(0, Math.max(W - W * hmView.k, hmView.x));
+    hmView.y = Math.min(0, Math.max(H - H * hmView.k, hmView.y));
+  }
+  let hmRaf = 0;
+  function hmRedraw() { if (hmRaf) return; hmRaf = requestAnimationFrame(() => { hmRaf = 0; hmClamp(); renderHeatOwn(); }); }
+  function hmZoomAt(factor, mx, my) {
+    const k0 = hmView.k; const k1 = Math.max(1, Math.min(14, k0 * factor));
+    if (k1 === k0) return;
+    hmView.x = mx - (mx - hmView.x) * (k1 / k0);
+    hmView.y = my - (my - hmView.y) * (k1 / k0);
+    hmView.k = k1;
+    hmRedraw();
+  }
+  function bindHeatZoom(box) {
+    if (box.dataset.zoomBound) return;
+    box.dataset.zoomBound = '1';
+    const stage = () => box.querySelector('.hm-stage');
+    box.addEventListener('wheel', (ev) => {
+      const st = stage(); if (!st || !st.contains(ev.target)) return;
+      ev.preventDefault();
+      const r = st.getBoundingClientRect();
+      hmZoomAt(ev.deltaY < 0 ? 1.25 : 0.8, ev.clientX - r.left, ev.clientY - r.top);
+    }, { passive: false });
+    box.addEventListener('click', (ev) => {
+      const b = ev.target.closest('[data-z]'); if (!b) return;
+      const st = stage(); const W = st.clientWidth; const H = st.clientHeight;
+      if (b.dataset.z === 'reset') { hmView.k = 1; hmView.x = 0; hmView.y = 0; hmRedraw(); return; }
+      hmZoomAt(b.dataset.z === 'in' ? 1.5 : 1 / 1.5, W / 2, H / 2);
+    });
+    // glisser pour se déplacer (souris ou doigt)
+    let drag = null;
+    box.addEventListener('pointerdown', (ev) => {
+      const st = stage(); if (!st || !st.contains(ev.target) || ev.button > 0 || hmView.k <= 1) return;
+      drag = { x: ev.clientX, y: ev.clientY, vx: hmView.x, vy: hmView.y };
+      st.classList.add('hm-grab');
+    });
+    window.addEventListener('pointermove', (ev) => {
+      if (!drag) return;
+      hmView.x = drag.vx + (ev.clientX - drag.x); hmView.y = drag.vy + (ev.clientY - drag.y);
+      hmRedraw();
+    });
+    window.addEventListener('pointerup', () => { if (drag) { drag = null; const st = stage(); if (st) st.classList.remove('hm-grab'); } });
+  }
+
   async function mountHeatOwn(force) {
     const box = wrapHm.querySelector('[data-hm-chart]');
-    if (!box.querySelector('.hm-stage')) box.innerHTML = '<div class="hm-stage"></div><div class="hm-legend-host"></div>';
+    if (!box.querySelector('.hm-stage')) box.innerHTML = '<div class="hm-stage"></div><div class="hm-zoom"><button type="button" data-z="in" aria-label="Zoom avant">+</button><button type="button" data-z="out" aria-label="Zoom arrière">−</button><button type="button" data-z="reset" aria-label="Tout afficher">⤢</button></div><div class="hm-legend-host"></div>';
     bindHeatTip(box);
+    bindHeatZoom(box);
     const id = hmSel; const cached = hmData[id];
     if (cached) renderHeatOwn(); else box.querySelector('.hm-stage').innerHTML = '<p class="ind-empty">Chargement…</p>';
     if (cached && !force && Date.now() - cached.loaded < 120000) return;
