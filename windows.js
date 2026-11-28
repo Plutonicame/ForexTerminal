@@ -49,6 +49,7 @@
         { id: 'tab-globe', label: 'Globe' },
         { id: 'tab-rates', label: 'Taux d\'intérêt', currency: { win: 'rates', all: 'panels' } },
         { id: 'tab-macro', label: 'Données macro' },
+        { id: 'tab-devise', label: 'Devise' },
       ],
     },
     {

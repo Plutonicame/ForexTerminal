@@ -19,6 +19,11 @@
   const CESIUM_VERSION = '1.119.0';
   const CESIUM_BASE = `https://cdn.jsdelivr.net/npm/cesium@${CESIUM_VERSION}/Build/Cesium/`;
   const ESRI_URL = 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}';
+  // Frontières terrestres de tous les pays (Natural Earth, domaine public) : un 2e lien de secours si le CDN est indisponible
+  const BORDERS_URLS = [
+    'https://cdn.jsdelivr.net/gh/nvkelso/natural-earth-vector@v5.1.2/geojson/ne_50m_admin_0_boundary_lines_land.geojson',
+    'https://raw.githubusercontent.com/nvkelso/natural-earth-vector/v5.1.2/geojson/ne_50m_admin_0_boundary_lines_land.geojson',
+  ];
   const SHIPS_POLL_MS = 2 * 60 * 1000;
   const SPACE_VIEW = { lon: 35, lat: 22, h: 24000000 };
   const LS_FILTERS = 'fxt-globe-filters';
@@ -191,6 +196,57 @@
     if (v._galaxy) { sc.skyBox = v._galaxy; sc.skyBox.show = true; } else { v._spaceMode = null; }
   }
 
+  /* ---------------- Frontières des pays (traits fins, couleur --globe-borders) ---------------- */
+  // Le fichier n'est téléchargé qu'une fois, même si le globe et le mini-globe d'Overwatch l'utilisent tous les deux.
+  function loadBorders() {
+    if (loadBorders.p) return loadBorders.p;
+    loadBorders.p = (async () => {
+      for (const url of BORDERS_URLS) {
+        try {
+          const r = await fetch(url);
+          if (!r.ok) continue;
+          const j = await r.json();
+          if (j && Array.isArray(j.features) && j.features.length) return j;
+        } catch (e) { /* on essaie le lien suivant */ }
+      }
+      loadBorders.p = null; // pas de réponse : on pourra réessayer à la prochaine ouverture
+      return null;
+    })();
+    return loadBorders.p;
+  }
+
+  function styleBorders(v) {
+    const C = window.Cesium;
+    if (!v || !C || !v._borders) return;
+    const col = C.Color.fromCssColorString(cssVar('--globe-borders', '#2a2a2a')) || C.Color.GRAY;
+    const mat = new C.ColorMaterialProperty(col);
+    v._borders.entities.values.forEach((e) => {
+      if (!e.polyline) return;
+      e.polyline.material = mat;
+      e.polyline.depthFailMaterial = mat; // reste visible au-dessus du relief des tuiles 3D de Google
+      e.polyline.width = 1;
+    });
+  }
+
+  async function addBorders(v) {
+    const C = window.Cesium;
+    if (!v || !C || v._borders || v._bordersLoading) return;
+    v._bordersLoading = true;
+    try {
+      const json = await loadBorders();
+      if (!json || v.isDestroyed()) return;
+      const ds = await C.GeoJsonDataSource.load(json, { clampToGround: false, stroke: C.Color.GRAY, strokeWidth: 1 });
+      if (v.isDestroyed()) return;
+      v._borders = ds;
+      await v.dataSources.add(ds);
+      styleBorders(v);
+    } catch (e) {
+      console.warn('globe.js frontières', e);
+    } finally {
+      v._bordersLoading = false;
+    }
+  }
+
   /* ---------------- Globe ---------------- */
   function flyHome() {
     const C = window.Cesium;
@@ -225,6 +281,7 @@
       v.camera.setView({ destination: C.Cartesian3.fromDegrees(SPACE_VIEW.lon, SPACE_VIEW.lat, SPACE_VIEW.h) });
       viewer = v;
       applySpace(v);
+      addBorders(v); // sans attendre : le globe s'affiche tout de suite, les frontières arrivent ensuite
 
       Object.keys(CATS).forEach((k) => {
         collections[k] = v.scene.primitives.add(new C.PointPrimitiveCollection());
@@ -435,6 +492,7 @@
       v.camera.setView({ destination: C.Cartesian3.fromDegrees(SPACE_VIEW.lon, SPACE_VIEW.lat, SPACE_VIEW.h) });
       mini = v;
       applySpace(v);
+      addBorders(v);
       v.useDefaultRenderLoop = miniOn;
       v.resize();
     }).catch((e) => { console.warn('globe.js mini', e); miniInit = null; });
@@ -443,6 +501,6 @@
   window.Globe = { setActive, reload: loadShips, mountMini, setMiniActive };
 
   document.addEventListener('DOMContentLoaded', () => {
-    window.addEventListener('fx-theme-changed', () => { applySpace(viewer); applySpace(mini); if (viewer && shipRows.length) drawShips(); renderBar(); });
+    window.addEventListener('fx-theme-changed', () => { applySpace(viewer); applySpace(mini); styleBorders(viewer); styleBorders(mini); if (viewer && shipRows.length) drawShips(); renderBar(); });
   });
 })();

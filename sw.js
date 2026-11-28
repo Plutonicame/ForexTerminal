@@ -8,7 +8,7 @@
  * ce sera ajouté plus tard si besoin (ex. cache des réponses API).
  */
 
-const CACHE_VERSION = 'fx-terminal-shell-v185';
+const CACHE_VERSION = 'fx-terminal-shell-v186';
 
 const APP_SHELL = [
   './',
@@ -41,6 +41,7 @@ const APP_SHELL = [
   './recap.js',
   './riskcalc.js',
   './macro.js',
+  './devise.js',
   './icon-192.png',
   './icon-512.png',
   './icon-180.png',
